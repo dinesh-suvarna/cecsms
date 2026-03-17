@@ -51,7 +51,7 @@ if($role != 'SuperAdmin'){
         exit;
     }
 }
-
+$unit_code = $unit['unit_code'];
 $unit_name = $unit['unit_name'];
 $division_id = $unit['division_id'];
 
@@ -59,41 +59,48 @@ $division_id = $unit['division_id'];
 // ================= UPDATE =================
 if(isset($_POST['update_unit'])){
 
+    $unit_code = strtoupper(trim($_POST['unit_code']));
     $unit_name = ucwords(trim($_POST['unit_name']));
     $division_id = intval($_POST['division_id']);
 
-    if(empty($unit_name)){
+    if(empty($unit_code)){
+        $error = "Unit code is required.";
+    } elseif(empty($unit_name)){
         $error = "Unit name is required.";
     } else {
 
-        // ✅ Duplicate check inside same division
         $check = $conn->prepare("
             SELECT id 
             FROM units 
             WHERE division_id=? 
-            AND LOWER(unit_name)=LOWER(?) 
+            AND (LOWER(unit_name)=LOWER(?) OR LOWER(unit_code)=LOWER(?))
             AND id != ?
         ");
+
         $check->bind_param(
-            "isi",
+            "issi",
             $division_id,
             $unit_name,
+            $unit_code,
             $unit_id
         );
+
         $check->execute();
         $dup = $check->get_result();
 
         if($dup->num_rows > 0){
-            $error = "Another unit with this name already exists in this division.";
+            $error = "Unit code or name already exists in this division.";
         } else {
 
             $update = $conn->prepare("
                 UPDATE units 
-                SET unit_name=?, division_id=? 
+                SET unit_code=?, unit_name=?, division_id=? 
                 WHERE id=?
             ");
+
             $update->bind_param(
-                "sii",
+                "ssii",
+                $unit_code,
                 $unit_name,
                 $division_id,
                 $unit_id
@@ -185,6 +192,15 @@ if(isset($_POST['update_unit'])){
         <?php endwhile; ?>
 
     </select>
+</div>
+<!-- Unit Code -->
+<div class="mb-3">
+    <label class="form-label">Unit Codee</label>
+    <input type="text"
+           name="unit_code"
+           value="<?= htmlspecialchars($unit_code) ?>"
+           class="form-control"
+           required>
 </div>
 
 <!-- Unit Name -->

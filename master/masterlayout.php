@@ -12,6 +12,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         :root {
@@ -119,7 +120,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         .top-navbar {
             background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(8px);
+           
             border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 0.8rem 1.5rem;
@@ -174,6 +175,15 @@ $current_page = basename($_SERVER['PHP_SELF']);
 h5 {
     line-height: 1.2;
 }
+.modal {
+    z-index: 1065 !important;
+}
+.modal-backdrop {
+    z-index: 1060 !important;
+}
+.dropdown-menu {
+    z-index: 2000 !important;
+}
     </style>
 </head>
 <body>
@@ -196,11 +206,8 @@ h5 {
 
         <div class="nav-group-label">Inventory Management</div>
         <div class="nav flex-column">
-            <a href="add_items_master.php" class="nav-link <?= ($current_page == 'add_items_master.php') ? 'active' : '' ?>">
-                <i class="bi bi-plus-square"></i> Add Stock Item
-            </a>
-            <a href="manage_items_master.php" class="nav-link <?= ($current_page == 'manage_items_master.php') ? 'active' : '' ?>">
-                <i class="bi bi-search"></i> View Stock
+            <a href="items_master.php" class="nav-link <?= ($current_page == 'items_master.php') ? 'active' : '' ?>">
+                <i class="bi bi-plus-square"></i> Item Master
             </a>
             <a href="stock_specifications.php" class="nav-link <?= ($current_page == 'stock_specifications.php') ? 'active' : '' ?>">
                 <i class="bi bi-sliders"></i> Specifications
@@ -209,20 +216,14 @@ h5 {
 
         <div class="nav-group-label">Master Records</div>
         <div class="nav flex-column">
-            <a href="add_institute.php" class="nav-link <?= ($current_page == 'add_institute.php') ? 'active' : '' ?>">
-                <i class="bi bi-building"></i> Add Institutions
+            <a href="institutions.php" class="nav-link <?= ($current_page == 'institutions.php') ? 'active' : '' ?>">
+                <i class="bi bi-building"></i> Institutions
             </a>
-            <a href="edit_delete_institute.php" class="nav-link <?= ($current_page == 'edit_delete_institute.php') ? 'active' : '' ?>">
-                <i class="bi bi-building"></i> View Institutions
+            <a href="divisions.php" class="nav-link <?= ($current_page == 'divisions.php') ? 'active' : '' ?>">
+                <i class="bi bi-diagram-3"></i> Divisions
             </a>
-            <a href="division_add.php" class="nav-link <?= ($current_page == 'division_add.php') ? 'active' : '' ?>">
-                <i class="bi bi-diagram-3"></i> Add Divisions
-            </a>
-            <a href="division_list.php" class="nav-link <?= ($current_page == 'division_list.php') ? 'active' : '' ?>">
-                <i class="bi bi-diagram-3"></i> View Divisions
-            </a>
-            <a href="unit_add.php" class="nav-link <?= ($current_page == 'unit_add.php') ? 'active' : '' ?>">
-                <i class="bi bi-collection"></i> Add Units
+            <a href="units.php" class="nav-link <?= ($current_page == 'units.php') ? 'active' : '' ?>">
+                <i class="bi bi-collection"></i> Units
             </a>
             <a href="unit_list.php" class="nav-link <?= ($current_page == 'unit_list.php') ? 'active' : '' ?>">
                 <i class="bi bi-collection"></i> View Units
@@ -269,17 +270,23 @@ h5 {
             <div class="dropdown">
                 <div class="user-profile shadow-sm" data-bs-toggle="dropdown">
                     <div class="text-end d-none d-md-block">
-                        <p class="small fw-bold mb-0">Admin User</p>
-                        <span class="badge bg-emerald-soft text-success" style="font-size: 9px;">Superuser</span>
+                        <?php $username = $_SESSION['username'] ?? 'User'; ?>
+                        <p class="small fw-bold mb-0"><?= htmlspecialchars($username) ?></p>
+                        <?php $role = $_SESSION['role'] ?? 'User'; ?>
+                        <span class="badge bg-emerald-soft text-success" style="font-size: 9px;">
+                            <?= htmlspecialchars($role) ?>
+                        </span>
                     </div>
                     <div class="avatar bg-light border rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
                         <i class="bi bi-person text-success"></i>
                     </div>
                 </div>
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
-                    <li><a class="dropdown-item py-2" href="#"><i class="bi bi-person me-2"></i> My Profile</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item py-2 text-danger" href="../logout.php"><i class="bi bi-box-arrow-right me-2"></i> Sign Out</a></li>
+                    <li>
+                        <a class="dropdown-item py-2 text-danger fw-bold" href="../admin/logout.php">
+                            <i class="bi bi-box-arrow-right me-2"></i> Logout
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -313,6 +320,7 @@ h5 {
             }, 100);
         }
     });
+    
 </script>
 
 </body>

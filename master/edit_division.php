@@ -10,7 +10,7 @@ $user_institution_id = $_SESSION['institution_id'] ?? null;
 
 // Validate ID
 if(!isset($_GET['id']) || !is_numeric($_GET['id'])){
-    header("Location: division_list.php");
+    header("Location: divisions.php");
     exit;
 }
 
@@ -26,7 +26,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if($result->num_rows == 0){
-    header("Location: division_list.php");
+    header("Location: divisions.php");
     exit;
 }
 
@@ -35,7 +35,7 @@ $stmt->close();
 
 // Security: prevent editing other institution division
 if($role != 'SuperAdmin' && $division['institution_id'] != $user_institution_id){
-    header("Location: division_list.php");
+    header("Location: divisions.php");
     exit;
 }
 
@@ -172,7 +172,7 @@ if(isset($_POST['update_division'])){
         Update
     </button>
 
-    <a href="division_list.php" class="btn btn-secondary">
+    <a href="divisions.php" class="btn btn-secondary">
         Back
     </a>
 </div>

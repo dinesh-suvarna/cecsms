@@ -121,9 +121,7 @@ if($result->num_rows > 0){
             <option value="">Select Division</option>
         </select>
 
-        <a href="../master/division_add.php" target="_blank" class="btn btn-success">
-    + Add
-</a>
+        
     </div>
 </div>
 

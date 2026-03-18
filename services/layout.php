@@ -210,7 +210,7 @@ header("Pragma: no-cache");
     </div>
 
     <div class="p-3 border-top mt-auto">
-        <a href="logout.php" class="btn btn-outline-danger w-100 rounded-pill btn-sm fw-bold">
+        <a href="../admin/logout.php" class="btn btn-outline-danger w-100 rounded-pill btn-sm fw-bold">
             <i class="bi bi-power me-2"></i> Logout
         </a>
     </div>
@@ -255,7 +255,7 @@ header("Pragma: no-cache");
                 </div>
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
                     <li>
-                        <a class="dropdown-item py-2 text-danger fw-bold" href="logout.php">
+                        <a class="dropdown-item py-2 text-danger fw-bold" href="../admin/logout.php">
                             <i class="bi bi-box-arrow-right me-2"></i> Logout
                         </a>
                     </li>

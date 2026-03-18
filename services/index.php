@@ -194,18 +194,34 @@ ob_start();
     </div>
     
     <div class="col-md-6 col-xl-4">
-        <div class="card border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-            <div class="card-body p-4 d-flex flex-column justify-content-center align-items-center text-center text-white">
-                <div class="bg-white bg-opacity-20 rounded-circle p-3 mb-3">
-                    <i class="bi bi-plus-lg fs-2"></i>
-                </div>
-                <h5 class="fw-bold mb-2">New Maintenance?</h5>
-                <p class="small opacity-75 mb-3">Quickly log a new service entry for any vehicle or equipment.</p>
-                <a href="add_service.php" class="btn btn-white btn-lg rounded-pill px-4 fw-800 text-success shadow-sm" style="background: #fff; font-size: 14px;">
-                    ADD RECORD
-                </a>
-            </div>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<div class="card border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); transition: transform 0.2s;">
+    <div class="card-body p-4 d-flex flex-column justify-content-center align-items-center text-center text-white">
+        
+        <div class="d-flex align-items-center justify-content-center bg-white bg-opacity-25 rounded-4 mb-3" style="width: 65px; height: 65px;">
+            <i class="bi bi-pc-display text-white" style="font-size: 32px;"></i>
         </div>
+
+        <h5 class="fw-bold mb-2">New IT Entry?</h5>
+        
+        <p class="small opacity-75 mb-4">
+            Log maintenance for Computers, Printers, UPS units, or other IT peripherals.
+        </p>
+
+        <a href="add_service.php" class="btn btn-white btn-lg rounded-pill px-4 fw-800 text-success shadow-sm w-100" 
+           style="background: #fff; font-size: 13px; border: none;">
+            <i class="bi bi-plus-circle-fill me-2"></i> ADD SERVICE RECORD
+        </a>
+    </div>
+</div>
+
+<style>
+    /* Optional Hover Effect */
+    .card:hover {
+        transform: translateY(-5px);
+    }
+</style>
     </div>
 </div>
 <?php endif; ?>

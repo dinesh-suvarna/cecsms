@@ -2,11 +2,12 @@
 session_start();
 include "../config/db.php";
 
-if(!isset($_SESSION['admin_id'])){
+if(!isset($_SESSION['user_id'])){
     http_response_code(403);
     echo "Unauthorized";
     exit;
 }
+
 
 if(isset($_POST['id']) && isset($_POST['status'])){
     $id = (int)$_POST['id'];

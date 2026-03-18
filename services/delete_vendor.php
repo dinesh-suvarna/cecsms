@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-if (!isset($_SESSION["admin_id"])) {
+if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
     exit();
 }
@@ -21,7 +21,7 @@ if (isset($_GET['id'])) {
     if ($check->num_rows > 0) {
         // Vendor is used — cannot delete
         $check->close();
-        header("Location: view_vendors.php?error=used");
+        header("Location: vendor_manager.php?error=used");
         exit();
     }
 
@@ -34,5 +34,5 @@ if (isset($_GET['id'])) {
     $stmt->close();
 }
 
-header("Location: view_vendors.php?success=deleted");
+header("Location: vendor_manager.php?success=deleted");
 exit();

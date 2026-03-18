@@ -1,5 +1,5 @@
 <?php 
-$role = $_SESSION["role"] ?? ''; 
+$role = $_SESSION["role"] ?? 'User'; 
 if (!isset($page_title)) $page_title = "Admin Panel";
 
 /* Detect current page */
@@ -7,418 +7,321 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
 /* Prevent caching */
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
 ?>
 
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title><?= htmlspecialchars($page_title) ?> | Admin Portal</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><?= htmlspecialchars($page_title) ?> | Admin Portal</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-<style>
+    <style>
+        :root {
+            --sb-width: 270px;
+            --primary-accent: #10b981; /* SaaS Emerald */
+            --bg-body: #f8fafc;
+            --sidebar-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        }
 
-:root{
---sidebar-width:270px;
---primary-indigo:#6366f1;
-}
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
 
-/* THEMES */
+        /* --- SIDEBAR --- */
+        #sidebar {
+            width: var(--sb-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            transition: transform 0.3s ease-in-out;
+            z-index: 1050;
+            display: flex;
+            flex-direction: column;
+        }
 
-[data-bs-theme="light"]{
---bg-body:#f8fafc;
---sidebar-bg:#ffffff;
---sidebar-text:#64748b;
---topbar-bg:#ffffff;
---border-color:#e2e8f0;
-}
+        .sidebar-brand {
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: var(--primary-accent);
+            text-decoration: none;
+        }
 
-[data-bs-theme="dark"]{
---bg-body:#0f172a;
---sidebar-bg:#1e293b;
---sidebar-text:#94a3b8;
---topbar-bg:#1e293b;
---border-color:#334155;
-}
+        .nav-group-label {
+            padding: 1.5rem 1.5rem 0.5rem;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
 
-body{
-background:var(--bg-body);
-font-family:'Inter',sans-serif;
-transition:.3s;
-}
+        #sidebar .nav-link {
+            margin: 0.2rem 1rem;
+            padding: 0.7rem 1rem;
+            color: var(--text-muted);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
 
-/* SIDEBAR */
+        #sidebar .nav-link:hover {
+            background: #f1f5f9;
+            color: var(--primary-accent);
+            transform: translateX(4px);
+        }
 
-#sidebar{
-width:var(--sidebar-width);
-min-height:100vh;
-background:var(--sidebar-bg);
-border-right:1px solid var(--border-color);
-position:fixed;
-transition:.3s;
-z-index:1040;
-display:flex;
-flex-direction:column;
-}
+        #sidebar .nav-link.active {
+            background: var(--primary-accent);
+            color: #ffffff !important;
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.25);
+        }
 
-.sidebar-logo{
-padding:1.5rem;
-font-weight:700;
-font-size:1.25rem;
-color:var(--primary-indigo);
-display:flex;
-align-items:center;
-gap:10px;
-}
+        /* Submenu Styling */
+        .collapse .nav-link {
+            margin-left: 2.5rem !important;
+            font-size: 0.85rem !important;
+            padding: 0.5rem 1rem !important;
+        }
 
-.section-label{
-padding:1.2rem 1.5rem .5rem;
-font-size:.65rem;
-text-transform:uppercase;
-letter-spacing:.05rem;
-font-weight:700;
-color:var(--sidebar-text);
-opacity:.6;
-}
+        /* --- MAIN CONTENT --- */
+        .main-wrapper {
+            margin-left: var(--sb-width);
+            min-height: 100vh;
+            padding: 1.5rem;
+            transition: margin 0.3s ease-in-out;
+        }
 
-#sidebar .nav-link{
-color:var(--sidebar-text);
-padding:.75rem 1.5rem;
-margin:.2rem 1rem;
-border-radius:10px;
-display:flex;
-align-items:center;
-gap:12px;
-font-size:.9rem;
-font-weight:500;
-transition:.2s;
-}
+        .top-navbar {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 0.8rem 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+        }
 
-#sidebar .nav-link:hover{
-background:rgba(99,102,241,.1);
-color:var(--primary-indigo);
-}
+        .nav-home-icon {
+            width: 38px;
+            height: 38px;
+            background-color: #f8fafc;
+            color: #64748b;
+            border-radius: 10px;
+            font-size: 1.25rem;
+            transition: all 0.2s ease-in-out;
+            border: 1px solid var(--border-color);
+        }
 
-#sidebar .nav-link.active{
-background:var(--primary-indigo);
-color:#fff !important;
-box-shadow:0 4px 12px rgba(99,102,241,.3);
-}
+        .nav-home-icon:hover {
+            background-color: var(--primary-accent);
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+            border-color: var(--primary-accent);
+        }
 
-/* SUBMENU */
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: #fff;
+            cursor: pointer;
+        }
 
-#sidebar .collapse .nav-link{
-font-size:.85rem;
-padding:6px 1.5rem;
-opacity:.85;
-}
+        .bg-emerald-soft { background-color: rgba(16, 185, 129, 0.1); }
 
-#sidebar .collapse .nav-link:hover{
-opacity:1;
-}
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
 
-/* MAIN */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-.main-content{
-margin-left:var(--sidebar-width);
-padding:1.5rem;
-transition:.3s;
-}
-
-.topbar{
-background:var(--topbar-bg);
-border-radius:16px;
-padding:.75rem 1.5rem;
-margin-bottom:2rem;
-border:1px solid var(--border-color);
-box-shadow:0 4px 6px rgba(0,0,0,.05);
-}
-
-/* MOBILE */
-
-@media(max-width:992px){
-#sidebar{margin-left:-270px;}
-.main-content{margin-left:0;}
-#sidebar.active{margin-left:0;}
-}
-
-</style>
+        @media (max-width: 992px) {
+            #sidebar { transform: translateX(-100%); }
+            .main-wrapper { margin-left: 0; }
+            #sidebar.show { transform: translateX(0); }
+        }
+    </style>
 </head>
-
 <body>
 
 <nav id="sidebar">
+    <a href="/cecsms/index.php" class="sidebar-brand">
+        <div class="bg-success text-white rounded-3 px-2 py-1 shadow-sm">
+            <i class="bi bi-shield-lock"></i>
+        </div>
+        <span>Admin<span class="text-dark">Center</span></span>
+    </a>
 
-<div class="sidebar-logo">
-<div class="bg-primary text-white rounded-3 px-2 py-1">
-<i class="bi bi-shield-lock"></i>
-</div>
-<span>Admin<span class="text-dark">Center</span></span>
-</div>
+    <div class="overflow-y-auto flex-grow-1" style="scrollbar-width: thin;">
+        <div class="nav-group-label">General</div>
+        <div class="nav flex-column">
+            <a href="/cecsms/index.php" class="nav-link <?= ($current_page=='admin_dashboard.php')?'active':'' ?>">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+        </div>
 
-<div class="section-label">General</div>
+        <?php if(in_array($role,['SuperAdmin','Admin'])): ?>
+        <div class="nav-group-label">System Control</div>
+        <div class="nav flex-column">
+            <a href="/cecsms/users/manage_users.php" class="nav-link <?= ($current_page=='manage_users.php')?'active':'' ?>">
+                <i class="bi bi-people"></i> User Management
+            </a>
+            <a href="/cecsms/services/index.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'],'services'))?'active':'' ?>">
+                <i class="bi bi-tools"></i> Services
+            </a>
+            <a href="/cecsms/master/master_dashboard.php" class="nav-link <?= ($current_page=='master_dashboard.php')?'active':'' ?>">
+                <i class="bi bi-database-gear"></i> Master Data
+            </a>
+        </div>
+        <?php endif; ?>
 
-<ul class="nav flex-column">
+        <div class="nav-group-label">Inventory Modules</div>
+        <div class="nav flex-column">
+            <a class="nav-link d-flex justify-content-between align-items-center <?= in_array($current_page,['dashboard.php','dispatch.php','dispatch_report.php'])?'active':'' ?>" 
+               data-bs-toggle="collapse" href="#stockMenu">
+                <span><i class="bi bi-pc-display"></i> Computer Stock</span>
+                <i class="bi bi-chevron-down small"></i>
+            </a>
+            <div class="collapse <?= in_array($current_page,['dashboard.php','dispatch.php','dispatch_report.php'])?'show':'' ?>" id="stockMenu">
+                <div class="nav flex-column">
+                    <a href="/cecsms/stock/dashboard.php" class="nav-link <?= ($current_page=='dashboard.php')?'active':'' ?>">Stock Dashboard</a>
+                    <a href="/cecsms/stock/dispatch.php" class="nav-link <?= ($current_page=='dispatch.php')?'active':'' ?>">Dispatch Assets</a>
+                    <a href="/cecsms/stock/dispatch_report.php" class="nav-link <?= ($current_page=='dispatch_report.php')?'active':'' ?>">Dispatch Report</a>
+                </div>
+            </div>
 
-<li class="nav-item">
-<a href="/cecsms/index.php"
-class="nav-link <?= ($current_page=='admin_dashboard.php')?'active':'' ?>">
-<i class="bi bi-speedometer2"></i>
-Dashboard
-</a>
-</li>
+            <?php if(in_array($role,['SuperAdmin','Admin'])): ?>
+            <a href="/cecsms/ewaste/index.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'],'ewaste'))?'active':'' ?>">
+                <i class="bi bi-recycle"></i> E-Waste
+            </a>
+            <?php endif; ?>
+        </div>
+    </div>
 
-</ul>
-
-<?php if(in_array($role,['SuperAdmin','Admin'])): ?>
-
-<div class="section-label">System Control</div>
-
-<ul class="nav flex-column">
-
-<li class="nav-item">
-<a href="/cecsms/users/manage_users.php"
-class="nav-link <?= ($current_page=='manage_users.php')?'active':'' ?>">
-<i class="bi bi-people"></i>
-User Management
-</a>
-</li>
-
-<li class="nav-item">
-<a href="/cecsms/services/index.php"
-class="nav-link <?= (strpos($_SERVER['PHP_SELF'],'services'))?'active':'' ?>">
-<i class="bi bi-tools"></i>
-Services
-</a>
-</li>
-
-<li class="nav-item">
-<a href="/cecsms/master/master_dashboard.php"
-class="nav-link <?= ($current_page=='master_dashboard.php')?'active':'' ?>">
-<i class="bi bi-database-gear"></i>
-Master Data
-</a>
-</li>
-
-</ul>
-
-<?php endif; ?>
-
-<div class="section-label">Inventory Modules</div>
-
-<ul class="nav flex-column">
-
-<li class="nav-item">
-
-<a class="nav-link d-flex justify-content-between align-items-center
-<?= in_array($current_page,['dashboard.php','dispatch.php','dispatch_report.php'])?'active':'' ?>"
-data-bs-toggle="collapse"
-href="#stockMenu">
-
-<span>
-<i class="bi bi-pc-display"></i>
-Computer Stock
-</span>
-
-<i class="bi bi-chevron-down small"></i>
-
-</a>
-
-<div class="collapse
-<?= in_array($current_page,['dashboard.php','dispatch.php','dispatch_report.php'])?'show':'' ?>"
-id="stockMenu">
-
-<ul class="nav flex-column ms-3">
-
-<li class="nav-item">
-<a href="/cecsms/stock/dashboard.php"
-class="nav-link <?= ($current_page=='dashboard.php')?'active':'' ?>">
-Stock Dashboard
-</a>
-</li>
-
-<li class="nav-item">
-<a href="/cecsms/stock/dispatch.php"
-class="nav-link <?= ($current_page=='dispatch.php')?'active':'' ?>">
-Dispatch Assets
-</a>
-</li>
-
-<li class="nav-item">
-<a href="/cecsms/stock/dispatch_report.php"
-class="nav-link <?= ($current_page=='dispatch_report.php')?'active':'' ?>">
-Dispatch Report
-</a>
-</li>
-
-</ul>
-
-</div>
-
-</li>
-
-<?php if(in_array($role,['SuperAdmin','Admin'])): ?>
-
-<li class="nav-item">
-<a href="/cecsms/ewaste/index.php"
-class="nav-link <?= (strpos($_SERVER['PHP_SELF'],'ewaste'))?'active':'' ?>">
-<i class="bi bi-recycle"></i>
-E-Waste
-</a>
-</li>
-
-<?php endif; ?>
-
-</ul>
-
-<div class="mt-auto p-3">
-
-<a href="/cecsms/admin/logout.php"
-class="btn btn-outline-danger w-100 rounded-3 btn-sm">
-
-<i class="bi bi-box-arrow-right me-2"></i>
-Logout
-
-</a>
-
-</div>
-
+    <div class="p-3 border-top mt-auto">
+        <a href="/cecsms/admin/logout.php" class="btn btn-outline-danger w-100 rounded-pill btn-sm fw-bold">
+            <i class="bi bi-power me-2"></i> Logout
+        </a>
+    </div>
 </nav>
 
-<div class="main-content">
+<main class="main-wrapper">
+    <header class="top-navbar">
+        <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-light d-lg-none border-0 shadow-sm rounded-3" id="menuToggle">
+                <i class="bi bi-list fs-5"></i>
+            </button>
+            
+            <a href="/cecsms/index.php" class="nav-home-icon d-flex align-items-center justify-content-center text-decoration-none" title="Go to Dashboard">
+                <i class="bi bi-house-door"></i>
+            </a>
 
-<header class="topbar d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0 fw-bold text-dark lh-1 mb-1"><?= htmlspecialchars($page_title) ?></h5>
+                <p class="text-muted mb-0 d-none d-md-block" style="font-size: 11px; letter-spacing: 0.02rem;">
+                    System Administration & Control
+                </p>
+            </div>
+        </div>
 
-<div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-none d-sm-flex align-items-center gap-2 text-muted small border-end pe-3">
+                <i class="bi bi-calendar-event"></i>
+                <?= date('D, M j, Y') ?>
+            </div>
 
-<button class="btn btn-light d-lg-none" id="sidebarToggle">
-<i class="bi bi-list"></i>
-</button>
+            <div class="dropdown">
+                <div class="user-profile shadow-sm" data-bs-toggle="dropdown">
+                    <div class="text-end d-none d-md-block">
+                        <p class="small fw-bold mb-0"><?= htmlspecialchars($_SESSION['username'] ?? 'User'); ?></p>
+                        <span class="badge bg-emerald-soft text-success" style="font-size: 9px;">
+                            <?= htmlspecialchars($role) ?>
+                        </span>
+                    </div>
+                    <div class="avatar bg-light border rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                        <i class="bi bi-person text-success"></i>
+                    </div>
+                </div>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                    <li>
+                        <a class="dropdown-item py-2 text-danger fw-bold" href="/cecsms/admin/logout.php">
+                            <i class="bi bi-box-arrow-right me-2"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </header>
 
-<div>
-<h6 class="mb-0 fw-bold"><?= htmlspecialchars($page_title) ?></h6>
-<small class="text-muted d-none d-sm-block" style="font-size:11px;">
-System Administration
-</small>
-</div>
-
-</div>
-
-<div class="d-flex align-items-center gap-3">
-
-<button class="btn btn-link text-muted p-0" id="themeToggler">
-<i class="bi bi-moon-stars-fill fs-5" id="themeIcon"></i>
-</button>
-
-<div class="vr mx-1 opacity-25"></div>
-
-<div class="dropdown">
-
-<div class="d-flex align-items-center gap-2"
-data-bs-toggle="dropdown"
-style="cursor:pointer">
-
-<div class="text-end d-none d-md-block">
-
-<div class="fw-bold small mb-0">
-<?= htmlspecialchars($_SESSION['username'] ?? 'User'); ?>
-</div>
-
-<span class="badge bg-primary text-white"
-style="font-size:10px;">
-<?= $role ?>
-</span>
-
-</div>
-
-<div class="bg-light rounded-circle p-2 border shadow-sm">
-<i class="bi bi-person"></i>
-</div>
-
-</div>
-
-<ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-3">
-
-<li>
-<a class="dropdown-item py-2"
-href="/cecsms/admin/logout.php">
-<i class="bi bi-box-arrow-right me-2"></i>
-Logout
-</a>
-</li>
-
-</ul>
-
-</div>
-
-</div>
-
-</header>
-
-<div class="container-fluid p-0">
-<?php if(isset($content)) echo $content; ?>
-</div>
-
-</div>
+    <div class="animate-fade-in">
+        <div class="container-fluid p-0">
+            <?php if(isset($content)) echo $content; ?>
+        </div>
+    </div>
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
+    // Sidebar Mobile Toggle
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    if(menuToggle) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('show');
+        });
+    }
 
-/* Theme toggle */
+    // Auto-scroll to active link
+    document.addEventListener("DOMContentLoaded", function() {
+        const sidebarContainer = document.querySelector('.overflow-y-auto');
+        const activeLink = document.querySelector('#sidebar .nav-link.active');
+        if (activeLink && sidebarContainer) {
+            setTimeout(() => {
+                const scrollPos = activeLink.offsetTop - (sidebarContainer.clientHeight / 2) + (activeLink.clientHeight / 2);
+                sidebarContainer.scrollTo({ top: scrollPos, behavior: 'smooth' });
+            }, 100);
+        }
+    });
 
-const themeToggler=document.getElementById('themeToggler');
-const themeIcon=document.getElementById('themeIcon');
-const html=document.documentElement;
-
-const savedTheme=localStorage.getItem('admin_theme')||'light';
-
-html.setAttribute('data-bs-theme',savedTheme);
-updateTheme(savedTheme);
-
-themeToggler.addEventListener('click',()=>{
-
-const current=html.getAttribute('data-bs-theme');
-const newTheme=current==='light'?'dark':'light';
-
-html.setAttribute('data-bs-theme',newTheme);
-localStorage.setItem('admin_theme',newTheme);
-
-updateTheme(newTheme);
-
-});
-
-function updateTheme(theme){
-
-themeIcon.className=theme==='light'
-?'bi bi-moon-stars-fill fs-5'
-:'bi bi-sun-fill fs-5 text-warning';
-
-}
-
-/* Sidebar toggle */
-
-document.getElementById('sidebarToggle')
-?.addEventListener('click',()=>{
-
-document.getElementById('sidebar')
-.classList.toggle('active');
-
-});
-
-/* Reload when using browser back */
-
-window.addEventListener("pageshow",function(event){
-
-if(event.persisted) location.reload();
-
-});
-
+    // Back button cache fix
+    window.onpageshow = function(event) {
+        if (event.persisted) { window.location.reload(); }
+    };
 </script>
-
 </body>
 </html>

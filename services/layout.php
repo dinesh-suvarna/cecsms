@@ -1,264 +1,303 @@
 <?php
-// Mocking session for testing; ensure session_start() is at the top of your actual file
+// Ensure session_start() is at the top of your actual file
 $role = $_SESSION["role"] ?? 'User'; 
 if (!isset($page_title)) $page_title = "Service Dashboard";
 
 $current_page = basename($_SERVER['PHP_SELF']);
+
+/* Prevent caching */
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
 ?>
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title><?= htmlspecialchars($page_title) ?> | Service Management</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><?= htmlspecialchars($page_title) ?> | Service Management</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         :root {
-            --sidebar-width: 270px;
-            --primary-indigo: #6366f1;
-        }
-
-        /* SaaS Themes */
-        [data-bs-theme="light"] {
+            --sb-width: 270px;
+            --primary-accent: #10b981; /* SaaS Emerald */
             --bg-body: #f8fafc;
             --sidebar-bg: #ffffff;
-            --sidebar-text: #64748b;
-            --topbar-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
             --border-color: #e2e8f0;
-        }
-
-        [data-bs-theme="dark"] {
-            --bg-body: #0f172a;
-            --sidebar-bg: #1e293b;
-            --sidebar-text: #94a3b8;
-            --topbar-bg: #1e293b;
-            --border-color: #334155;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
         }
 
         body {
-            background: var(--bg-body);
             font-family: 'Inter', sans-serif;
-            transition: 0.3s;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            overflow-x: hidden;
         }
 
-        /* SIDEBAR */
+        /* --- SIDEBAR --- */
         #sidebar {
-    width: 270px; /* Fixed width */
-    min-height: 100vh;
-    background: var(--sidebar-bg);
-    border-right: 1px solid var(--border-color);
-    position: fixed; /* This stays fixed on the left */
-    top: 0;
-    left: 0;
-    z-index: 1040;
-}
+            width: var(--sb-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            transition: transform 0.3s ease-in-out;
+            z-index: 1050;
+            display: flex;
+            flex-direction: column;
+        }
 
-        .sidebar-logo {
+        .sidebar-brand {
             padding: 1.5rem;
-            font-weight: 700;
-            font-size: 1.25rem;
-            color: var(--primary-indigo);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: var(--primary-accent);
+            text-decoration: none;
         }
 
-        .section-label {
-            padding: 1.2rem 1.5rem .5rem;
-            font-size: .65rem;
+        .nav-group-label {
+            padding: 1.5rem 1.5rem 0.5rem;
+            font-size: 0.65rem;
             text-transform: uppercase;
-            letter-spacing: .05rem;
+            letter-spacing: 0.08rem;
             font-weight: 700;
-            color: var(--sidebar-text);
-            opacity: .6;
+            color: var(--text-muted);
         }
 
-        #sidebar .nav-link {
-            color: var(--sidebar-text);
-            padding: .75rem 1.5rem;
-            margin: .2rem 1rem;
+        .nav-link {
+            margin: 0.2rem 1rem;
+            padding: 0.7rem 1rem;
+            color: var(--text-muted);
             border-radius: 10px;
             display: flex;
             align-items: center;
             gap: 12px;
-            font-size: .9rem;
+            font-size: 0.9rem;
             font-weight: 500;
-            transition: .2s;
+            transition: all 0.2s;
+            text-decoration: none;
         }
 
-        #sidebar .nav-link:hover {
-            background: rgba(99, 102, 241, .1);
-            color: var(--primary-indigo);
+        .nav-link:hover {
+            background: #f1f5f9;
+            color: var(--primary-accent);
+            transform: translateX(4px);
         }
 
-        #sidebar .nav-link.active {
-            background: var(--primary-indigo);
-            color: #fff !important;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, .3);
+        .nav-link.active {
+            background: var(--primary-accent);
+            color: #ffffff !important;
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.25);
         }
 
-        /* MAIN CONTENT AREA */
-        .main-content {
-    /* This is the magic line that fixes the overlap */
-    margin-left: 270px; 
-    padding: 1.5rem;
-    min-height: 100vh;
-    transition: 0.3s;
-}
+        /* --- MAIN CONTENT --- */
+        .main-wrapper {
+            margin-left: var(--sb-width);
+            min-height: 100vh;
+            padding: 1.5rem;
+            transition: margin 0.3s ease-in-out;
+        }
 
-        .topbar {
-            background: var(--topbar-bg);
-            border-radius: 16px;
-            padding: .75rem 1.5rem;
-            margin-bottom: 2rem;
+        .top-navbar {
+            background: rgba(255, 255, 255, 0.9);
             border: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px rgba(0,0,0,.05);
+            border-radius: 16px;
+            padding: 0.8rem 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
         }
 
-        /* On mobile, remove the margin so it fills the screen */
-@media (max-width: 992px) {
-    .main-content {
-        margin-left: 0;
-    }
-    #sidebar {
-        margin-left: -270px;
-    }
-    #sidebar.active {
-        margin-left: 0;
-    }
-}
+        .nav-home-icon {
+            width: 38px;
+            height: 38px;
+            background-color: #f8fafc;
+            color: #64748b;
+            border-radius: 10px;
+            font-size: 1.25rem;
+            transition: all 0.2s ease-in-out;
+            border: 1px solid var(--border-color);
+        }
+
+        .nav-home-icon:hover {
+            background-color: var(--primary-accent);
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+            border-color: var(--primary-accent);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: #fff;
+            cursor: pointer;
+        }
+
+        .bg-emerald-soft { background-color: rgba(16, 185, 129, 0.1); }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 992px) {
+            #sidebar { transform: translateX(-100%); }
+            .main-wrapper { margin-left: 0; }
+            #sidebar.show { transform: translateX(0); }
+        }
     </style>
 </head>
 <body>
 
 <nav id="sidebar">
-    <div class="sidebar-logo">
-        <div class="bg-primary text-white rounded-3 px-2 py-1">
+    <a href="index.php" class="sidebar-brand">
+        <div class="bg-success text-white rounded-3 px-2 py-1 shadow-sm">
             <i class="bi bi-gear-wide-connected"></i>
         </div>
         <span>Service<span class="text-dark">Manager</span></span>
-    </div>
+    </a>
 
-    <div class="section-label">Main Menu</div>
-    <ul class="nav flex-column">
-        <li class="nav-item">
+    <div class="overflow-y-auto flex-grow-1" style="scrollbar-width: thin;">
+        <div class="nav-group-label">Main Menu</div>
+        <div class="nav flex-column">
             <a href="index.php" class="nav-link <?= ($current_page=='index.php')?'active':'' ?>">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
-        </li>
-    </ul>
+        </div>
 
-    <div class="section-label">Service Operations</div>
-    <ul class="nav flex-column">
-        <li class="nav-item">
+        <div class="nav-group-label">Service Operations</div>
+        <div class="nav flex-column">
+            <a href="vendor_manager.php" class="nav-link <?= ($current_page=='vendor_manager.php')?'active':'' ?>">
+                <i class="bi bi-person-vcard-fill"></i> Vendor Manager
+            </a>
             <a href="add_service.php" class="nav-link <?= ($current_page=='add_service.php')?'active':'' ?>">
-                <i class="bi bi-plus-circle"></i> Add Service
+                <i class="bi bi-wrench-adjustable"></i> Add Service
             </a>
-        </li>
-        <li class="nav-item">
-            <a href="vendor.php" class="nav-link <?= ($current_page=='vendor.php')?'active':'' ?>">
-                <i class="bi bi-building-add"></i> Add Vendor
-            </a>
-        </li>
-        <li class="nav-item">
             <a href="view_services.php" class="nav-link <?= ($current_page=='view_services.php')?'active':'' ?>">
-                <i class="bi bi-list-ul"></i> View Services
+                <i class="bi bi-list-columns-reverse "></i> View Services
             </a>
-        </li>
-    </ul>
+        </div>
 
-    <div class="section-label">Reports</div>
-    <ul class="nav flex-column">
-        <li class="nav-item">
+        <div class="nav-group-label">Reports</div>
+        <div class="nav flex-column">
             <a href="export_excel.php" class="nav-link <?= ($current_page=='export_excel.php')?'active':'' ?>">
-                <i class="bi bi-file-earmark-excel"></i> Export Excel
+                <i class="bi bi-file-earmark-excel-fill text-success"></i> Export Excel
             </a>
-        </li>
-    </ul>
+        </div>
+    </div>
 
-    <div class="mt-auto p-3">
-        <a href="logout.php" class="btn btn-outline-danger w-100 rounded-3 btn-sm">
-            <i class="bi bi-box-arrow-right me-2"></i> Logout
+    <div class="p-3 border-top mt-auto">
+        <a href="logout.php" class="btn btn-outline-danger w-100 rounded-pill btn-sm fw-bold">
+            <i class="bi bi-power me-2"></i> Logout
         </a>
     </div>
 </nav>
 
-<div class="main-content">
-    <header class="topbar d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-light d-lg-none" id="sidebarToggle">
-                <i class="bi bi-list"></i>
+<main class="main-wrapper">
+    <header class="top-navbar">
+        <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-light d-lg-none border-0 shadow-sm rounded-3" id="menuToggle">
+                <i class="bi bi-list fs-5"></i>
             </button>
-            <div class="d-flex align-items-center gap-2 fw-medium">
-                    <a href="/cecsms/index.php" class="text-dark fs-5 text-decoration-none" title="Go to Dashboard">
+            
+            <a href="/cecsms/index.php" class="nav-home-icon d-flex align-items-center justify-content-center text-decoration-none" title="Go to Dashboard">
                 <i class="bi bi-house-door"></i>
             </a>
-                   
-        </div>
+
             <div>
-                <h6 class="mb-0 fw-bold"><?= htmlspecialchars($page_title) ?></h6>
-                <small class="text-muted" style="font-size:11px;">
-                    <i class="bi bi-calendar3 me-1"></i> <?= date("d M Y"); ?>
-                </small>
+                <h5 class="mb-0 fw-bold text-dark lh-1 mb-1"><?= htmlspecialchars($page_title) ?></h5>
+                <p class="text-muted mb-0 d-none d-md-block" style="font-size: 11px; letter-spacing: 0.02rem;">
+                    Maintenance and vendor management portal.
+                </p>
             </div>
         </div>
 
         <div class="d-flex align-items-center gap-3">
-            <button class="btn btn-link text-muted p-0" id="themeToggler">
-                <i class="bi bi-moon-stars-fill fs-5" id="themeIcon"></i>
-            </button>
-            <div class="vr mx-1 opacity-25"></div>
+            <div class="d-none d-sm-flex align-items-center gap-2 text-muted small border-end pe-3">
+                <i class="bi bi-calendar-event"></i>
+                <?= date('D, M j, Y') ?>
+            </div>
+
             <div class="dropdown">
-                <div class="d-flex align-items-center gap-2" data-bs-toggle="dropdown" style="cursor:pointer">
+                <div class="user-profile shadow-sm" data-bs-toggle="dropdown">
                     <div class="text-end d-none d-md-block">
-                        <div class="fw-bold small mb-0"><?= htmlspecialchars($_SESSION['username'] ?? 'Admin'); ?></div>
-                        <span class="badge bg-primary text-white" style="font-size:10px;"><?= $role ?></span>
+                        <p class="small fw-bold mb-0"><?= htmlspecialchars($_SESSION['username'] ?? 'Admin'); ?></p>
+                        <span class="badge bg-emerald-soft text-success" style="font-size: 9px;">
+                            <?= htmlspecialchars($role) ?>
+                        </span>
                     </div>
-                    <div class="bg-light rounded-circle p-2 border shadow-sm">
-                        <i class="bi bi-person"></i>
+                    <div class="avatar bg-light border rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                        <i class="bi bi-person text-success"></i>
                     </div>
                 </div>
-                <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-3">
-                    <li><a class="dropdown-item py-2" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                    <li>
+                        <a class="dropdown-item py-2 text-danger fw-bold" href="logout.php">
+                            <i class="bi bi-box-arrow-right me-2"></i> Logout
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>
     </header>
 
-    <main class="container-fluid p-0">
-        <?php if(isset($content)) echo $content; ?>
-    </main>
-
+    <div class="animate-fade-in">
+        <div class="container-fluid p-0">
+            <?php if(isset($content)) echo $content; ?>
+        </div>
+    </div>
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Theme logic
-    const themeToggler = document.getElementById('themeToggler');
-    const themeIcon = document.getElementById('themeIcon');
-    const html = document.documentElement;
-    const savedTheme = localStorage.getItem('service_theme') || 'light';
-
-    html.setAttribute('data-bs-theme', savedTheme);
-    updateTheme(savedTheme);
-
-    themeToggler.addEventListener('click', () => {
-        const current = html.getAttribute('data-bs-theme');
-        const newTheme = current === 'light' ? 'dark' : 'light';
-        html.setAttribute('data-bs-theme', newTheme);
-        localStorage.setItem('service_theme', newTheme);
-        updateTheme(newTheme);
-    });
-
-    function updateTheme(theme) {
-        themeIcon.className = theme === 'light' ? 'bi bi-moon-stars-fill fs-5' : 'bi bi-sun-fill fs-5 text-warning';
+    // Sidebar Mobile Toggle
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    if(menuToggle) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('show');
+        });
     }
 
-    // Mobile Sidebar Toggle
-    document.getElementById('sidebarToggle')?.addEventListener('click', () => {
-        document.getElementById('sidebar').classList.toggle('active');
+    // Auto-scroll to active link
+    document.addEventListener("DOMContentLoaded", function() {
+        const sidebarContainer = document.querySelector('.overflow-y-auto');
+        const activeLink = document.querySelector('#sidebar .nav-link.active');
+        if (activeLink && sidebarContainer) {
+            setTimeout(() => {
+                const scrollPos = activeLink.offsetTop - (sidebarContainer.clientHeight / 2) + (activeLink.clientHeight / 2);
+                sidebarContainer.scrollTo({ top: scrollPos, behavior: 'smooth' });
+            }, 100);
+        }
     });
+
+    // Browser Back Refresh fix
+    window.onpageshow = function(event) {
+        if (event.persisted) { window.location.reload(); }
+    };
 </script>
+</body>
+</html>

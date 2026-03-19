@@ -85,16 +85,16 @@ if(isset($_POST['submit'])){
                 $insertDetails->execute();
             }
 
+            // Find this section near line 83
             foreach($bulk_qty as $sid => $qty){
                 $sid = (int)$sid;
                 $qty = (int)$qty;
                 if($qty <= 0) continue;
 
-                // Subtract from stock_details so it doesn't stay "Available"
-                $updateBulk->bind_param("iii", $qty, $sid, $qty);
-                $updateBulk->execute();
+                // REMOVE OR COMMENT OUT THIS LINE:
+                // $updateBulk->execute(); 
 
-                // Record the dispatch
+                // ONLY record the dispatch
                 $insertDetails->bind_param("iii", $dispatch_id, $sid, $qty);
                 $insertDetails->execute();
             }
@@ -207,16 +207,23 @@ ob_start();
                                                     <div id="<?= $collapseId ?>" class="accordion-collapse collapse" data-bs-parent="#acc-<?= md5($itemName) ?>">
                                                         <div class="accordion-body p-2 bg-white">
                                                             <div class="d-flex flex-wrap gap-2">
-                                                                <?php foreach($units as $u): ?>
+                                                                <?php
+                                                                foreach($units as $u): 
+                                                                    // Calculate actual available quantity for the UI
+                                                                    $available = $u['quantity'] - $u['dispatched_qty']; 
+                                                                    if($available <= 0) continue;
+                                                                ?>
                                                                     <button type="button" 
                                                                         id="btn-stock-<?= $u['id'] ?>"
-                                                                        class="btn btn-sm btn-outline-primary btn-add-item px-3" 
+                                                                        class="btn btn-sm btn-outline-primary btn-add-item px-3 mb-1" 
                                                                         data-id="<?= $u['id'] ?>" 
-                                                                        data-name="<?= htmlspecialchars($itemName) ?> (<?= htmlspecialchars($modelName) ?>)"
+                                                                        data-name="<?= htmlspecialchars($itemName) ?>"
                                                                         data-serial="<?= $u['serial_number'] ?: 'BULK' ?>"
                                                                         data-type="<?= $u['serial_number'] ? 'serial' : 'bulk' ?>"
-                                                                        data-max="<?= ($u['quantity'] - $u['dispatched_qty']) ?>">
-                                                                        <i class="bi bi-plus-lg"></i> <?= $u['serial_number'] ?: 'Add Bulk' ?>
+                                                                        data-max="<?= $available ?>">
+                                                                        
+                                                                        <i class="bi <?= $u['serial_number'] ? 'bi-upc-scan' : 'bi-box-seam' ?> me-1"></i>
+                                                                        <?= $u['serial_number'] ?: "Add Bulk (Avail: $available)" ?>
                                                                     </button>
                                                                 <?php endforeach; ?>
                                                             </div>
@@ -298,6 +305,7 @@ document.querySelectorAll('.btn-add-item').forEach(btn => {
 
         if(empty) empty.remove();
 
+        
         const row = document.createElement('tr');
         row.id = "queue-row-" + d.id;
         row.innerHTML = `
@@ -305,8 +313,11 @@ document.querySelectorAll('.btn-add-item').forEach(btn => {
             <td><span class="badge bg-light text-dark border">${d.serial}</span></td>
             <td>
                 ${d.type === 'serial' 
-                    ? `<input type="hidden" name="stock_ids[]" value="${d.id}"> 1` 
-                    : `<input type="number" name="bulk_qty[${d.id}]" class="form-control form-control-sm" value="1" min="1" max="${d.max}">`
+                    ? `<input type="hidden" name="stock_ids[]" value="${d.id}"> <span class="badge bg-info">1 Unit</span>` 
+                    : `<div class="input-group input-group-sm" style="width: 120px;">
+                        <input type="number" name="bulk_qty[${d.id}]" class="form-control" value="1" min="1" max="${d.max}">
+                        <span class="input-group-text">/ ${d.max}</span>
+                    </div>`
                 }
             </td>
             <td class="text-end">

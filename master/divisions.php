@@ -40,7 +40,8 @@ if(isset($_POST['add_division'])){
             $row = $resultCheck->fetch_assoc();
 
             if($row['status'] === 'Active'){
-                $error = "Division already exists.";
+                $_SESSION['error'] = "Division already exists.";
+                
             } else {
                 $update = $conn->prepare("
                     UPDATE divisions 
@@ -49,7 +50,7 @@ if(isset($_POST['add_division'])){
                 ");
                 $update->bind_param("si", $division_type, $row['id']);
                 $update->execute();
-                $success = "Division restored successfully.";
+                $_SESSION['success'] = "Division restored successfully.";
             }
 
         } else {
@@ -60,16 +61,23 @@ if(isset($_POST['add_division'])){
             ");
             $stmt->bind_param("iss", $institution_id, $division_name, $division_type);
             $stmt->execute();
-            $success = "Division added successfully.";
+           $_SESSION['success'] = "Division added successfully.";
             $division_name = "";
         }
     }
+    // REDIRECT TO SELF TO CLEAR POST DATA
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit();
 }
+// Extract messages from session, then clear them
+$success = $_SESSION['success'] ?? "";
+$error = $_SESSION['error'] ?? "";
+unset($_SESSION['success'], $_SESSION['error']);
 
 /* ================= FETCH LIST ================= */
 $search = $_GET['search'] ?? '';
 $page   = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$limit  = 5;
+$limit  = 100;
 $start  = ($page - 1) * $limit;
 
 $params = [];
@@ -102,8 +110,9 @@ $stmt->execute();
 $totalRows = $stmt->get_result()->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 
-/* DATA */
-$sql = "SELECT d.*, i.institution_name
+/* UPDATED DATA SQL with COUNT */
+$sql = "SELECT d.*, i.institution_name,
+        (SELECT COUNT(*) FROM divisions WHERE institution_id = d.institution_id AND status = 'Active') as dept_count
         FROM divisions d
         JOIN institutions i ON d.institution_id=i.id
         $where
@@ -188,119 +197,119 @@ Save Division
 </div>
 
 <!-- RIGHT: LIST -->
+
+
 <div class="col-lg-8">
-<div class="card shadow-sm rounded-4 border-0 p-4">
+    <div class="card shadow-sm rounded-4 border-0 p-4 mb-3">
+        <div class="d-flex justify-content-between mb-3 align-items-center">
+            <h5 class="fw-bold m-0"><i class="bi bi-list-check text-primary me-2"></i>Department Directory</h5>
+            
+        </div>
 
-<div class="d-flex justify-content-between mb-3">
-<h5 class="fw-bold m-0">Divisions</h5>
+        <form method="GET" class="mb-0">
+            <div class="row g-2">
+                <?php if($role == 'SuperAdmin'): ?>
+                <div class="col-md-6">
+                    <select name="institution_id" class="form-select border-0 bg-light" onchange="this.form.submit()">
+                        <option value="">All Institutions</option>
+                        <?php
+                        $res = $conn->query("SELECT id, institution_name FROM institutions ORDER BY institution_name");
+                        while($irow = $res->fetch_assoc()){
+                            $selected = ($institution_filter == $irow['id']) ? 'selected' : '';
+                            echo "<option value='{$irow['id']}' $selected>{$irow['institution_name']}</option>";
+                        }
+                        ?>
+                    </select>
+                </div>
+                <?php endif; ?>
+
+                <div class="col-md-3 flex-grow-1">
+                    <input type="text" id="liveSearch" name="search" 
+                    value="<?= htmlspecialchars($search) ?>" 
+                    class="form-control border-0 bg-light" 
+                    placeholder="Start typing to search...">
+                </div>
+
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1">
+                        <i class="bi bi-filter"></i>
+                    </button>
+                    <a href="divisions.php" class="btn btn-outline-secondary" title="Reset All">
+                        <i class="bi bi-arrow-clockwise"></i> Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="accordion accordion-flush shadow-sm rounded-4 overflow-hidden" id="deptAccordion">
+    <?php 
+    $current_institution = "";
+    $first = true;
+
+    if($result->num_rows > 0):
+        while($row = $result->fetch_assoc()): 
+            if ($current_institution !== $row['institution_name']): 
+                if (!$first) echo '</tbody></table></div></div></div>'; 
+                $current_institution = $row['institution_name'];
+                $acc_id = "inst_" . $row['institution_id'];
+                
+                $show_class = (!empty($search)) ? 'show' : '';
+$button_class = (!empty($search)) ? '' : 'collapsed';
+    ?>
+        <div class="accordion-item border-bottom">
+        <h2 class="accordion-header">
+            <button class="accordion-button <?= $button_class ?> fw-bold py-3 bg-white" 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#<?= $acc_id ?>">
+                <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                    <span>
+                        <i class="bi bi-building me-2 text-primary"></i>
+                        <?= htmlspecialchars($current_institution) ?>
+                    </span>
+                    <span class="badge rounded-pill bg-light text-muted border fw-normal" style="font-size: 0.7rem;">
+                        <?= $row['dept_count'] ?> Depts
+                    </span>
+                </div>
+            </button>
+        </h2>
+        <div id="<?= $acc_id ?>" 
+             class="accordion-collapse collapse <?= $show_class ?>" 
+             data-bs-parent="#deptAccordion">
+            <div class="accordion-body p-0">
+                    <table class="table table-hover align-middle mb-0 text-nowrap">
+                        <thead class="bg-light">
+                            <tr style="font-size: 11px; text-transform: uppercase;">
+                                <th class="ps-4">Department</th>
+                                <th>Type</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+        <?php 
+                $first = false;
+            endif; 
+        ?>
+            <tr>
+                <td class="ps-4 fw-medium"><?= htmlspecialchars($row['division_name']) ?></td>
+                <td><span class="badge bg-light text-primary border"><?= ucfirst($row['division_type']) ?></span></td>
+                <td class="text-end pe-4">
+                    <div class="btn-group shadow-sm rounded-pill overflow-hidden border">
+                        <?php if($row['status'] == 'Active'): ?>
+                            <a href="edit_division.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-white text-warning border-0"><i class="bi bi-pencil-square"></i></a>
+                            <button onclick="deactivateDivision(<?= $row['id'] ?>)" class="btn btn-sm btn-white text-danger border-0"><i class="bi bi-trash"></i></button>
+                        <?php else: ?>
+                            <button onclick="restoreDivision(<?= $row['id'] ?>)" class="btn btn-sm btn-white text-success border-0"><i class="bi bi-arrow-counterclockwise"></i></button>
+                        <?php endif; ?>
+                    </div>
+                </td>
+            </tr>
+        <?php endwhile; ?>
+            </tbody></table></div></div></div> 
+    <?php else: ?>
+        <?php endif; ?>
 </div>
-
-<form method="GET" class="mb-3">
-<div class="row g-2">
-
-<?php if($role == 'SuperAdmin'): ?>
-<div class="col-md-6">
-<select name="institution_id" class="form-select" onchange="this.form.submit()">
-<option value="">All Institutions</option>
-<?php
-$res = $conn->query("SELECT id, institution_name FROM institutions ORDER BY institution_name");
-while($row = $res->fetch_assoc()){
-$selected = ($institution_filter == $row['id']) ? 'selected' : '';
-echo "<option value='{$row['id']}' $selected>{$row['institution_name']}</option>";
-}
-?>
-</select>
-</div>
-<?php endif; ?>
-
-<div class="col-md-4">
-<input type="text" name="search"
-value="<?= htmlspecialchars($search) ?>"
-class="form-control"
-placeholder="Search Division...">
-</div>
-
-<div class="col-md-2">
-<button class="btn btn-primary w-100">Filter</button>
-</div>
-
-</div>
-</form>
-
-</div>
-
-<?php if(isset($_SESSION['success'])): ?>
-<div class="alert alert-success">
-<?= $_SESSION['success']; unset($_SESSION['success']); ?>
-</div>
-<?php endif; ?>
-
-<?php if(isset($_SESSION['error'])): ?>
-<div class="alert alert-danger">
-<?= $_SESSION['error']; unset($_SESSION['error']); ?>
-</div>
-<?php endif; ?>
-
-<div class="table-responsive">
-<table class="table table-hover align-middle">
-<thead class="small text-muted">
-<tr>
-<th>Institution</th>
-<th>Division</th>
-<th>Type</th>
-<th>Status</th>
-<th class="text-end">Action</th>
-</tr>
-</thead>
-
-<tbody>
-<?php while($row=$result->fetch_assoc()): ?>
-<tr>
-
-<td><?= htmlspecialchars($row['institution_name']) ?></td>
-
-<td class="fw-bold"><?= htmlspecialchars($row['division_name']) ?></td>
-
-<td>
-<span class="badge bg-primary">
-<?= ucfirst($row['division_type']) ?>
-</span>
-</td>
-<td>
-<?php if($row['status'] == 'Active'): ?>
-    <span class="badge bg-success">Active</span>
-<?php else: ?>
-    <span class="badge bg-secondary">Inactive</span>
-<?php endif; ?>
-</td>
-
-<td class="text-end">
-
-<?php if($row['status'] == 'Active'): ?>
-
-<a href="edit_division.php?id=<?= $row['id'] ?>"
-class="btn btn-sm btn-warning">Edit</a>
-
-<button class="btn btn-sm btn-danger"
-onclick="deactivateDivision(<?= $row['id'] ?>)">
-Deactivate
-</button>
-
-<?php else: ?>
-
-<button class="btn btn-sm btn-success"
-onclick="restoreDivision(<?= $row['id'] ?>)">
-Restore
-</button>
-
-<?php endif; ?>
-
-</td>
-
-</tr>
-<?php endwhile; ?>
-</tbody>
-</table>
 </div>
 
 <!-- PAGINATION -->
@@ -308,8 +317,9 @@ Restore
 <ul class="pagination justify-content-center mt-3">
 <?php for($i=1;$i<=$totalPages;$i++): ?>
 <li class="page-item <?= ($i==$page)?'active':'' ?>">
-<a class="page-link"
-href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&institution_id=<?= urlencode($institution_filter) ?>"
+<a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&institution_id=<?= urlencode($institution_filter) ?>">
+    <?= $i ?>
+</a>
 <?= $i ?>
 </a>
 </li>
@@ -362,7 +372,56 @@ function restoreDivision(id){
         }
     });
 }
+
+document.getElementById('liveSearch').addEventListener('keyup', function() {
+    let filter = this.value.toLowerCase();
+    let accordionItems = document.querySelectorAll('#deptAccordion .accordion-item');
+
+    accordionItems.forEach(item => {
+        let rows = item.querySelectorAll('tbody tr');
+        let hasVisibleRow = false;
+
+        rows.forEach(row => {
+            // Search inside the Department Name (1st column) and Type (2nd column)
+            let deptName = row.cells[0].textContent.toLowerCase();
+            let deptType = row.cells[1].textContent.toLowerCase();
+
+            if (deptName.includes(filter) || deptType.includes(filter)) {
+                row.style.display = ""; // Show row
+                hasVisibleRow = true;
+            } else {
+                row.style.display = "none"; // Hide row
+            }
+        });
+
+        // UI Logic: If an institution has matching departments, show it and expand it.
+        // If not, hide the whole institution accordion item.
+        if (hasVisibleRow) {
+            item.style.display = "";
+            if (filter.length > 0) {
+                // Auto-expand the accordion if user is typing
+                const collapseElement = item.querySelector('.accordion-collapse');
+                const bsCollapse = new bootstrap.Collapse(collapseElement, {toggle: false});
+                bsCollapse.show();
+            }
+        } else {
+            item.style.display = "none";
+        }
+    });
+});
+
 </script>
+<style>
+    @media (min-width: 992px) {
+    .col-lg-4 {
+        position: sticky;
+        top: 2rem;
+        height: fit-content;
+        z-index: 10;
+    }
+}
+</style>
+
 
 <?php
 $content = ob_get_clean();

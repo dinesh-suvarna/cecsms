@@ -16,7 +16,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
     <style>
         :root {
-            --sb-width: 270px;
+            --sb-width: 290px;
             --primary-accent: #10b981;
             --bg-body: #f8fafc;
             --sidebar-bg: #ffffff;
@@ -43,25 +43,9 @@ $current_page = basename($_SERVER['PHP_SELF']);
             background: var(--sidebar-bg);
             border-right: 1px solid var(--border-color);
             transition: transform 0.3s ease-in-out;
-            z-index: 1050;
+            z-index: 1030; 
             display: flex;
             flex-direction: column;
-        }
-
-        .overflow-y-auto {
-            overflow-y: auto;
-            scrollbar-width: thin;
-            max-height: 100vh;
-            scroll-behavior: smooth;
-        }
-
-        .animate-fade-in {
-            animation: fadeIn 0.4s ease-out forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
         }
 
         .sidebar-brand {
@@ -70,44 +54,55 @@ $current_page = basename($_SERVER['PHP_SELF']);
             align-items: center;
             gap: 12px;
             font-weight: 800;
-            font-size: 1.2rem;
+            font-size: 1.35rem;
             color: var(--primary-accent);
             text-decoration: none;
         }
 
         .nav-group-label {
             padding: 1.5rem 1.5rem 0.5rem;
-            font-size: 0.65rem;
+            font-size: 0.78rem;
+            opacity: 0.85;
+            letter-spacing: 0.1rem;
             text-transform: uppercase;
             letter-spacing: 0.08rem;
             font-weight: 700;
             color: var(--text-muted);
         }
 
-        .nav-link {
+        #sidebar .nav-link {
             margin: 0.2rem 1rem;
-            padding: 0.7rem 1rem;
+            padding: 0.85rem 1.2rem;
             color: var(--text-muted);
             border-radius: 10px;
             display: flex;
             align-items: center;
             gap: 12px;
-            font-size: 0.9rem;
-            font-weight: 500;
+            font-size: 1rem;   /* Bigger */
+            font-weight: 600;  /* Slightly bold */
             transition: all 0.2s;
             text-decoration: none;
         }
 
-        .nav-link:hover {
+        #sidebar .nav-link:hover {
             background: #f1f5f9;
             color: var(--primary-accent);
             transform: translateX(4px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
         }
 
-        .nav-link.active {
+        #sidebar .nav-link.active {
             background: var(--primary-accent);
             color: #ffffff !important;
             box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.25);
+            font-weight: 700;
+        }
+
+        .collapse .nav-link {
+            margin-left: 2.5rem !important;
+            font-size: 0.95rem !important;  
+            padding: 0.6rem 1rem !important;
+            font-weight: 500;
         }
 
         /* --- MAIN CONTENT --- */
@@ -115,12 +110,14 @@ $current_page = basename($_SERVER['PHP_SELF']);
             margin-left: var(--sb-width);
             min-height: 100vh;
             padding: 1.5rem;
+            font-size: 0.98rem;
             transition: margin 0.3s ease-in-out;
+            position: relative;
+            z-index: 1;
         }
 
         .top-navbar {
             background: rgba(255, 255, 255, 0.9);
-           
             border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 0.8rem 1.5rem;
@@ -129,6 +126,44 @@ $current_page = basename($_SERVER['PHP_SELF']);
             justify-content: space-between;
             align-items: center;
             box-shadow: var(--shadow-sm);
+        }
+
+        .nav-home-icon {
+            width: 38px;
+            height: 38px;
+            background-color: #f8fafc;
+            color: #64748b;
+            border-radius: 10px;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease-in-out;
+            border: 1px solid var(--border-color);
+            text-decoration: none;
+        }
+
+        .nav-home-icon:hover {
+            background-color: var(--primary-accent);
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+            border-color: var(--primary-accent);
+        }
+
+        
+
+        #sidebar .nav-link i {
+            font-size: 1.1rem;
+        }
+
+        .nav-link[aria-expanded="true"] .bi-chevron-down {
+            transform: rotate(180deg);
+            transition: transform 0.3s ease;
+        }
+
+        .nav-link .bi-chevron-down {
+            transition: transform 0.3s ease;
         }
 
         .user-profile {
@@ -142,34 +177,26 @@ $current_page = basename($_SERVER['PHP_SELF']);
             cursor: pointer;
         }
 
+        /* --- UI UTILITIES --- */
+        .bg-emerald-soft { background-color: rgba(16, 185, 129, 0.1); }
+        .modal-backdrop { z-index: 1040 !important; }
+        .modal { z-index: 1050 !important; }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         @media (max-width: 992px) {
-            #sidebar { transform: translateX(-100%); }
+            #sidebar { transform: translateX(-100%); z-index: 2000; }
             .main-wrapper { margin-left: 0; }
             #sidebar.show { transform: translateX(0); }
         }
-
-        .bg-emerald-soft { background-color: rgba(16, 185, 129, 0.1); }
-
-       
-/* Modern Hover Effect for the Home Icon */
-.nav-home-icon {
-    width: 38px;
-    height: 38px;
-    background-color: #f8fafc; /* Very light gray */
-    color: #64748b; /* Muted slate */
-    border-radius: 10px;
-    font-size: 1.25rem;
-    transition: all 0.2s ease-in-out;
-    border: 1px solid var(--border-color);
-}
-
-.nav-home-icon:hover {
-    background-color: var(--primary-accent); /* Your SaaS Emerald */
-    color: #ffffff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
-    border-color: var(--primary-accent);
-}
+    
 
 /* Ensure the H5 and Icon align visually */
 h5 {

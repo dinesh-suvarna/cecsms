@@ -7,7 +7,7 @@ $page_icon  = "bi-clipboard-data";
 $query = "
 SELECT 
     sd.id,
-    IF(im.stock_type = 'serial', 1, sd.quantity) AS total_quantity,
+    sd.quantity AS total_quantity,
     im.item_name,
     sd.serial_number,
     sd.bill_no,
@@ -15,23 +15,15 @@ SELECT
     sd.po_number,
     v.vendor_name,
     sd.amount,
-    sd.warranty_upto,
     sd.status,
     im.stock_type,
-    IFNULL(SUM(dd.quantity - IFNULL(dd.returned_quantity,0)),0) AS dispatched_qty,
-    dm.dispatch_date,
-    i.institution_name,
-    d.division_name,
-    u.unit_name
+    /* Correlated subquery for accurate math */
+    IFNULL((SELECT SUM(quantity - IFNULL(returned_quantity,0)) 
+            FROM dispatch_details 
+            WHERE stock_detail_id = sd.id), 0) AS dispatched_qty
 FROM stock_details sd
 LEFT JOIN items_master im ON sd.stock_item_id = im.id
 LEFT JOIN vendors v ON sd.vendor_id = v.id
-LEFT JOIN dispatch_details dd ON sd.id = dd.stock_detail_id
-LEFT JOIN dispatch_master dm ON dd.dispatch_id = dm.id
-LEFT JOIN institutions i ON dm.institution_id = i.id
-LEFT JOIN divisions d ON dm.division_id = d.id
-LEFT JOIN units u ON dm.unit_id = u.id
-GROUP BY sd.id
 ORDER BY im.item_name ASC, sd.id DESC
 ";
 

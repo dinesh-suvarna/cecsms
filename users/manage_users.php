@@ -31,7 +31,7 @@ if (empty($_SESSION['csrf_token'])) {
 }
 $csrf_token = $_SESSION['csrf_token'];
 
-/* ================= DELETE USER ================= */
+/* ================= DELETE (SOFT) USER ================= */
 if(isset($_GET['delete'], $_GET['csrf']) && hash_equals($csrf_token, $_GET['csrf'])){
 
     $id = intval($_GET['delete']);
@@ -42,37 +42,48 @@ if(isset($_GET['delete'], $_GET['csrf']) && hash_equals($csrf_token, $_GET['csrf
     $result = $check->get_result();
 
     if($result->num_rows === 1){
-
         $target = $result->fetch_assoc();
 
-        // Prevent deleting yourself
+        // Prevent deactivating yourself
         if($id == $currentUserId){
             header("Location: manage_users.php");
             exit();
         }
 
-        // SuperAdmin can delete anyone
+        // Logic: Instead of DELETE, we UPDATE status to 'Inactive'
+        // This keeps dispatch_master and division_assets history intact.
         if($currentRole === 'SuperAdmin'){
-            $stmt = $conn->prepare("DELETE FROM users WHERE id=?");
+            $stmt = $conn->prepare("UPDATE users SET status = 'Inactive' WHERE id=?");
             $stmt->bind_param("i", $id);
             $stmt->execute();
         }
-
-        // Admin can delete only Staff in same institution + division
         elseif($currentRole === 'Admin'){
             if(
                 $target['role'] === 'Staff' &&
                 $target['institution_id'] == $currentInstitution &&
                 $target['division_id'] == $currentDivision
             ){
-                $stmt = $conn->prepare("DELETE FROM users WHERE id=?");
+                $stmt = $conn->prepare("UPDATE users SET status = 'Inactive' WHERE id=?");
                 $stmt->bind_param("i", $id);
                 $stmt->execute();
             }
         }
     }
 
-    header("Location: manage_users.php");
+    header("Location: manage_users.php?msg=deactivated");
+    exit();
+}
+
+/* ================= REACTIVATE USER ================= */
+if(isset($_GET['activate'], $_GET['csrf']) && hash_equals($csrf_token, $_GET['csrf'])){
+    $id = intval($_GET['activate']);
+    
+    // Simple logic: If SuperAdmin or Admin (with proper scope), set status to Active
+    $stmt = $conn->prepare("UPDATE users SET status = 'Active' WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    
+    header("Location: manage_users.php?msg=activated");
     exit();
 }
 
@@ -213,7 +224,7 @@ if($currentRole === 'SuperAdmin'){
 $institutionsArr = $conn->query("SELECT id, institution_name FROM institutions ORDER BY institution_name ASC")->fetch_all(MYSQLI_ASSOC);
 $divisionsArr    = $conn->query("SELECT id, division_name, institution_id FROM divisions WHERE status='Active' ORDER BY division_name ASC")->fetch_all(MYSQLI_ASSOC);
 
-/* =================== HTML / Modal =================== */
+/* =================== HTML Content (Table only) =================== */
 ob_start();
 ?>
 
@@ -273,26 +284,23 @@ ob_start();
                     <td><?= $row['created_at'] ?></td>
 
                     <td>
-                        <button class="btn btn-sm btn-warning"
-                            onclick="editUser(
-                                <?= $row['id'] ?>,
-                                '<?= htmlspecialchars($row['username'], ENT_QUOTES) ?>',
-                                '<?= $row['role'] ?>',
-                                '<?= $row['status'] ?>',
-                                '<?= $row['institution_id'] ?>',
-                                '<?= $row['division_id'] ?>'
-                            )"
-                            data-bs-toggle="modal"
-                            data-bs-target="#userModal">
+                        <button class="btn btn-sm btn-warning" 
+                                onclick="editUser(<?= $row['id'] ?>, '<?= htmlspecialchars($row['username'], ENT_QUOTES) ?>', '<?= $row['role'] ?>', '<?= $row['status'] ?>', '<?= $row['institution_id'] ?>', '<?= $row['division_id'] ?>')">
                             <i class="bi bi-pencil"></i>
                         </button>
 
                         <?php if($row['id'] != $currentUserId): ?>
-                        <a href="?delete=<?= $row['id'] ?>&csrf=<?= $csrf_token ?>"
-                           class="btn btn-sm btn-danger"
-                           onclick="return confirm('Delete this user?')">
-                            <i class="bi bi-trash"></i>
-                        </a>
+                            <?php if($row['status'] == 'Active'): ?>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="confirmDeactivate(<?= $row['id'] ?>, '<?= $csrf_token ?>')">
+                                    <i class="bi bi-person-x-fill"></i>
+                                </button>
+                            <?php else: ?>
+                                <button class="btn btn-sm btn-outline-success" 
+                                        onclick="confirmReactivate(<?= $row['id'] ?>, '<?= $csrf_token ?>')">
+                                    <i class="bi bi-person-check-fill"></i>
+                                </button>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -303,8 +311,14 @@ ob_start();
     </div>
 </div>
 
-<!-- USER MODAL -->
-<div class="modal fade" id="userModal">
+<?php
+$content = ob_get_clean();
+
+/* =================== Extra HTML (Modal & Scripts only) =================== */
+ob_start();
+?>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form method="POST">
         <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
@@ -332,6 +346,7 @@ ob_start();
                 <div class="mb-3">
                     <label>Institution</label>
                     <select name="institution_id" id="institution_id" class="form-select">
+                        <option value="">Select Institution</option>
                         <?php foreach($institutionsArr as $inst): ?>
                             <option value="<?= $inst['id'] ?>"><?= htmlspecialchars($inst['institution_name']) ?></option>
                         <?php endforeach; ?>
@@ -379,40 +394,62 @@ ob_start();
 </div>
 
 <script>
-function editUser(id, username, role, status, institution_id, division_id){
+function editUser(id, username, role, status, institution_id, division_id) {
+    // 1. Set basic fields
+    const userIdField = document.getElementById('user_id');
+    const usernameField = document.getElementById('username');
+    const statusField = document.getElementById('status');
 
-    document.getElementById('user_id').value = id;
-    document.getElementById('username').value = username;
-    document.getElementById('status').value = status;
+    if(userIdField) userIdField.value = id;
+    if(usernameField) usernameField.value = username;
+    if(statusField) statusField.value = status;
 
+    // 2. Handle Role Select (Only if it exists in the DOM)
     let roleSelect = document.getElementById('role');
-    let institutionSelect = document.getElementById('institution_id');
-    let divisionSelect = document.getElementById('division_id');
-
-    if(roleSelect){
+    if (roleSelect) {
         roleSelect.value = role;
         roleSelect.disabled = (role === 'SuperAdmin');
     }
 
-    if(institutionSelect){
-        if(role === 'SuperAdmin'){
-            institutionSelect.value = '';
-            institutionSelect.disabled = true;
+    // 3. Handle Institution & Division (The "Crash-Prone" part)
+    let instSelect = document.getElementById('institution_id');
+    let divSelect = document.getElementById('division_id');
+
+    if (instSelect) {
+        instSelect.value = (role === 'SuperAdmin') ? '' : institution_id;
+        instSelect.disabled = (role === 'SuperAdmin');
+    }
+
+    if (divSelect) {
+        if (role === 'SuperAdmin') {
+            divSelect.value = '';
+            divSelect.disabled = true;
         } else {
-            institutionSelect.value = institution_id;
-            institutionSelect.disabled = false;
+            divSelect.disabled = false;
+            // Only filter if we have an institution dropdown to read from
+            if (instSelect) {
+                filterDivisions(institution_id);
+            }
+            divSelect.value = division_id;
         }
     }
 
-    if(divisionSelect){
-        if(role === 'SuperAdmin'){
-            divisionSelect.value = '';
-            divisionSelect.disabled = true; 
-        } else {
-            divisionSelect.value = division_id;
-            divisionSelect.disabled = false;
-        }
-    }
+    // 4. Manually trigger the Bootstrap Modal to open
+    var myModalEl = document.getElementById('userModal');
+    var modal = bootstrap.Modal.getOrCreateInstance(myModalEl);
+    modal.show();
+}
+
+function filterDivisions(institutionId) {
+    let divisionSelect = document.getElementById('division_id');
+    if (!divisionSelect) return; // Exit if element doesn't exist
+    
+    let options = divisionSelect.querySelectorAll('option');
+    options.forEach(option => {
+        if (!option.value) return; 
+        // Show option only if it matches institutionId
+        option.style.display = (option.dataset.institution == institutionId) ? 'block' : 'none';
+    });
 }
 
 function resetForm(){
@@ -438,21 +475,74 @@ function resetForm(){
     }
 }
 
-// Filter divisions by institution dynamically
-document.getElementById('institution_id')?.addEventListener('change', function(){
-    let institutionId = this.value;
+function filterDivisions(institutionId) {
     let divisionSelect = document.getElementById('division_id');
+    if(!divisionSelect) return;
     let options = divisionSelect.querySelectorAll('option');
 
     options.forEach(option => {
         if(!option.value) return;
         option.style.display = (option.dataset.institution === institutionId) ? 'block' : 'none';
     });
-    divisionSelect.value = '';
+}
+
+// Filter divisions by institution dynamically
+document.getElementById('institution_id')?.addEventListener('change', function(){
+    filterDivisions(this.value);
+    document.getElementById('division_id').value = '';
 });
+
+function confirmDeactivate(userId, csrf) {
+    Swal.fire({
+        title: 'Deactivate User?',
+        text: "This user won't be able to login, but their dispatch and asset records will be preserved.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6e7881',
+        confirmButtonText: 'Yes, Deactivate',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = `?delete=${userId}&csrf=${csrf}`;
+        }
+    });
+}
+
+function confirmReactivate(userId, csrf) {
+    Swal.fire({
+        title: 'Reactivate User?',
+        text: "Restore login access for this user?",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#198754',
+        cancelButtonColor: '#6e7881',
+        confirmButtonText: 'Yes, Reactivate'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = `?activate=${userId}&csrf=${csrf}`;
+        }
+    });
+}
+
+// Optional: Show a "Success" toast after the page reloads
+<?php if(isset($_GET['msg'])): ?>
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true
+    });
+
+    Toast.fire({
+        icon: 'success',
+        title: 'User status updated successfully'
+    });
+<?php endif; ?>
 </script>
 
 <?php
-$content = ob_get_clean();
+$extra_html = ob_get_clean();
 include "../admin/adminlayout.php";
 ?>

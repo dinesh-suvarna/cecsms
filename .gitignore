@@ -1,8 +1,27 @@
+# --- Database & Security ---
 config/db.php
+# Keep the schema, but ignore actual data exports
 *.sql
+!database/schema.sql  # Exception: allow the structure, ignore the data
+
+# --- Logs & Temp ---
 *.log
 *.tmp
-/vendor
-/node_modules
+*.bak
+*.swp
+
+# --- Dependencies ---
+/vendor/
+/node_modules/
+
+# --- IDE & OS Files ---
+.vscode/
+.idea/
+.project
+.settings/
 .DS_Store
 Thumbs.db
+
+# --- Environment ---
+.env
+.env.local

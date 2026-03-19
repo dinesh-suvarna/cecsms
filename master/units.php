@@ -17,9 +17,9 @@ if(isset($_POST['add_unit'])){
     $unit_type = $_POST['unit_type'];
 
     if(empty($unit_name)){
-        $error = "Unit name is required.";
+        $_SESSION['error'] = "Unit name is required.";
     } elseif(empty($division_id)){
-        $error = "Division is required.";
+        $_SESSION['error'] = "Division is required.";
     } else {
         $check = $conn->prepare("SELECT id, status FROM units WHERE division_id=? AND (LOWER(unit_name)=LOWER(?) OR LOWER(unit_code)=LOWER(?))");
         $check->bind_param("iss", $division_id, $unit_name, $unit_code);
@@ -29,23 +29,29 @@ if(isset($_POST['add_unit'])){
         if($resultCheck->num_rows > 0){
             $row = $resultCheck->fetch_assoc();
             if($row['status'] == 'Active'){
-                $error = "Unit already exists.";
+                $_SESSION['error'] = "Unit already exists.";
             } else {
                 $restore = $conn->prepare("UPDATE units SET status='Active', unit_type=? WHERE id=?");
                 $restore->bind_param("si", $unit_type, $row['id']);
                 $restore->execute();
-                $success = "Unit restored successfully.";
+                $_SESSION['success'] = "Unit restored successfully.";
             }
         } else {
             $stmt = $conn->prepare("INSERT INTO units (division_id, unit_code, unit_name, unit_type) VALUES (?, ?, ?, ?)");
             $stmt->bind_param("isss", $division_id, $unit_code, $unit_name, $unit_type);
             $stmt->execute();
-            $success = "Unit added successfully.";
-            $unit_name = "";
+            $_SESSION['success'] = "Unit added successfully.";
         }
     }
+    // REDIRECT TO SELF TO CLEAR POST DATA
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit();
 }
 
+// Extract messages from session, then clear them
+$success = $_SESSION['success'] ?? "";
+$error = $_SESSION['error'] ?? "";
+unset($_SESSION['success'], $_SESSION['error']);
 /* ================= FETCH DATA LOGIC ================= */
 $where  = " WHERE 1 ";
 $params = [];
@@ -78,7 +84,7 @@ ob_start();
     <div class="col-lg-4">
         <div class="card shadow-sm rounded-4 border-0">
             <div class="card-body p-4">
-                <h5 class="fw-bold mb-4"><i class="bi bi-building text-primary me-2"></i>Add Unit</h5>
+                <h5 class="fw-bold mb-4"><i class="bi bi-building text-primary me-2"></i>Add Labs and Facilities</h5>
                 
                 <?php if($success): ?> <div class="alert alert-success"><?= $success ?></div> <?php endif; ?>
                 <?php if($error): ?> <div class="alert alert-danger"><?= $error ?></div> <?php endif; ?>
@@ -135,15 +141,31 @@ ob_start();
     </div>
 
     <div class="col-lg-8">
-        <div class="card shadow-sm rounded-4 border-0 p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h5 class="fw-bold m-0"><i class="bi bi-list-ul text-primary me-2"></i>Units Gallery</h5>
+    <div class="card shadow-sm rounded-4 border-0 p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold m-0">
+                <i class="bi bi-door-open text-primary me-2"></i>Departmental Units
+            </h5>
             <button id="collapseAllBtn" class="btn btn-sm btn-outline-secondary rounded-pill px-3" style="font-size: 0.75rem;">
                 <i class="bi bi-arrows-collapse me-1"></i> Collapse All
             </button>
         </div>
 
-            <div class="accordion accordion-flush" id="instAccordion">
+        <div class="row g-2 mb-4">
+            <div class="col-md-9 flex-grow-1">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-0 text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" id="unitSearch" class="form-control border-0 bg-light" placeholder="Search for labs, offices, or departments...">
+                </div>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-light border w-100 shadow-sm rounded-3" title="Reset All">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Reset
+                </a>
+            </div>
+        </div>
+
+        <div class="accordion accordion-flush" id="instAccordion">
                 <?php
                 $currentInst = '';
                 $currentDiv  = '';
@@ -222,12 +244,18 @@ ob_start();
                             <td class="fw-semibold small"><?= $row['unit_name'] ?></td>
                             <td><span class="badge-saas" style="background:#f0fdf4; color:#166534; border: 1px solid #dcfce7;"><?= ucfirst($row['unit_type']) ?></span></td>
                             <td class="text-end pe-3">
-                                <div class="d-flex justify-content-end gap-2">
-                                    <a href="edit_unit.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-light rounded-circle text-warning shadow-xs"><i class="bi bi-pencil-square"></i></a>
-                                    <button type="button" class="btn btn-sm btn-light rounded-circle <?= $row['status'] == 'Active' ? 'text-warning' : 'text-success' ?>" onclick="handleStatus(<?= $row['id'] ?>, '<?= addslashes($row['unit_name']) ?>', '<?= $row['status'] == 'Active' ? 'Deactivate' : 'Activate' ?>')">
-                                        <i class="bi <?= $row['status'] == 'Active' ? 'bi-pause-circle' : 'bi-play-circle' ?>"></i>
+                                
+                                    <a href="edit_unit.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-light rounded-pill text-warning shadow-xs px-3">
+                                        <i class="bi bi-pencil-square me-1"></i> Edit
+                                    </a>
+
+                                    <button type="button" 
+                                            class="btn btn-sm btn-light rounded-pill px-3 <?= $row['status'] == 'Active' ? 'text-danger' : 'text-success' ?>" 
+                                            onclick="handleStatus(<?= $row['id'] ?>, '<?= addslashes($row['unit_name']) ?>', '<?= $row['status'] == 'Active' ? 'Deactivate' : 'Activate' ?>')">
+                                        <i class="bi <?= $row['status'] == 'Active' ? 'bi-x-circle' : 'bi-check-circle' ?> me-1"></i>
+                                        <?= $row['status'] == 'Active' ? 'Deactivate' : 'Activate' ?>
                                     </button>
-                                </div>
+                                
                             </td>
                         </tr>
                     <?php endwhile; ?>
@@ -334,7 +362,64 @@ $(document).ready(function() {
             }
         });
     });
+    // LIVE SEARCH LOGIC
+$('#unitSearch').on('keyup', function() {
+    let value = $(this).val().toLowerCase();
+    
+    // 1. If search is empty, show everything and stop
+    if (value === "") {
+        $('#instAccordion .accordion-item, #instAccordion tr').show();
+        return;
+    }
+
+    // 2. Loop through top-level Institution items ONLY (using the > selector)
+    $('#instAccordion > .accordion-item').each(function() {
+        let $instItem = $(this);
+        let institutionMatch = false;
+
+        // 3. Loop through Divisions inside this Institution
+        $instItem.find('.accordion-body .accordion-item').each(function() {
+            let $divItem = $(this);
+            let divisionMatch = false;
+            let $rows = $divItem.find('tbody tr');
+
+            // 4. Check each Unit (Table Row)
+            $rows.each(function() {
+                let text = $(this).text().toLowerCase();
+                if (text.indexOf(value) > -1) {
+                    $(this).show();
+                    divisionMatch = true;
+                    institutionMatch = true;
+                } else {
+                    $(this).hide();
+                }
+            });
+
+            // 5. Handle Division Visibility & Auto-Expand
+            if (divisionMatch) {
+                $divItem.show();
+                let $divCollapse = $divItem.find('.accordion-collapse').first();
+                if (!$divCollapse.hasClass('show')) {
+                    bootstrap.Collapse.getOrCreateInstance($divCollapse[0], { toggle: false }).show();
+                }
+            } else {
+                $divItem.hide();
+            }
+        });
+
+        // 6. Handle Institution Visibility & Auto-Expand
+        if (institutionMatch) {
+            $instItem.show();
+            let $instCollapse = $instItem.find('> .accordion-collapse');
+            if (!$instCollapse.hasClass('show')) {
+                bootstrap.Collapse.getOrCreateInstance($instCollapse[0], { toggle: false }).show();
+            }
+        } else {
+            $instItem.hide();
+        }
+    });
 });
+                });
 </script>
 
 <style>

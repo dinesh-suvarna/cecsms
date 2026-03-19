@@ -2,39 +2,19 @@
 require_once "../config/db.php";
 require_once "../includes/session.php";
 
-if($_SERVER['REQUEST_METHOD'] === 'POST'){
-
+if (isset($_POST['id']) && isset($_POST['status_action'])) {
     $id = intval($_POST['id']);
+    $action = $_POST['status_action'];
+    $new_status = ($action === 'Activate') ? 'Active' : 'Inactive';
 
-    // 🔎 Check if unit is used in dispatch_master
-    $check = $conn->prepare("
-        SELECT 1 
-        FROM dispatch_master 
-        WHERE unit_id = ?
-        LIMIT 1
-    ");
-    $check->bind_param("i", $id);
-    $check->execute();
-    $check->store_result();
+    $stmt = $conn->prepare("UPDATE units SET status = ? WHERE id = ?");
+    $stmt->bind_param("si", $new_status, $id);
 
-    if($check->num_rows > 0){
-
-        $_SESSION['error'] = "Cannot delete. This unit has dispatch records.";
-
+    if ($stmt->execute()) {
+        $_SESSION['success'] = "Unit " . strtolower($action) . "d successfully.";
     } else {
-
-        $stmt = $conn->prepare("
-            UPDATE units 
-            SET status='Deleted' 
-            WHERE id=?
-        ");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-
-        $_SESSION['success'] = "Unit deleted successfully.";
+        $_SESSION['error'] = "Failed to update unit status.";
     }
 }
-
-header("Location: unit_list.php");
-exit;
-?>
+header("Location: units.php");
+exit();

@@ -9,9 +9,8 @@ $error = "";
 $success = "";
 $unit_name = "";
 
-/* ================= ADD UNIT ================= */
+/* ================= ADD UNIT LOGIC ================= */
 if(isset($_POST['add_unit'])){
-
     $division_id = intval($_POST['division_id']);
     $unit_code = strtoupper(trim($_POST['unit_code']));
     $unit_name = ucwords(strtolower(trim($_POST['unit_name'])));
@@ -22,367 +21,337 @@ if(isset($_POST['add_unit'])){
     } elseif(empty($division_id)){
         $error = "Division is required.";
     } else {
-
-        $check = $conn->prepare("
-            SELECT id, status 
-            FROM units 
-            WHERE division_id=? 
-            AND (LOWER(unit_name)=LOWER(?) OR LOWER(unit_code)=LOWER(?))
-        ");
+        $check = $conn->prepare("SELECT id, status FROM units WHERE division_id=? AND (LOWER(unit_name)=LOWER(?) OR LOWER(unit_code)=LOWER(?))");
         $check->bind_param("iss", $division_id, $unit_name, $unit_code);
         $check->execute();
         $resultCheck = $check->get_result();
 
         if($resultCheck->num_rows > 0){
-
             $row = $resultCheck->fetch_assoc();
-
             if($row['status'] == 'Active'){
                 $error = "Unit already exists.";
             } else {
-
-                $restore = $conn->prepare("
-                    UPDATE units 
-                    SET status='Active', unit_type=? 
-                    WHERE id=?
-                ");
+                $restore = $conn->prepare("UPDATE units SET status='Active', unit_type=? WHERE id=?");
                 $restore->bind_param("si", $unit_type, $row['id']);
                 $restore->execute();
-
                 $success = "Unit restored successfully.";
             }
-
         } else {
-
-            $stmt = $conn->prepare("
-                INSERT INTO units (division_id, unit_code, unit_name, unit_type)
-                VALUES (?, ?, ?, ?)
-            ");
+            $stmt = $conn->prepare("INSERT INTO units (division_id, unit_code, unit_name, unit_type) VALUES (?, ?, ?, ?)");
             $stmt->bind_param("isss", $division_id, $unit_code, $unit_name, $unit_type);
             $stmt->execute();
-
             $success = "Unit added successfully.";
             $unit_name = "";
         }
     }
 }
 
-/* ================= FETCH ================= */
-
-$search = $_GET['search'] ?? '';
-$page   = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$limit  = 5;
-$start  = ($page - 1) * $limit;
-
+/* ================= FETCH DATA LOGIC ================= */
+$where  = " WHERE 1 ";
 $params = [];
 $types  = "";
-$where  = " WHERE 1 ";
 
-/* Role filter */
 if($role !== 'SuperAdmin'){
     $where .= " AND i.id=? ";
     $params[] = $user_institution_id;
     $types .= "i";
 }
 
-/* Search */
-if(!empty($search)){
-    $where .= " AND (u.unit_name LIKE ? OR u.unit_code LIKE ?) ";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
-    $types .= "ss";
-}
-
-/* COUNT */
-$countSql = "SELECT COUNT(*) as total
-FROM units u
-JOIN divisions d ON u.division_id=d.id
-JOIN institutions i ON d.institution_id=i.id
-$where";
-
-$stmt = $conn->prepare($countSql);
-if(!empty($params)) $stmt->bind_param($types, ...$params);
-$stmt->execute();
-$totalRows = $stmt->get_result()->fetch_assoc()['total'];
-$totalPages = ceil($totalRows / $limit);
-
-/* DATA */
-$sql = "SELECT u.*, d.division_name, i.institution_name
-FROM units u
-JOIN divisions d ON u.division_id=d.id
-JOIN institutions i ON d.institution_id=i.id
-$where
-ORDER BY i.institution_name, d.division_name, u.unit_name
-LIMIT ?, ?";
-
-$params[] = $start;
-$params[] = $limit;
-$types .= "ii";
+// Main Query (Search removed for cleaner accordion navigation)
+$sql = "SELECT u.*, d.division_name, d.id AS div_id, i.institution_name, i.id AS inst_id
+        FROM units u
+        JOIN divisions d ON u.division_id=d.id
+        JOIN institutions i ON d.institution_id=i.id
+        $where
+        ORDER BY i.institution_name, d.division_name, u.unit_name";
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param($types, ...$params);
+if(!empty($params)) $stmt->bind_param($types, ...$params);
 $stmt->execute();
 $result = $stmt->get_result();
 
-ob_start();
+/* ================= START PAGE CONTENT ================= */
+ob_start(); 
 ?>
 
 <div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card shadow-sm rounded-4 border-0">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-4"><i class="bi bi-building text-primary me-2"></i>Add Unit</h5>
+                
+                <?php if($success): ?> <div class="alert alert-success"><?= $success ?></div> <?php endif; ?>
+                <?php if($error): ?> <div class="alert alert-danger"><?= $error ?></div> <?php endif; ?>
 
-<!-- LEFT: ADD -->
-<div class="col-lg-4">
-<div class="card shadow-sm rounded-4 border-0">
-<div class="card-body p-4">
+                <form method="POST">
+                    <?php if($role == 'SuperAdmin'): ?>
+                        <div class="mb-3">
+                            <label class="small fw-bold">Institution</label>
+                            <select id="institution" class="form-select" required>
+                                <option value="">Select</option>
+                                <?php
+                                $res = $conn->query("SELECT id, institution_name FROM institutions ORDER BY institution_name");
+                                while($iRow = $res->fetch_assoc()){ echo "<option value='{$iRow['id']}'>{$iRow['institution_name']}</option>"; }
+                                ?>
+                            </select>
+                        </div>
+                    <?php else: ?>
+                        <input type="hidden" id="institution" value="<?= $user_institution_id ?>">
+                    <?php endif; ?>
 
-<h5 class="fw-bold mb-4">
-<i class="bi bi-building text-primary me-2"></i>Add Unit
-</h5>
+                    <div class="mb-3">
+                        <label class="small fw-bold">Division</label>
+                        <select name="division_id" id="division" class="form-select" required>
+                            <option value="">Select Division</option>
+                        </select>
+                    </div>
 
-<?php if($success): ?>
-<div class="alert alert-success"><?= $success ?></div>
-<?php endif; ?>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="small fw-bold">Code</label>
+                            <input type="text" name="unit_code" class="form-control">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="small fw-bold">Unit Name</label>
+                            <input type="text" name="unit_name" class="form-control" required>
+                        </div>
+                    </div>
 
-<?php if($error): ?>
-<div class="alert alert-danger"><?= $error ?></div>
-<?php endif; ?>
+                    <div class="mb-4">
+                        <label class="small fw-bold">Type</label>
+                        <select name="unit_type" class="form-select">
+                            <option value="lab">Lab</option>
+                            <option value="office">Office</option>
+                            <option value="store">Store</option>
+                            <option value="room">Room</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
 
-<form method="POST">
-
-<?php if($role == 'SuperAdmin'): ?>
-<div class="mb-3">
-<label class="small fw-bold">Institution</label>
-<select id="institution" class="form-select" required>
-<option value="">Select</option>
-<?php
-$res = $conn->query("SELECT id, institution_name FROM institutions ORDER BY institution_name");
-while($row = $res->fetch_assoc()){
-echo "<option value='{$row['id']}'>{$row['institution_name']}</option>";
-}
-?>
-</select>
-</div>
-<?php else: ?>
-<input type="hidden" id="institution" value="<?= $user_institution_id ?>">
-<?php endif; ?>
-
-<div class="mb-3">
-<label class="small fw-bold">Division</label>
-<select name="division_id" id="division" class="form-select" required>
-<option value="">Select Division</option>
-</select>
-</div>
-
-<div class="row">
-    <div class="col-md-4">
-        <label>Unit Code</label>
-        <input type="text" name="unit_code" class="form-control" >
+                    <button name="add_unit" class="btn btn-primary w-100 rounded-pill">Save Unit</button>
+                </form>
+            </div>
+        </div>
     </div>
 
-    <div class="col-md-8">
-        <label>Unit Name</label>
-        <input type="text" name="unit_name" class="form-control" required>
+    <div class="col-lg-8">
+        <div class="card shadow-sm rounded-4 border-0 p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-bold m-0"><i class="bi bi-list-ul text-primary me-2"></i>Units Gallery</h5>
+            <button id="collapseAllBtn" class="btn btn-sm btn-outline-secondary rounded-pill px-3" style="font-size: 0.75rem;">
+                <i class="bi bi-arrows-collapse me-1"></i> Collapse All
+            </button>
+        </div>
+
+            <div class="accordion accordion-flush" id="instAccordion">
+                <?php
+                $currentInst = '';
+                $currentDiv  = '';
+                $firstInst   = true;
+                $firstDiv    = true;
+
+                // Pre-fetch counts for badges
+                $divisionCounts = [];
+                $divQuery = $conn->query("SELECT division_id, COUNT(*) as total FROM units WHERE status = 'Active' GROUP BY division_id");
+                while($cRow = $divQuery->fetch_assoc()){ $divisionCounts[$cRow['division_id']] = $cRow['total']; }
+
+                $instDivCounts = [];
+                $idvQuery = $conn->query("SELECT institution_id, COUNT(*) as total FROM divisions GROUP BY institution_id");
+                while($cRow = $idvQuery->fetch_assoc()){ $instDivCounts[$cRow['institution_id']] = $cRow['total']; }
+
+                if($result->num_rows > 0):
+                    while($row = $result->fetch_assoc()):
+                        $inst = $row['institution_name'];
+                        $div  = $row['division_name'];
+                        $instId = "inst_" . md5($inst);
+                        $divId = "div_" . $row['div_id'];
+
+                        if($currentInst != $inst):
+                            if(!$firstInst) echo '</tbody></table></div></div></div></div></div></div>'; 
+                ?>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button inst-header collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $instId ?>">
+                                <div class="d-flex align-items-center w-100">
+                                    <div class="icon-box me-3 bg-light p-2 rounded-3"><i class="bi bi-building text-primary"></i></div>
+                                    <span class="fw-bold"><?= $inst ?></span>
+                                    <span class="badge-saas badge-inst ms-auto me-3"><?= $instDivCounts[$row['inst_id']] ?? 0 ?> Divisions</span>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="<?= $instId ?>" class="accordion-collapse collapse" data-bs-parent="#instAccordion">
+                            <div class="accordion-body p-3">
+                                <div class="accordion accordion-flush" id="divAcc_<?= $instId ?>">
+                <?php 
+                            $currentInst = $inst;
+                            $currentDiv = ''; 
+                            $firstInst = false;
+                            $firstDiv = true;
+                        endif;
+
+                        if($currentDiv != $div):
+                            if(!$firstDiv) echo '</tbody></table></div></div></div>'; 
+                ?>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button div-header collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $divId ?>">
+                                <i class="bi bi-folder2 text-muted me-2"></i>
+                                <span class="fw-semibold text-dark"><?= $div ?></span>
+                                <span class="badge-saas badge-div ms-2"><?= $divisionCounts[$row['div_id']] ?? 0 ?> Units</span>
+                            </button>
+                        </h2>
+                        <div id="<?= $divId ?>" class="accordion-collapse collapse" data-bs-parent="#divAcc_<?= $instId ?>">
+                            <div class="accordion-body p-0 pt-2">
+                                <table class="table table-saas mb-0 align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th class="ps-3">Code</th>
+                                            <th>Unit Name</th>
+                                            <th>Type</th>
+                                            <th class="text-end pe-3">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                <?php 
+                            $currentDiv = $div;
+                            $firstDiv = false;
+                        endif; 
+                ?>
+                        <tr>
+                            <td class="ps-3 text-muted small"><?= $row['unit_code'] ?></td>
+                            <td class="fw-semibold small"><?= $row['unit_name'] ?></td>
+                            <td><span class="badge-saas" style="background:#f0fdf4; color:#166534; border: 1px solid #dcfce7;"><?= ucfirst($row['unit_type']) ?></span></td>
+                            <td class="text-end pe-3">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="edit_unit.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-light rounded-circle text-warning shadow-xs"><i class="bi bi-pencil-square"></i></a>
+                                    <button type="button" class="btn btn-sm btn-light rounded-circle <?= $row['status'] == 'Active' ? 'text-warning' : 'text-success' ?>" onclick="handleStatus(<?= $row['id'] ?>, '<?= addslashes($row['unit_name']) ?>', '<?= $row['status'] == 'Active' ? 'Deactivate' : 'Activate' ?>')">
+                                        <i class="bi <?= $row['status'] == 'Active' ? 'bi-pause-circle' : 'bi-play-circle' ?>"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                    <?php echo '</tbody></table></div></div></div></div></div></div>'; ?>
+                <?php else: ?>
+                    <div class="text-center py-5 text-muted"><i class="bi bi-inbox fs-1 d-block mb-3"></i>No units registered yet.</div>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="mb-4">
-<label class="small fw-bold">Type</label>
-<select name="unit_type" class="form-select">
-<option value="lab">Lab</option>
-<option value="office">Office</option>
-<option value="store">Store</option>
-<option value="room">Room</option>
-<option value="other">Other</option>
-</select>
-</div>
-
-<button name="add_unit" class="btn btn-primary w-100 rounded-pill">
-Save Unit
-</button>
-
-</form>
-
-</div>
-</div>
-</div>
-
-<!-- RIGHT: LIST -->
-<div class="col-lg-8">
-<div class="card shadow-sm rounded-4 border-0 p-4">
-
-<h5 class="fw-bold mb-3">Units</h5>
-
-<form method="GET" class="mb-3">
-<div class="row g-2">
-<div class="col-md-10">
-<input type="text" name="search"
-value="<?= htmlspecialchars($search) ?>"
-class="form-control"
-placeholder="Search Unit...">
-</div>
-<div class="col-md-2">
-<button class="btn btn-primary w-100">Search</button>
-</div>
-</div>
-</form>
-
-<div class="table-responsive">
-<table class="table table-hover align-middle">
-<thead class="small text-muted">
-<tr>
-<th>Institution</th>
-<th>Division</th>
-<th>Unit</th>
-<th>Type</th>
-<th>Status</th>
-<th class="text-end">Action</th>
-</tr>
-</thead>
-
-<tbody>
-
-<?php
-$currentInst = '';
-$currentDiv  = '';
-
-$divisionCounts = [];
-
-$countQuery = $conn->query("
-    SELECT d.division_name, COUNT(u.id) as total
-    FROM units u
-    JOIN divisions d ON u.division_id = d.id
-    WHERE u.status = 'Active'
-    GROUP BY d.division_name
-");
-
-while($row = $countQuery->fetch_assoc()){
-    $divisionCounts[$row['division_name']] = $row['total'];
-}
-
-while($row = $result->fetch_assoc()):
-
-    $inst = $row['institution_name'];
-    $div  = $row['division_name'];
-    $divId = "div_" . md5($inst . $div);
-
-    // Institution Header
-    if($currentInst != $inst):
-?>
-<tr class="table-primary fw-bold">
-    <td colspan="6">
-        <i class="bi bi-building me-2"></i><?= $inst ?>
-    </td>
-</tr>
-<?php
-    $currentInst = $inst;
-    $currentDiv = '';
-    endif;
-
-    // Division Header
-    
-    if($currentDiv != $div):
-?>
-<tr class="table-light fw-semibold toggle-division" data-target="<?= $divId ?>" style="cursor:pointer;">
-    <td></td>
-    <td colspan="5">
-        <i class="bi bi-caret-right-fill me-2 arrow"></i>
-        <?= $div ?>
-        <span class="badge bg-dark ms-2"><?= $divisionCounts[$div] ?? 0 ?></span>
-    </td>
-</tr>
-<?php
-    $currentDiv = $div;
-    endif;
-?>
-
-<tr class="unit-row <?= $divId ?>" style="display:none;">
-    <td></td>
-    <td></td>
-    <td class="fw-bold">
-        <?= $row['unit_code'] . " - " . $row['unit_name']; ?>
-    </td>
-    <td>
-        <span class="badge bg-primary">
-            <?= ucfirst($row['unit_type']) ?>
-        </span>
-    </td>
-    <td>
-        <?php if($row['status']=='Active'): ?>
-            <span class="badge bg-success">Active</span>
-        <?php else: ?>
-            <span class="badge bg-secondary">Inactive</span>
-        <?php endif; ?>
-    </td>
-    <td class="text-end">
-        <a href="edit_unit.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-warning">Edit</a>
-    </td>
-</tr>
-
-<?php endwhile; ?>
-
-</tbody>
-</table>
-</div>
-
-</div>
-</div>
-
-</div>
-
-<!-- AJAX -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 function loadDivisions(id){
+    if(!id) return;
     $.post("fetch_divisions.php",{institution_id:id},function(data){
         $("#division").html(data);
     });
 }
 
-$("#institution").change(function(){
-    loadDivisions($(this).val());
-});
+function handleStatus(id, name, action) {
+    const isDeactivating = (action === 'Deactivate');
+    Swal.fire({
+        title: `${action} Unit?`,
+        text: isDeactivating ? `Are you sure you want to deactivate "${name}"?` : `Reactivate "${name}"?`,
+        icon: isDeactivating ? 'warning' : 'question',
+        showCancelButton: true,
+        confirmButtonColor: isDeactivating ? '#f59e0b' : '#10b981',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: `Yes, ${action} it!`,
+        borderRadius: '15px'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'unit_delete.php';
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden'; idInput.name = 'id'; idInput.value = id;
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden'; actionInput.name = 'status_action'; actionInput.value = action;
+            form.appendChild(idInput);
+            form.appendChild(actionInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
+}
 
-$(document).ready(function(){
-    var inst = $("#institution").val();
-    if(inst){
-        loadDivisions(inst);
-    }
-});
+$(document).ready(function() {
+    const STORAGE_KEY_PREFIX = "units_accordion_";
 
+    // 1. INITIALIZE SELECTS
+    $("#institution").change(function(){ loadDivisions($(this).val()); });
+    var initialInst = $("#institution").val();
+    if(initialInst){ loadDivisions(initialInst); }
 
-document.querySelectorAll('.toggle-division').forEach(row => {
-
-    const target = row.dataset.target;
-    const arrow  = row.querySelector('.arrow');
-
-    // Load saved state
-    if(localStorage.getItem(target) === 'open'){
-        document.querySelectorAll('.' + target).forEach(r => r.style.display = '');
-        arrow.classList.remove('bi-caret-right-fill');
-        arrow.classList.add('bi-caret-down-fill');
-    }
-
-    row.addEventListener('click', () => {
-
-        const rows = document.querySelectorAll('.' + target);
-        const isOpen = rows[0].style.display !== 'none';
-
-        rows.forEach(r => {
-            r.style.display = isOpen ? 'none' : '';
-        });
-
-        // Toggle arrow
-        arrow.classList.toggle('bi-caret-right-fill');
-        arrow.classList.toggle('bi-caret-down-fill');
-
-        // Save state
-        localStorage.setItem(target, isOpen ? 'closed' : 'open');
+    // 2. RESTORE ACCORDION STATE
+    $('.accordion-collapse').each(function() {
+        var id = $(this).attr('id');
+        if (sessionStorage.getItem(STORAGE_KEY_PREFIX + id) === 'show') {
+            var bsCollapse = new bootstrap.Collapse(this, { toggle: false });
+            bsCollapse.show();
+            $('button[data-bs-target="#' + id + '"]').removeClass('collapsed');
+        }
     });
 
-});
+    // 3. SAVE STATE ON INTERACTION
+    $('#instAccordion').on('shown.bs.collapse', '.accordion-collapse', function (e) {
+        sessionStorage.setItem(STORAGE_KEY_PREFIX + e.target.id, 'show');
+        e.stopPropagation(); 
+    });
 
+    $('#instAccordion').on('hidden.bs.collapse', '.accordion-collapse', function (e) {
+        sessionStorage.removeItem(STORAGE_KEY_PREFIX + e.target.id);
+        e.stopPropagation(); 
+    });
+
+    // 4. COLLAPSE ALL FUNCTIONALITY
+    $('#collapseAllBtn').click(function() {
+        // Find all open accordions and hide them
+        $('.accordion-collapse.show').each(function() {
+            var bsCollapse = bootstrap.Collapse.getInstance(this);
+            if (bsCollapse) {
+                bsCollapse.hide();
+            } else {
+                new bootstrap.Collapse(this).hide();
+            }
+        });
+
+        // Clear all accordion keys from sessionStorage
+        Object.keys(sessionStorage).forEach(key => {
+            if (key.startsWith(STORAGE_KEY_PREFIX)) {
+                sessionStorage.removeItem(key);
+            }
+        });
+    });
+
+    // 5. CLEANUP ON MODULE EXIT
+    $('.sidebar-link, .nav-link').not('[href*="units.php"]').click(function() {
+        Object.keys(sessionStorage).forEach(key => {
+            if (key.startsWith(STORAGE_KEY_PREFIX)) {
+                sessionStorage.removeItem(key);
+            }
+        });
+    });
+});
 </script>
 
-<?php
+<style>
+#instAccordion { --accent-color: #0d6efd; --hover-bg: #f8fafc; }
+.accordion-item { border: none !important; margin-bottom: 0.75rem !important; }
+.inst-header { background: white !important; border-radius: 12px !important; border: 1px solid #edf2f7 !important; transition: 0.2s; }
+.inst-header:not(.collapsed) { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.div-header { background: #ffffff !important; border-radius: 8px !important; font-size: 0.9rem !important; border-left: 3px solid transparent !important; }
+.div-header:not(.collapsed) { border-left: 3px solid var(--accent-color) !important; background: #f1f5f9 !important; }
+.badge-saas { font-weight: 500; padding: 0.4em 0.8em; border-radius: 6px; font-size: 0.75rem; }
+.badge-inst { background: #e0e7ff; color: #4338ca; }
+.badge-div { background: #f1f5f9; color: #475569; }
+.table-saas thead th { text-transform: uppercase; font-size: 0.7rem; color: #94a3b8; border: none; padding: 1rem; }
+.table-saas tbody td { padding: 1rem; border-bottom: 1px solid #f1f5f9; }
+</style>
+
+<?php 
 $content = ob_get_clean();
 include "../master/masterlayout.php";
 ?>

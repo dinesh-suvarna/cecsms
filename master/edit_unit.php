@@ -10,7 +10,7 @@ $user_institution_id = $_SESSION['institution_id'] ?? null;
 
 // Validate ID
 if(!isset($_GET['id']) || !is_numeric($_GET['id'])){
-    header("Location: unit_list.php");
+    header("Location: units.php");
     exit;
 }
 
@@ -26,7 +26,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if($result->num_rows == 0){
-    header("Location: unit_list.php");
+    header("Location: units.php");
     exit;
 }
 
@@ -47,7 +47,7 @@ if($role != 'SuperAdmin'){
     $check->close();
 
     if($inst_data['institution_id'] != $user_institution_id){
-        header("Location: unit_list.php");
+        header("Location: units.php");
         exit;
     }
 }
@@ -220,7 +220,7 @@ if(isset($_POST['update_unit'])){
         Update
     </button>
 
-    <a href="unit_list.php" class="btn btn-secondary">
+    <a href="units.php" class="btn btn-secondary">
         Back
     </a>
 </div>

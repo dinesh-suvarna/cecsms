@@ -207,32 +207,29 @@ h5 {
         <div class="nav-group-label">Inventory Management</div>
         <div class="nav flex-column">
             <a href="items_master.php" class="nav-link <?= ($current_page == 'items_master.php') ? 'active' : '' ?>">
-                <i class="bi bi-plus-square"></i> Item Master
+                <i class="bi bi-pc-display-horizontal"></i> Asset Registry
             </a>
             <a href="stock_specifications.php" class="nav-link <?= ($current_page == 'stock_specifications.php') ? 'active' : '' ?>">
-                <i class="bi bi-sliders"></i> Specifications
+                <i class="bi bi-cpu"></i> Device Configurations
             </a>
         </div>
 
-        <div class="nav-group-label">Master Records</div>
+        <div class="nav-group-label">Organization</div>
         <div class="nav flex-column">
             <a href="institutions.php" class="nav-link <?= ($current_page == 'institutions.php') ? 'active' : '' ?>">
                 <i class="bi bi-building"></i> Institutions
             </a>
             <a href="divisions.php" class="nav-link <?= ($current_page == 'divisions.php') ? 'active' : '' ?>">
-                <i class="bi bi-diagram-3"></i> Divisions
+                <i class="bi bi-diagram-3 me-2"></i> Departments
             </a>
             <a href="units.php" class="nav-link <?= ($current_page == 'units.php') ? 'active' : '' ?>">
-                <i class="bi bi-collection"></i> Units
-            </a>
-            <a href="unit_list.php" class="nav-link <?= ($current_page == 'unit_list.php') ? 'active' : '' ?>">
-                <i class="bi bi-collection"></i> View Units
+                <i class="bi bi-collection"></i> Labs & Facilities
             </a>
         </div>
     </div>
 
     <div class="p-3 border-top mt-auto">
-        <a href="../logout.php" class="btn btn-outline-danger w-100 rounded-pill btn-sm fw-bold">
+        <a href="../admin/logout.php" class="btn btn-outline-danger w-100 rounded-pill btn-sm fw-bold">
             <i class="bi bi-power me-2"></i> Logout
         </a>
     </div>

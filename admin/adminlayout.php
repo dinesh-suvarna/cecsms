@@ -51,9 +51,18 @@ header("Pragma: no-cache");
             background: var(--sidebar-bg);
             border-right: 1px solid var(--border-color);
             transition: transform 0.3s ease-in-out;
-            z-index: 1050;
+            /* ADJUSTMENT 1: Lower sidebar z-index so it doesn't fight with modals */
+            z-index: 1030; 
             display: flex;
             flex-direction: column;
+        }
+
+        /* ADJUSTMENT 2: Force Modals and Backdrops to the front */
+        .modal-backdrop {
+            z-index: 1040 !important;
+        }
+        .modal {
+            z-index: 1050 !important;
         }
 
         .sidebar-brand {
@@ -115,6 +124,9 @@ header("Pragma: no-cache");
             min-height: 100vh;
             padding: 1.5rem;
             transition: margin 0.3s ease-in-out;
+            /* ADJUSTMENT 3: Ensure content is below sidebar/modals but above body */
+            position: relative;
+            z-index: 1;
         }
 
         .top-navbar {
@@ -171,7 +183,7 @@ header("Pragma: no-cache");
         }
 
         @media (max-width: 992px) {
-            #sidebar { transform: translateX(-100%); }
+            #sidebar { transform: translateX(-100%); z-index: 2000; } /* On mobile, sidebar must be top-most */
             .main-wrapper { margin-left: 0; }
             #sidebar.show { transform: translateX(0); }
         }
@@ -190,7 +202,7 @@ header("Pragma: no-cache");
     <div class="overflow-y-auto flex-grow-1" style="scrollbar-width: thin;">
         <div class="nav-group-label">General</div>
         <div class="nav flex-column">
-            <a href="/cecsms/index.php" class="nav-link <?= ($current_page=='admin_dashboard.php')?'active':'' ?>">
+            <a href="/cecsms/index.php" class="nav-link <?= ($current_page=='admin_dashboard.php' || $current_page=='index.php')?'active':'' ?>">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
         </div>
@@ -295,7 +307,11 @@ header("Pragma: no-cache");
     </div>
 </main>
 
+<?php if(isset($extra_html)) echo $extra_html; ?>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+
 <script>
     // Sidebar Mobile Toggle
     const menuToggle = document.getElementById('menuToggle');

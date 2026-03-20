@@ -141,8 +141,9 @@ while($row = $result->fetch_assoc()){
                         $div_id = "div_" . md5($institution . $division);
                     ?>
                         <div class="division-header d-flex justify-content-between align-items-center toggle-header" 
-                            data-bs-toggle="collapse" data-bs-target="#div_body_<?= $div_id ?>" 
-                            aria-expanded="false" style="cursor:pointer;">
+                            data-bs-toggle="collapse" 
+                            data-bs-target="#div_body_<?= $div_id ?>" 
+                            style="cursor:pointer;">
                             
                             <div class="fw-bold d-flex align-items-center">
                                 <i class="bi bi-caret-right-fill me-3 toggle-icon"></i>
@@ -151,11 +152,17 @@ while($row = $result->fetch_assoc()){
                                 </span>
                             </div>
 
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="badge rounded-pill bg-light text-dark border px-3"><?= $divData['computer_total'] ?> Items</span>
-                                <button class="btn btn-link btn-sm p-0 no-print text-decoration-none text-forest">
-                                    Report <i class="bi bi-arrow-up-right-square ms-1"></i>
-                                </button>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge rounded-pill bg-white text-dark border px-3 py-2 me-2">
+                                    <?= $divData['computer_total'] ?> computers
+                                </span>
+                                
+                                <a href="print_report.php?type=division&id=<?= $divData['id'] ?>" 
+                                target="_blank" 
+                                class="btn btn-primary btn-sm"
+                                onclick="event.stopPropagation(); window.open(this.href, '_blank'); return false;">
+                                    <i class="bi bi-file-earmark-pdf me-2"></i> Division Report
+                                </a>
                             </div>
                         </div>
 
@@ -173,7 +180,12 @@ while($row = $result->fetch_assoc()){
                                             </h6>
                                             <div class="d-flex align-items-center gap-3">
                                                 <span class="text-muted small"><?= $unitData['computer_total'] ?> PCs</span>
-                                                <a href="print_report.php?type=unit&id=<?= $unitData['id'] ?>" class="btn btn-outline-info btn-xs no-print px-2 py-0" style="font-size: 0.7rem;" onclick="event.stopPropagation();">Unit Report</a>
+                                                <a href="print_unit_report.php?id=<?= $unitData['id'] ?>" 
+                                                target="_blank" 
+                                                class="btn btn-outline-info btn-xs no-print px-2 py-0" 
+                                                onclick="event.stopPropagation(); window.open(this.href, '_blank'); return false;">
+                                                <i class="bi bi-printer me-1"></i> Print Voucher
+                                                </a>
                                             </div>
                                         </div>
 
@@ -197,7 +209,7 @@ while($row = $result->fetch_assoc()){
                                                             <td class="fw-bold text-dark item-name"><?= htmlspecialchars($row['item_name']) ?></td>
                                                             <td>
                                                                 <?php if(!empty($row['serial_number'])): ?>
-                                                                    <span class="badge border text-dark font-monospace fw-normal bg-light serial-text"><?= htmlspecialchars($row['serial_number']) ?></span>
+                                                                    <span class=" text-dark font-monospace fw-normal serial-text"><?= htmlspecialchars($row['serial_number']) ?></span>
                                                                 <?php else: ?>
                                                                     <span class="fw-bold text-primary"><?= $row['quantity'] ?></span> <small class="text-muted">Units</small>
                                                                 <?php endif; ?>
@@ -403,6 +415,12 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
     color: #64748b; /* Muted slate */
 }
 
+.division-header .btn {
+    position: relative;
+    z-index: 10; /* Ensures the button sits "above" the collapse trigger layer */
+    white-space: nowrap;
+}
+
 /* Rotation logic for when the parent is NOT collapsed */
 [aria-expanded="true"] .toggle-icon {
     transform: rotate(90deg);
@@ -422,6 +440,23 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 
 .division-header:hover {
     background-color: #e2e8f0 !important;
+}
+
+.division-header .btn {
+    white-space: nowrap;
+    font-weight: 500;
+    transition: transform 0.2s ease;
+}
+
+.division-header .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+}
+
+/* Make sure the badge looks clean next to the button */
+.division-header .badge {
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
 }
 
 /* UNIT DATA BLOCK: The "Clean Nest" Look */

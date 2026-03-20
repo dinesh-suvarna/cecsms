@@ -6,13 +6,33 @@ require_once "../admin/auth.php";
 /* ---------- NOTIFY ---------- */
 if (!function_exists('notify')) {
     function notify($type, $msg){
-        $_SESSION['notify_type'] = $type; 
-        $_SESSION['notify_msg']  = $msg;
+        $_SESSION['swal_type'] = $type; // 'success', 'error', 'warning'
+        $_SESSION['swal_msg']  = $msg;
     }
 }
 
 $page_title = "Item Master";
 $page_icon  = "bi-boxes";
+
+/* ---------- UPDATE ---------- */
+if(isset($_POST['update'])){
+    $id   = intval($_POST['id']);
+    $name = trim($_POST['item_name']);
+    $cat  = $_POST['category'];
+
+    if(!empty($name)){
+        try {
+            $stmt = $conn->prepare("UPDATE items_master SET item_name=?, category=? WHERE id=?");
+            $stmt->bind_param("ssi", $name, $cat, $id);
+            $stmt->execute();
+            notify("success", "Updated successfully!");
+        } catch(mysqli_sql_exception $e) {
+            notify("danger", "Error updating record.");
+        }
+    }
+    header("Location: items_master.php");
+    exit;
+}
 
 /* ---------- ADD ITEM ---------- */
 if(isset($_POST['submit'])){
@@ -22,8 +42,6 @@ if(isset($_POST['submit'])){
 
     if(empty($item_name)){
         notify("danger","Item name is required.");
-    } elseif(!in_array($stock_type, ['serial','non_serial'])){
-        notify("danger","Invalid stock type.");
     } else {
         try {
             $stmt = $conn->prepare("INSERT INTO items_master (item_name, category, stock_type) VALUES (?, ?, ?)");
@@ -47,7 +65,7 @@ if(isset($_GET['delete'])){
     $check->store_result();
 
     if($check->num_rows > 0){
-        notify("danger","Cannot delete. Linked to stock.");
+        notify("danger","Cannot delete. Linked to existing stock records.");
     } else {
         $stmt = $conn->prepare("DELETE FROM items_master WHERE id=?");
         $stmt->bind_param("i",$id);
@@ -58,33 +76,29 @@ if(isset($_GET['delete'])){
     exit;
 }
 
-/* ---------- UPDATE ---------- */
-if(isset($_POST['update'])){
-    $id = intval($_POST['id']);
-    $name = trim($_POST['item_name']);
-    $cat  = $_POST['category'];
+/* ---------- DATA QUERY (WITH STOCK COUNTS) ---------- */
+// This query calculates total purchased vs total dispatched per item
+$query = "
+    SELECT 
+        im.*,
+        IFNULL(SUM(sd.quantity), 0) as total_purchased,
+        IFNULL((
+            SELECT SUM(dd.quantity - IFNULL(dd.returned_quantity, 0))
+            FROM dispatch_details dd
+            JOIN stock_details sd2 ON dd.stock_detail_id = sd2.id
+            WHERE sd2.stock_item_id = im.id
+        ), 0) as total_dispatched
+    FROM items_master im
+    LEFT JOIN stock_details sd ON im.id = sd.stock_item_id
+    GROUP BY im.id
+    ORDER BY im.item_name ASC
+";
+$items = $conn->query($query);
 
-    if($name){
-        try{
-            $stmt = $conn->prepare("UPDATE items_master SET item_name=?, category=? WHERE id=?");
-            $stmt->bind_param("ssi",$name,$cat,$id);
-            $stmt->execute();
-            notify("success","Updated successfully!");
-        }catch(mysqli_sql_exception $e){
-            notify("danger",$e->getCode()==1062?"Duplicate name":"Database error");
-        }
-    }
-    header("Location: items_master.php");
-    exit;
-}
-
-/* ---------- DATA ---------- */
-$items = $conn->query("SELECT * FROM items_master ORDER BY item_name ASC");
 
 ob_start();
 ?>
 
-<!-- TOAST -->
 <?php
 $type = $_SESSION['notify_type'] ?? '';
 $msg  = $_SESSION['notify_msg'] ?? '';
@@ -101,122 +115,213 @@ if($msg): ?>
 <?php endif; ?>
 
 <div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 rounded-4 sticky-top" style="top: 20px;">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-4"><i class="bi bi-plus-circle text-success me-2"></i>New Item Category</h5>
 
-<!-- LEFT: ADD -->
-<div class="col-lg-4">
-    <div class="card shadow-sm border-0 rounded-4">
-        <div class="card-body p-4">
-            <h5 class="fw-bold mb-4"><i class="bi bi-plus-circle text-success me-2"></i>Add Item</h5>
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted">Stock Tracking Type</label>
+                        <select name="stock_type" class="form-select rounded-3">
+                            <option value="serial">Serialized (Track by Serial No.)</option>
+                            <option value="non_serial">Non-Serialized (Bulk Quantity)</option>
+                        </select>
+                    </div>
 
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted">Category Group</label>
+                        <select name="category" class="form-select rounded-3">
+                            <option>Computer</option>
+                            <option>Accessory</option>
+                            <option>Component</option>
+                            <option>Networking</option>
+                            <option>Furniture</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="small fw-bold text-muted">Item Description/Name</label>
+                        <input type="text" name="item_name" class="form-control rounded-3" placeholder="e.g. Dell Latitude 3420" required>
+                    </div>
+
+                    <button type="submit" name="submit" class="btn btn-success w-100 rounded-pill fw-bold">
+                        Add to Registry
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 rounded-4 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="fw-bold m-0">Master Item Registry</h5>
+                <div class="input-group w-50">
+                    <span class="input-group-text bg-transparent border-end-0 rounded-start-pill"><i class="bi bi-search"></i></span>
+                    <input type="text" id="search" class="form-control border-start-0 rounded-end-pill" placeholder="Filter items...">
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="tbl">
+                    <thead class="bg-light small text-muted text-uppercase">
+                        <tr>
+                            <th>Item Detail</th>
+                            <th class="text-center">Total In</th>
+                            <th class="text-center">Dispatched</th>
+                            <th class="text-center">Available</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php while($row=$items->fetch_assoc()): 
+                        $available = $row['total_purchased'] - $row['total_dispatched'];
+                        $type_badge = ($row['stock_type'] == 'serial') ? 'bg-primary' : 'bg-info text-dark';
+                    ?>
+                        <tr>
+                            <td>
+                                <div class="fw-bold"><?= htmlspecialchars($row['item_name']) ?></div>
+                                <div class="small text-muted">
+                                    <span class="badge <?= $type_badge ?> p-1" style="font-size: 10px;"><?= strtoupper($row['stock_type']) ?></span>
+                                    <?= htmlspecialchars($row['category']) ?>
+                                </div>
+                            </td>
+                            <td class="text-center fw-semibold text-dark"><?= number_format($row['total_purchased']) ?></td>
+                            <td class="text-center text-danger"><?= number_format($row['total_dispatched']) ?></td>
+                            <td class="text-center">
+                                <span class="badge rounded-pill <?= ($available > 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger') ?> px-3">
+                                    <?= number_format($available) ?>
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-secondary border-0" 
+                                            onclick="editItem(<?= $row['id'] ?>,'<?= addslashes($row['item_name']) ?>','<?= $row['category'] ?>')">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <a href="javascript:void(0)" 
+   class="btn btn-sm btn-outline-danger border-0 delete-btn" 
+   data-id="<?= $row['id'] ?>">
+    <i class="bi bi-trash3"></i>
+</a>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php
+
+$modal_html='
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
             <form method="POST">
-                <div class="mb-3">
-                    <label class="small fw-bold text-muted">Stock Type</label>
-                    <select name="stock_type" class="form-select rounded-3">
-                        <option value="serial">Serialized</option>
-                        <option value="non_serial">Non-Serialized (Bulk Quantity)</option>
-                    </select>
+                <div class="modal-header border-0 p-4 pb-0">
+                    <h5 class="fw-bold"><i class="bi bi-pencil-square me-2"></i>Edit Item Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" name="id" id="eid">
+                    
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted">Item Name</label>
+                        <input type="text" name="item_name" id="ename" class="form-control rounded-3" required>
+                    </div>
 
-                <div class="mb-3">
-                    <label class="small fw-bold text-muted">Category</label>
-                    <select name="category" class="form-select rounded-3">
-                        <option>Computer</option>
-                        <option>Accessory</option>
-                        <option>Component</option>
-                        <option>Networking</option>
-                    </select>
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted">Category</label>
+                        <select name="category" id="ecat" class="form-select rounded-3">
+                            <option>Computer</option>
+                            <option>Accessory</option>
+                            <option>Component</option>
+                            <option>Networking</option>
+                            <option>Furniture</option>
+                        </select>
+                    </div>
                 </div>
-
-                <div class="mb-4">
-                    <label class="small fw-bold text-muted">Item Name</label>
-                    <input type="text" name="item_name" class="form-control rounded-3" required>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="update" class="btn btn-primary rounded-pill px-4 fw-bold">Update Item</button>
                 </div>
-
-                <button type="submit" name="submit" class="btn btn-success w-100 rounded-pill fw-bold">
-                    Save Item
-                </button>
             </form>
         </div>
     </div>
-</div>
+</div>';?>
 
-<!-- RIGHT: TABLE -->
-<div class="col-lg-8">
-    <div class="card shadow-sm border-0 rounded-4 p-4">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-        <div class="d-flex justify-content-between mb-4">
-            <h5 class="fw-bold m-0">Existing Items</h5>
-            <input type="text" id="search" class="form-control form-control-sm w-50 rounded-pill" placeholder="Search...">
-        </div>
-
-        <div class="table-responsive">
-            <table class="table table-hover align-middle" id="tbl">
-                <thead class="bg-light small text-muted">
-                    <tr>
-                        <th>Item</th>
-                        <th>Category</th>
-                        <th class="text-end">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php while($row=$items->fetch_assoc()): ?>
-                    <tr>
-                        <td class="fw-bold name"><?= $row['item_name'] ?></td>
-                        <td class="cat"><?= $row['category'] ?></td>
-                        <td class="text-end">
-                            <button class="btn btn-sm btn-white border"
-                                onclick="editItem(<?= $row['id'] ?>,'<?= addslashes($row['item_name']) ?>','<?= $row['category'] ?>')">
-                                ✏️
-                            </button>
-                            <a href="?delete=<?= $row['id'] ?>" class="btn btn-sm btn-white border">🗑️</a>
-                        </td>
-                    </tr>
-                <?php endwhile; ?>
-                </tbody>
-            </table>
-        </div>
-
-    </div>
-</div>
-
-</div>
-
-<!-- MODAL -->
 <?php
-$modal_html='
-<div class="modal" id="editModal">
-<div class="modal-dialog modal-dialog-centered">
-<div class="modal-content rounded-4">
-<form method="POST">
-<div class="modal-body p-4">
-<input type="hidden" name="id" id="eid">
-<input type="text" name="item_name" id="ename" class="form-control mb-2">
-<select name="category" id="ecat" class="form-select">
-<option>Computer</option><option>Accessory</option>
-</select>
-</div>
-<div class="p-3 text-end">
-<button type="submit" name="update" class="btn btn-success">Update</button>
-</div>
-</form>
-</div>
-</div>
-</div>';
+// Check for session-based notifications
+if(isset($_SESSION['swal_msg'])): 
+    $type = $_SESSION['swal_type'] == 'danger' ? 'error' : $_SESSION['swal_type'];
+    $msg  = $_SESSION['swal_msg'];
+    unset($_SESSION['swal_type'], $_SESSION['swal_msg']);
 ?>
+<script>
+    Swal.fire({
+        icon: '<?= $type ?>',
+        title: '<?= ($type == "success" ? "Done!" : "Oops...") ?>',
+        text: '<?= htmlspecialchars($msg) ?>',
+        timer: 3000,
+        showConfirmButton: false,
+        borderRadius: '15px'
+    });
+</script>
+<?php endif; ?>
 
 <script>
-function editItem(id,name,cat){
-    eid.value=id; ename.value=name; ecat.value=cat;
-    new bootstrap.Modal(editModal).show();
-}
 
-search.onkeyup=function(){
-    let f=this.value.toLowerCase();
-    document.querySelectorAll("#tbl tbody tr").forEach(r=>{
-        r.style.display = r.innerText.toLowerCase().includes(f) ? "" : "none";
+function editItem(id, name, cat) {
+    // 1. Fill the hidden ID field
+    document.getElementById('eid').value = id;
+    
+    // 2. Fill the visible input fields
+    document.getElementById('ename').value = name;
+    document.getElementById('ecat').value = cat;
+    
+    // 3. Initialize and Show the Modal correctly
+    var myModal = new bootstrap.Modal(document.getElementById('editModal'));
+    myModal.show();
+}
+// SweetAlert Delete Confirmation
+document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const id = this.getAttribute('data-id');
+        
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "This will only delete if no stock is linked!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = `items_master.php?delete=${id}`;
+            }
+        });
+    });
+});
+
+// Search Functionality
+document.getElementById('search').onkeyup = function() {
+    let filter = this.value.toLowerCase();
+    document.querySelectorAll("#tbl tbody tr").forEach(row => {
+        let text = row.innerText.toLowerCase();
+        row.style.display = text.includes(filter) ? "" : "none";
     });
 }
 </script>
+
 
 <?php
 $main_content = ob_get_clean();

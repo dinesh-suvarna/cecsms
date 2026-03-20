@@ -53,33 +53,43 @@ $total_units = $unit_result->fetch_assoc()['total'];
 
 
 // Master Stock 
-// 1. Get TOTAL assets from Items Master
+// 1. Get TOTAL Physical Quantity from stock_details
 if ($role == 'SuperAdmin') {
-    $total_q = "SELECT COUNT(*) as total FROM items_master WHERE status='Active'";
+    $total_q = "SELECT SUM(quantity) as total FROM stock_details";
     $total_res = $conn->query($total_q);
 } else {
-    $stmt = $conn->prepare("SELECT COUNT(*) as total FROM items_master WHERE status='Active' AND institution_id=?");
+    // For specific institutions, we join with items_master to filter
+    $stmt = $conn->prepare("
+        SELECT SUM(sd.quantity) as total 
+        FROM stock_details sd
+        JOIN items_master im ON sd.stock_item_id = im.id
+        WHERE im.institution_id = ?
+    ");
     $stmt->bind_param("i", $user_institution_id);
     $stmt->execute();
     $total_res = $stmt->get_result();
 }
 $total_assets = $total_res->fetch_assoc()['total'] ?? 0;
 
-// 2. Get DISPATCHED assets from Dispatch Master
+// 2. Get TOTAL Dispatched Quantity from dispatch_details
 if ($role == 'SuperAdmin') {
-    $disp_q = "SELECT COUNT(*) as total FROM dispatch_master WHERE status='Active'";
+    $disp_q = "SELECT SUM(quantity - IFNULL(returned_quantity, 0)) as total FROM dispatch_details";
     $disp_res = $conn->query($disp_q);
 } else {
-    $stmt = $conn->prepare("SELECT COUNT(*) as total FROM dispatch_master WHERE status='Active' AND institution_id=?");
+    $stmt = $conn->prepare("
+        SELECT SUM(dd.quantity - IFNULL(dd.returned_quantity, 0)) as total 
+        FROM dispatch_details dd
+        JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+        WHERE dm.institution_id = ?
+    ");
     $stmt->bind_param("i", $user_institution_id);
     $stmt->execute();
     $disp_res = $stmt->get_result();
 }
 $dispatched_assets = $disp_res->fetch_assoc()['total'] ?? 0;
 
-// 3. Calculate Percentage for Progress Bar
+// 3. Calculate Percentage
 $avail_percent = ($total_assets > 0) ? round(($dispatched_assets / $total_assets) * 100) : 0;
-
 ?>
 <?php ob_start(); ?>
 
@@ -227,7 +237,7 @@ $avail_percent = ($total_assets > 0) ? round(($dispatched_assets / $total_assets
 
                 <div class="mt-3">
                     <div class="d-flex justify-content-between mb-1" style="font-size: 0.75rem;">
-                        <span class="text-muted">Managed Entities</span>
+                        <span class="text-muted">Registered Locations</span>
                         <span class="text-dark fw-bold">Active</span>
                     </div>
                     <div class="progress" style="height: 6px; background-color: rgba(59, 130, 246, 0.05);">
@@ -257,7 +267,7 @@ $avail_percent = ($total_assets > 0) ? round(($dispatched_assets / $total_assets
 
                 <div class="mt-3">
                     <div class="d-flex justify-content-between mb-1" style="font-size: 0.75rem;">
-                        <span class="text-muted">Structural Units</span>
+                        <span class="text-muted">Functional Areas</span>
                         <span class="text-dark fw-bold">Active</span>
                     </div>
                     <div class="progress" style="height: 6px; background-color: rgba(139, 92, 246, 0.05);">

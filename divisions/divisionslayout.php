@@ -1,199 +1,299 @@
 <?php
-if (!isset($page_title)) $page_title = "Stock Dashboard";
-?>
+if (!isset($page_title)) $page_title = "Division Dashboard";
 
+// --- CACHE CONTROL ---
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
+$current_page = basename($_SERVER['PHP_SELF']);
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title><?= htmlspecialchars($page_title) ?> - Stock Management</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><?= htmlspecialchars($page_title) ?> | StockFlow Division</title>
 
-    <!-- Security -->
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
-
-    <!-- Bootstrap & Icons -->
-     <!-- Bootstrap 5 JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<style>
-body {
-    overflow-x: hidden;
-    background-color: #f4f6f9;
-    font-family: 'Segoe UI', sans-serif;
-}
+    <style>
+        :root {
+            --sb-width: 280px;
+            --primary-accent: #10b981;
+            --bg-body: #f8fafc;
+            --sidebar-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        }
 
-.wrapper {
-    display: flex;
-}
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
 
-/* SIDEBAR */
-#sidebar {
-    min-width: 260px;
-    max-width: 260px;
-    min-height: 100vh;
-    background: linear-gradient(180deg, #0f2027, #203a43, #2c5364);
-    color: #fff;
-    transition: all 0.3s ease;
-}
+        /* --- SIDEBAR --- */
+        #sidebar {
+            width: var(--sb-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            transition: transform 0.3s ease-in-out;
+            z-index: 1030; 
+            display: flex;
+            flex-direction: column;
+        }
 
-#sidebar .nav-link {
-    color: #cbd5e1;
-    padding: 12px 15px;
-    margin-bottom: 5px;
-    border-radius: 8px;
-    transition: all 0.3s;
-    font-size: 15px;
-}
+        .sidebar-brand {
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 800;
+            font-size: 1.35rem;
+            color: var(--primary-accent);
+            text-decoration: none;
+        }
 
-#sidebar .nav-link:hover {
-    background: rgba(255,255,255,0.1);
-    color: #fff;
-    padding-left: 20px;
-}
+        .nav-group-label {
+            padding: 1.5rem 1.5rem 0.5rem;
+            font-size: 0.72rem;
+            letter-spacing: 0.1rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
 
-#sidebar .nav-link.active {
-    background: linear-gradient(90deg, #10b981, #059669);
-    color: #fff;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-}
+        #sidebar .nav-link {
+            margin: 0.2rem 1rem;
+            padding: 0.8rem 1.1rem;
+            color: var(--text-muted);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
 
-/* MOBILE */
-@media (max-width: 768px) {
-    #sidebar {
-        margin-left: -260px;
-        position: fixed;
-        z-index: 1000;
-    }
-}
+        #sidebar .nav-link:hover {
+            background: #f1f5f9;
+            color: var(--primary-accent);
+            transform: translateX(4px);
+        }
 
-/* CONTENT */
-.top-navbar {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 10px 20px;
-}
+        #sidebar .nav-link.active {
+            background: var(--primary-accent);
+            color: #ffffff !important;
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.25);
+        }
 
-/*stock item*/
-.stock-card {
-    transition: 0.25s ease;
-}
+        /* --- MAIN CONTENT --- */
+        .main-wrapper {
+            margin-left: var(--sb-width);
+            min-height: 100vh;
+            padding: 1.5rem;
+            transition: margin 0.3s ease-in-out;
+            position: relative;
+        }
 
-.stock-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-}
+        .top-navbar {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 0.75rem 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+            backdrop-filter: blur(8px);
+        }
 
-.icon-wrapper {
-    width: 55px;
-    height: 55px;
-    background: #f8f9fa;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    color: #198754;
-}
+        .nav-home-icon {
+            width: 38px;
+            height: 38px;
+            background-color: #fff;
+            color: var(--text-muted);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
 
-.quantity-badge {
-    background: #e8f5ee;
-    color: #198754;
-    font-weight: 600;
-    padding: 6px 14px;
-    border-radius: 30px;
-}
+        .nav-home-icon:hover {
+            background-color: var(--primary-accent);
+            color: #fff;
+            border-color: var(--primary-accent);
+        }
 
-</style>
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: #fff;
+            cursor: pointer;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 992px) {
+            #sidebar { transform: translateX(-100%); }
+            .main-wrapper { margin-left: 0; }
+            #sidebar.show { transform: translateX(0); }
+        }
+    </style>
 </head>
-
 <body>
 
-<div class="wrapper">
-
-    <!-- SIDEBAR -->
-    <nav id="sidebar">
-        <div class="p-4">
-            <h4 class="text-white mb-4">📦 Stock Panel</h4>
-
-            <ul class="nav nav-pills flex-column">
-
-                
-
-                
-
-                <li>
-                    <a href="../divisions/assign_asset.php" 
-                       class="nav-link <?= basename($_SERVER['PHP_SELF'])=='../divisions/assign_asset.php'?'active':'' ?>">
-                        📋 asset assign
-                    </a>
-                </li>
-
-            </ul>
+<nav id="sidebar">
+    <a href="division_dashboard.php" class="sidebar-brand">
+        <div class="bg-success text-white rounded-3 px-2 py-1 shadow-sm">
+            <i class="bi bi-building"></i>
         </div>
-    </nav>
-
-    <!-- MAIN CONTENT -->
-    <div class="flex-fill p-4">
-
-        <!-- TOP NAVBAR -->
-        <nav class="navbar navbar-expand-lg bg-white shadow-sm px-4 py-3 border-bottom">
-            <div class="container-fluid">
-
-                <div class="d-flex align-items-center gap-3">
-                    <div class="d-flex align-items-center gap-3">
-
-    <!-- Home Icon -->
-    <a href="../admin/admin_dashboard.php"
-       class="text-dark fs-5 text-decoration-none"
-       title="Go to Dashboard">
-        <i class="bi bi-house-door"></i>
+        <span>Stock<span class="text-dark">Flow</span></span>
     </a>
 
-    <!-- Small Vertical Divider -->
-    <div style="width:1px; height:22px; background-color:#dee2e6;"></div>
-
-    <!-- Page Title -->
-    <span class="navbar-brand mb-0 h5 fw-semibold text-dark d-flex align-items-center">
-    
-        <?php if(isset($page_icon)): ?>
-            <i class="bi <?= $page_icon ?> me-2"></i>
-        <?php endif; ?>
-
-        <?= htmlspecialchars($page_title ?? '') ?>
-    </span>
-
-</div>
-                </div>
-
-                <div class="d-flex align-items-center gap-3">
-
-                    <span class="badge bg-light text-dark border px-3 py-2 fw-normal">
-                        <i class="bi bi-calendar3"></i>
-                        <?= date("d M Y"); ?>
-                    </span>
-
-                    <a href="../logout.php" 
-                       class="btn btn-outline-danger btn-sm px-3 rounded-pill">
-                        <i class="bi bi-box-arrow-right me-1"></i> Logout
-                    </a>
-
-                </div>
-
-            </div>
-        </nav>
-       
-
-        <!-- Page Content -->
-        <div class="mt-4">
-            <?php if(isset($content)) echo $content; ?>
+    <div class="overflow-y-auto flex-grow-1">
+        <div class="nav-group-label">Overview</div>
+        <div class="nav flex-column">
+            <a href="division_dashboard.php" class="nav-link <?= ($current_page == 'division_dashboard.php') ? 'active' : '' ?>">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
         </div>
 
-    </div>
-</div>
+        <div class="nav-group-label">Asset Management</div>
+        <div class="nav flex-column">
+            <a href="assign_asset.php" class="nav-link <?= ($current_page == 'assign_asset.php') ? 'active' : '' ?>">
+                <i class="bi bi-tag"></i> Assign Asset ID
+            </a>
+            <a href="assigned_assets.php" class="nav-link <?= ($current_page == 'assigned_assets.php') ? 'active' : '' ?>">
+                <i class="bi bi-check-circle"></i> View My Assets
+            </a>
+        </div>
 
+        <div class="nav-group-label">Maintenance</div>
+        <div class="nav flex-column">
+            <a href="returned_assets.php" class="nav-link <?= ($current_page == 'returned_assets.php') ? 'active' : '' ?>">
+                <i class="bi bi-arrow-return-left"></i> Returned Assets
+            </a>
+        </div>
+    </div>
+
+    <div class="p-3 border-top mt-auto">
+        <a href="../logout.php" class="btn btn-outline-danger w-100 rounded-pill btn-sm fw-bold">
+            <i class="bi bi-power me-2"></i> Logout
+        </a>
+    </div>
+</nav>
+
+<main class="main-wrapper">
+    <header class="top-navbar">
+        <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-light d-lg-none border-0 shadow-sm rounded-3" id="menuToggle">
+                <i class="bi bi-list fs-5"></i>
+            </button>
+            
+            <a href="../admin/admin_dashboard.php" class="nav-home-icon" title="Main Admin Panel">
+                <i class="bi bi-house-door"></i>
+            </a>
+
+            <div>
+                <h5 class="mb-0 fw-bold text-dark lh-1 mb-1"><?= htmlspecialchars($page_title) ?></h5>
+                <p class="text-muted mb-0 d-none d-md-block" style="font-size: 11px; letter-spacing: 0.02rem;">
+                    Division asset tracking and status management.
+                </p>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-none d-sm-flex align-items-center gap-2 text-muted small border-end pe-3">
+                <i class="bi bi-calendar-event"></i>
+                <?= date('D, M j, Y') ?>
+            </div>
+
+            <div class="dropdown">
+                <div class="user-profile shadow-sm" data-bs-toggle="dropdown">
+                    <div class="text-end d-none d-md-block">
+                        <p class="small fw-bold mb-0"><?= htmlspecialchars($_SESSION['username'] ?? 'Division User') ?></p>
+                        <span class="badge bg-emerald-soft text-success" style="font-size: 9px;">
+                            <?= htmlspecialchars($_SESSION['role'] ?? 'Division') ?>
+                        </span>
+                    </div>
+                    <div class="avatar bg-light border rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                        <i class="bi bi-person text-success"></i>
+                    </div>
+                </div>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                    <li>
+                        <a class="dropdown-item py-2 text-danger fw-bold" href="../logout.php">
+                            <i class="bi bi-box-arrow-right me-2"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <div class="animate-fade-in">
+        <?php if (isset($main_content)) echo $main_content; ?>
+        <?php if (!isset($main_content) && isset($content)) echo $content; ?>
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Sidebar Mobile Toggle
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    if(menuToggle) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('show');
+        });
+    }
+
+    // Auto-scroll to active link
+    document.addEventListener("DOMContentLoaded", function() {
+        const sidebarContainer = document.querySelector('.overflow-y-auto');
+        const activeLink = document.querySelector('#sidebar .nav-link.active');
+        if (activeLink && sidebarContainer) {
+            setTimeout(() => {
+                const scrollPos = activeLink.offsetTop - (sidebarContainer.clientHeight / 2) + (activeLink.clientHeight / 2);
+                sidebarContainer.scrollTo({ top: scrollPos, behavior: 'smooth' });
+            }, 100);
+        }
+    });
+
+    // Back button cache fix
+    window.onpageshow = function(event) {
+        if (event.persisted) { window.location.reload(); }
+    };
+</script>
 </body>
 </html>

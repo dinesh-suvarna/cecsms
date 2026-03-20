@@ -128,6 +128,27 @@ ob_start();
     .sticky-top-card { position: sticky; top: 20px; }
     .btn-add-item { font-size: 0.8rem; border-radius: 20px; }
     .category-label { font-size: 0.75rem; letter-spacing: 1px; color: #6c757d; }
+
+   
+.serial-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* Adjust 160px based on serial length */
+    gap: 10px;
+    width: 100%;
+}
+
+.btn-add-item {
+    text-align: left; /* Keeps text aligned even if button grows */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.btn-hardware {
+    min-height: 40px; 
+    justify-content: start; /* Keeps icon and text aligned to the left */
+    text-align: left;
+}
 </style>
 
 <div class="container-fluid mt-4">
@@ -206,24 +227,44 @@ ob_start();
                                                     </h2>
                                                     <div id="<?= $collapseId ?>" class="accordion-collapse collapse" data-bs-parent="#acc-<?= md5($itemName) ?>">
                                                         <div class="accordion-body p-2 bg-white">
-                                                            <div class="d-flex flex-wrap gap-2">
-                                                                <?php
+                                                            <div class="serial-grid"> <?php 
                                                                 foreach($units as $u): 
-                                                                    // Calculate actual available quantity for the UI
                                                                     $available = $u['quantity'] - $u['dispatched_qty']; 
                                                                     if($available <= 0) continue;
+                                                                    $lowerItem = strtolower($itemName);
+                                                                    $lowerCat  = strtolower($cat);
+                                                                    
+                                                                    // Comprehensive Icon Logic
+                                                                    if (str_contains($lowerItem, 'mouse')) {
+                                                                        $icon = 'bi-mouse3';
+                                                                    } elseif (str_contains($lowerItem, 'keyboard')) {
+                                                                        $icon = 'bi-keyboard';
+                                                                    } elseif (str_contains($lowerItem, 'computer') || str_contains($lowerItem, 'desktop') || str_contains($lowerItem, 'monitor')) {
+                                                                        $icon = 'bi-pc-display';
+                                                                    } elseif (str_contains($lowerItem, 'printer')) {
+                                                                        $icon = 'bi-printer';
+                                                                    } elseif (str_contains($lowerItem, 'scanner')) {
+                                                                        $icon = 'bi-qr-code-scan'; // Or 'bi-scanner' if using latest Bootstrap Icons
+                                                                    } elseif (str_contains($lowerItem, 'cctv') || str_contains($lowerItem, 'camera')) {
+                                                                        $icon = 'bi-camera-video';
+                                                                    } elseif (str_contains($lowerItem, 'ups') || str_contains($lowerItem, 'battery')) {
+                                                                        $icon = 'bi-lightning-charge';
+                                                                    } else {
+                                                                        $icon = 'bi-box'; // Your requested default
+                                                                    }
+                                                            
                                                                 ?>
                                                                     <button type="button" 
                                                                         id="btn-stock-<?= $u['id'] ?>"
-                                                                        class="btn btn-sm btn-outline-primary btn-add-item px-3 mb-1" 
+                                                                        class="btn btn-hardware btn-add-item" 
                                                                         data-id="<?= $u['id'] ?>" 
                                                                         data-name="<?= htmlspecialchars($itemName) ?>"
                                                                         data-serial="<?= $u['serial_number'] ?: 'BULK' ?>"
                                                                         data-type="<?= $u['serial_number'] ? 'serial' : 'bulk' ?>"
                                                                         data-max="<?= $available ?>">
                                                                         
-                                                                        <i class="bi <?= $u['serial_number'] ? 'bi-upc-scan' : 'bi-box-seam' ?> me-1"></i>
-                                                                        <?= $u['serial_number'] ?: "Add Bulk (Avail: $available)" ?>
+                                                                        <i class="bi <?= $icon ?> me-2 text-primary"></i>
+                                                                        <?= $u['serial_number'] ?: "QTY: $available" ?>
                                                                     </button>
                                                                 <?php endforeach; ?>
                                                             </div>

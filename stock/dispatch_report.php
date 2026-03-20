@@ -33,7 +33,7 @@ $institutions = $conn->query("SELECT id, institution_name FROM institutions ORDE
 $query = "
 SELECT 
     dm.id AS dispatch_id, dm.status, dm.dispatch_date, 
-    dd.quantity, si.item_name, sd.serial_number, si.category,
+    dd.quantity, si.item_name, sd.id AS stock_detail_id, sd.serial_number, si.category,
     i.institution_name, dm.institution_id,
     d.division_name, dm.division_id,
     un.unit_name, dm.unit_id
@@ -113,6 +113,13 @@ while($row = $result->fetch_assoc()){
                     <button type="button" id="globalToggleBtn" class="btn btn-outline-secondary btn-sm w-100" onclick="handleGlobalToggle()">
                         <i class="bi bi-arrows-angle-expand me-1"></i> <span id="toggleText">Expand All</span>
                     </button>
+                    <div>
+                    <button id="clearHighlightBtn" 
+                            class="btn btn-warning btn-sm ms-2" 
+                            style="display:none;">
+                        <i class="bi bi-x-circle me-1"></i> Clear Highlight
+                    </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -203,10 +210,18 @@ while($row = $result->fetch_assoc()){
                                                     </thead>
                                                     <tbody>
                                                         <?php foreach($unitData['rows'] as $row): ?>
-                                                        <tr style="font-size: 0.85rem;" class="report-row">
+                                                        <tr style="font-size: 0.85rem;" 
+                                                            class="report-row" 
+                                                            data-stock-id="<?= $row['stock_detail_id'] ?>">
                                                             <td class="ps-3 text-muted">DSP-<?= str_pad($row['dispatch_id'], 4, '0', STR_PAD_LEFT) ?></td>
                                                             <td class="text-muted"><?= date("d M, Y", strtotime($row['dispatch_date'])) ?></td>
-                                                            <td class="fw-bold text-dark item-name"><?= htmlspecialchars($row['item_name']) ?></td>
+                                                            <td class="fw-bold text-dark item-name">
+                                                                <a href="view_stock_details.php?highlight_id=<?= $row['stock_detail_id'] ?>" 
+                                                                class="text-decoration-none text-dark hover-link">
+                                                                    <i class="bi bi-box-arrow-in-up-right small text-primary me-1"></i>
+                                                                    <?= htmlspecialchars($row['item_name']) ?>
+                                                                </a>
+                                                            </td>
                                                             <td>
                                                                 <?php if(!empty($row['serial_number'])): ?>
                                                                     <span class=" text-dark font-monospace fw-normal serial-text"><?= htmlspecialchars($row['serial_number']) ?></span>
@@ -330,6 +345,89 @@ document.addEventListener("DOMContentLoaded", function() {
             parent = parent.parentElement.closest('.collapse');
         }
     }
+});
+
+window.addEventListener("load", function(){
+    const params = new URLSearchParams(window.location.search);
+    const stockId = params.get("stock_id");
+
+    if(stockId){
+        setTimeout(() => {
+
+            const rows = document.querySelectorAll(
+                `.report-row[data-stock-id="${stockId}"]`
+            );
+
+            if(rows.length > 0){
+
+                let affectedUnits = new Set();
+
+                rows.forEach(row => {
+
+                    // Expand all parent collapses
+                    let parent = row.closest('.collapse');
+                    while(parent){
+                        let bsCollapse = bootstrap.Collapse.getInstance(parent) 
+                            || new bootstrap.Collapse(parent, { toggle: false });
+                        bsCollapse.show();
+                        parent = parent.parentElement.closest('.collapse');
+                    }
+
+                    // Highlight row
+                    row.classList.add("match-highlight");
+
+                    // Add badge safely
+                    if(!row.querySelector('.match-badge')){
+                        row.insertAdjacentHTML(
+                            "beforeend",
+                            "<span class='badge bg-warning ms-2 match-badge'>Matched</span>"
+                        );
+                    }
+
+                    // Collect parent unit container
+                    let unitBlock = row.closest('.unit-block');
+                    if(unitBlock){
+                        affectedUnits.add(unitBlock);
+                    }
+                });
+
+                // Highlight entire unit blocks
+                affectedUnits.forEach(unit => {
+                    unit.classList.add("match-group-highlight");
+                });
+
+                // Scroll to first match
+                rows[0].scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+
+                // ✅ SHOW CLEAR BUTTON
+                document.getElementById("clearHighlightBtn").style.display = "inline-block";
+
+            }
+
+        }, 400);
+    }
+});
+
+document.getElementById("clearHighlightBtn").addEventListener("click", function(){
+
+    // Remove row highlights + badges
+    document.querySelectorAll('.match-highlight').forEach(row => {
+        row.classList.remove("match-highlight");
+
+        let badge = row.querySelector('.match-badge');
+        if(badge) badge.remove();
+    });
+
+    // Remove group highlight
+    document.querySelectorAll('.match-group-highlight').forEach(unit => {
+        unit.classList.remove("match-group-highlight");
+    });
+
+    // Hide button again
+    this.style.display = "none";
 });
 </script>
 
@@ -490,6 +588,29 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
     transform: translateX(3px);
     transition: transform 0.2s ease-in-out;
     display: inline-block;
+}
+
+/* GROUP HIGHLIGHT CONTAINER */
+.match-group-highlight {
+    background: rgba(255, 243, 205, 0.35); /* soft yellow */
+    border-left: 4px solid #ffc107;
+    border-radius: 6px;
+    padding: 8px;
+    transition: all 0.3s ease;
+}
+
+/* OPTIONAL: smoother row highlight */
+.report-row.match-highlight {
+    background-color: #fff3cd !important;
+    outline: 2px solid #ffc107;
+}
+
+#clearHighlightBtn {
+    transition: all 0.3s ease;
+}
+#clearHighlightBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 /* 6. SCROLLBAR & PRINT */

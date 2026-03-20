@@ -20,7 +20,16 @@ SELECT
     /* Correlated subquery for accurate math */
     IFNULL((SELECT SUM(quantity - IFNULL(returned_quantity,0)) 
             FROM dispatch_details 
-            WHERE stock_detail_id = sd.id), 0) AS dispatched_qty
+            WHERE stock_detail_id = sd.id), 0) AS dispatched_qty,
+
+    (
+        SELECT dd.dispatch_id 
+        FROM dispatch_details dd
+        WHERE dd.stock_detail_id = sd.id
+        ORDER BY dd.dispatch_id DESC
+        LIMIT 1
+    ) AS last_dispatch_id
+
 FROM stock_details sd
 LEFT JOIN items_master im ON sd.stock_item_id = im.id
 LEFT JOIN vendors v ON sd.vendor_id = v.id
@@ -189,9 +198,9 @@ if($row['stock_type'] === 'serial') {
     } else {
         $dynamicStatus = $row['status'];
     }
-    echo "<tr class='stock-row $row_class group-row $group_id' 
-        data-status='$dynamicStatus' 
-        style='display:none;'>";
+    echo "<tr id='row-".(int)$row['id']."' class='stock-row $row_class group-row $group_id' 
+      data-status='$dynamicStatus' 
+      style='display:none;'>";
 
     // Empty first column (for group alignment)
     echo "<td class='text-muted small'>$sl</td>";
@@ -217,7 +226,7 @@ if($row['stock_type'] === 'serial'){
 
     // Status for serial
     if($row['status'] === 'dispatched'){
-        $statusBadge = "<a href='dispatch_report.php?stock_id=$stockId' 
+        $statusBadge = "<a href='dispatch_report.php?stock_id=$stockId&dispatch_id={$row['last_dispatch_id']}' 
                             class='badge bg-danger text-decoration-none'>
                             <i class='bi bi-truck me-1'></i> Dispatched
                         </a>";
@@ -306,6 +315,62 @@ echo "</td>";
 </div>
 
 <script>
+// AUTO-EXPAND GROUP ON PAGE LOAD (If ID is passed in URL)
+// 1. HELPER: Function to expand a specific group and force visibility
+function expandGroup(groupId) {
+    const header = document.querySelector(`.group-header[data-group="${groupId}"]`);
+    const rows = document.querySelectorAll('.' + groupId);
+    
+    if (header) {
+        header.style.display = "table-row";
+        const icon = header.querySelector('.toggle-icon');
+        if (icon) icon.classList.replace('bi-chevron-right', 'bi-chevron-down');
+    }
+
+    rows.forEach(row => {
+        // Use setProperty with 'important' to override the default 'display:none'
+        row.style.setProperty("display", "table-row", "important");
+    });
+}
+
+// 2. MAIN LOAD LOGIC
+window.addEventListener('load', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const highlightId = urlParams.get('highlight_id');
+
+    if (highlightId) {
+        // Wait 300ms to ensure the table is fully rendered
+        setTimeout(() => {
+            const targetRow = document.getElementById('row-' + highlightId);
+            
+            if (targetRow) {
+                // Find the group class (e.g., group_eb8...)
+                const groupClass = Array.from(targetRow.classList).find(c => 
+                    c.startsWith('group_') && c !== 'group-row'
+                );
+                
+                if (groupClass) {
+                    // Force the accordion/group open
+                    expandGroup(groupClass);
+
+                    // Scroll the specific row into view
+                    targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // Visual Highlight
+                    targetRow.style.setProperty("background-color", "#fff3cd", "important");
+                    targetRow.style.outline = "2px solid #ffc107";
+                    
+                    // Fade out highlight after 3 seconds
+                    setTimeout(() => {
+                        targetRow.style.transition = 'all 2s ease';
+                        targetRow.style.backgroundColor = '';
+                        targetRow.style.outline = "none";
+                    }, 3000);
+                }
+            }
+        }, 300); 
+    }
+});
 // FILTER
 document.getElementById('statusFilter').addEventListener('change', function() {
     let value = this.value;
@@ -439,6 +504,8 @@ document.querySelectorAll('.group-header').forEach(header => {
         });
     });
 });
+
+
 </script>
 
 <?php

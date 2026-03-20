@@ -3,11 +3,11 @@ require_once "../config/db.php";
 require_once "../includes/session.php";
 require_once "../admin/auth.php";
 
-// Standard notify function if not included elsewhere
+/* ---------- NOTIFY (SweetAlert2 Style) ---------- */
 if (!function_exists('notify')) {
     function notify($type, $msg){
-        $_SESSION['notify_type'] = $type; 
-        $_SESSION['notify_msg']  = $msg;
+        $_SESSION['swal_type'] = ($type == 'danger') ? 'error' : $type; 
+        $_SESSION['swal_msg']  = $msg;
     }
 }
 
@@ -186,7 +186,10 @@ if($msg): ?>
                                 <button type="button" class="btn btn-sm btn-white border" onclick='openEditSpecModal(<?= json_encode($m) ?>)'>
                                     <i class="bi bi-pencil-square text-primary"></i>
                                 </button>
-                                <a href="?delete=<?= $m['id'] ?>" class="btn btn-sm btn-white border ms-1" onclick="return confirm('Delete?');">
+                                <a href="javascript:void(0)" 
+                                class="btn btn-sm btn-white border ms-1 delete-spec-btn" 
+                                data-id="<?= $m['id'] ?>" 
+                                data-name="<?= htmlspecialchars($m['model_name']) ?>">
                                     <i class="bi bi-trash text-danger"></i>
                                 </a>
                             </td>
@@ -277,4 +280,45 @@ document.getElementById('specSearch').addEventListener('keyup', function() {
         row.style.display = row.innerText.toLowerCase().includes(filter) ? '' : 'none';
     });
 });
+
+// SweetAlert Delete Confirmation
+document.querySelectorAll('.delete-spec-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const id = this.getAttribute('data-id');
+        const name = this.getAttribute('data-name');
+        
+        Swal.fire({
+            title: 'Delete Specification?',
+            text: `Are you sure you want to remove ${name}? This cannot be undone if linked assets exist.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = `stock_specifications.php?delete=${id}`;
+            }
+        });
+    });
+});
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<?php
+if(isset($_SESSION['swal_msg'])): 
+    $type = $_SESSION['swal_type'];
+    $msg  = $_SESSION['swal_msg'];
+    unset($_SESSION['swal_type'], $_SESSION['swal_msg']);
+?>
+<script>
+    Swal.fire({
+        icon: '<?= $type ?>',
+        title: '<?= ($type == "success" ? "Success!" : "Notice") ?>',
+        text: '<?= htmlspecialchars($msg) ?>',
+        timer: 2500,
+        showConfirmButton: false
+    });
+</script>
+<?php endif; ?>

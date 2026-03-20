@@ -280,7 +280,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     <div class="text-end d-none d-md-block">
                         <?php $username = $_SESSION['username'] ?? 'User'; ?>
                         <p class="small fw-bold mb-0"><?= htmlspecialchars($username) ?></p>
-                        <span class="badge bg-emerald-soft text-success" style="font-size: 9px;">ADMIN</span>
+                        <?php $role = $_SESSION['role'] ?? 'User'; ?>
+                        <span class="badge bg-emerald-soft text-success" style="font-size: 9px;">
+                            <?= htmlspecialchars($role) ?>
+                        </span>
                     </div>
                     <div class="avatar bg-light border rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
                         <i class="bi bi-person text-success"></i>
@@ -288,7 +291,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 </div>
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
                     <li>
-                        <a class="dropdown-item py-2 text-danger fw-bold" href="../logout.php">
+                        <a class="dropdown-item py-2 text-danger fw-bold" href="../admin/logout.php">
                             <i class="bi bi-box-arrow-right me-2"></i> Logout
                         </a>
                     </li>

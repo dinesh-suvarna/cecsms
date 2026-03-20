@@ -15,96 +15,59 @@ $user_id = $_SESSION['user_id'] ?? 0;
 
 /* ================= HANDLE ASSIGNMENT ================= */
 if ($role !== 'SuperAdmin' && isset($_POST['assign'])) {
-
     $dispatch_detail_id = (int)($_POST['dispatch_detail_id'] ?? 0);
     $stock_detail_id    = (int)($_POST['stock_detail_id'] ?? 0);
     $division_asset_id  = trim($_POST['division_asset_id'] ?? '');
     $unit_index         = (int)($_POST['unit_index'] ?? 0);
 
     if (!empty($division_asset_id)) {
-
         $insert = $conn->prepare("
             INSERT INTO division_assets 
             (dispatch_detail_id, stock_detail_id, division_asset_id, assigned_by, unit_index) 
             VALUES (?, ?, ?, ?, ?)
         ");
-
-        $insert->bind_param("iisii",
-            $dispatch_detail_id,
-            $stock_detail_id,
-            $division_asset_id,
-            $user_id,
-            $unit_index
-        );
+        $insert->bind_param("iisii", $dispatch_detail_id, $stock_detail_id, $division_asset_id, $user_id, $unit_index);
 
         try {
-    $insert->execute();
+            $insert->execute();
 
-    /* ===== CHECK IF ALL UNITS ASSIGNED ===== */
-    $check = $conn->prepare("
-        SELECT 
-            dd.quantity,
-            COUNT(da.id) AS assigned
-        FROM dispatch_details dd
-        LEFT JOIN division_assets da 
-        ON da.dispatch_detail_id = dd.id
-        WHERE dd.id = ?
-    ");
+            /* ===== CHECK IF ALL UNITS ASSIGNED ===== */
+            $check = $conn->prepare("
+                SELECT dd.quantity, COUNT(da.id) AS assigned
+                FROM dispatch_details dd
+                LEFT JOIN division_assets da ON da.dispatch_detail_id = dd.id
+                WHERE dd.id = ?
+            ");
+            $check->bind_param("i", $dispatch_detail_id);
+            $check->execute();
+            $res = $check->get_result()->fetch_assoc();
 
-    $check->bind_param("i", $dispatch_detail_id);
-    $check->execute();
-    $res = $check->get_result()->fetch_assoc();
+            if ($res['assigned'] >= $res['quantity']) {
+                $update = $conn->prepare("UPDATE stock_details SET status='assigned' WHERE id=?");
+                $update->bind_param("i", $stock_detail_id);
+                $update->execute();
+                $update->close();
+            }
 
-    if ($res['assigned'] >= $res['quantity']) {
-
-        $update = $conn->prepare("
-            UPDATE stock_details 
-            SET status='assigned' 
-            WHERE id=?
-        ");
-
-        $update->bind_param("i", $stock_detail_id);
-        $update->execute();
-        $update->close();
-    }
-
-    /* ===== SUCCESS MESSAGE ===== */
-    $_SESSION['toast_message'] = "Asset assigned successfully!";
-    $_SESSION['toast_type'] = "success";
-
-    header("Location: " . $_SERVER['PHP_SELF']);
-    exit;
+            $_SESSION['swal_type'] = "success";
+            $_SESSION['swal_msg']  = "Asset $division_asset_id assigned successfully!";
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
 
         } catch (mysqli_sql_exception $e) {
-
-        if ($e->getCode() == 1062) {
-            $_SESSION['toast_message'] = "Duplicate Asset ID!";
-        } else {
-            $_SESSION['toast_message'] = "Database error!";
+            $_SESSION['swal_type'] = "error";
+            $_SESSION['swal_msg']  = ($e->getCode() == 1062) ? "Duplicate Asset ID: $division_asset_id already exists!" : "Database error!";
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
         }
-
-        $_SESSION['toast_type'] = "danger";
-
-        header("Location: " . $_SERVER['PHP_SELF']);
-        exit;
-    }
-
     }
 }
 
 /* ================= FETCH DISPATCHED ITEMS ================= */
 if ($role === 'SuperAdmin') {
-
     $query = "
-        SELECT dd.id AS dispatch_detail_id,
-               sd.id AS stock_detail_id,
-               sd.serial_number,
-               sd.bill_no,
-               v.vendor_name,
-               dm.dispatch_date,
-               im.item_name,
-               im.stock_type,
-               dd.quantity,
+        SELECT dd.id AS dispatch_detail_id, sd.id AS stock_detail_id, sd.serial_number, sd.bill_no,
+               v.vendor_name, dm.dispatch_date, im.item_name, im.stock_type, dd.quantity,
                IFNULL(da_assigned.assigned_count,0) AS assigned_count
         FROM dispatch_details dd
         JOIN dispatch_master dm ON dm.id = dd.dispatch_id
@@ -112,27 +75,14 @@ if ($role === 'SuperAdmin') {
         JOIN items_master im ON sd.stock_item_id = im.id
         JOIN vendors v ON v.id = sd.vendor_id
         LEFT JOIN (
-            SELECT dispatch_detail_id, COUNT(*) AS assigned_count
-            FROM division_assets
-            GROUP BY dispatch_detail_id
+            SELECT dispatch_detail_id, COUNT(*) AS assigned_count FROM division_assets GROUP BY dispatch_detail_id
         ) da_assigned ON da_assigned.dispatch_detail_id = dd.id
-        ORDER BY dm.dispatch_date DESC
-    ";
-
+        ORDER BY dm.dispatch_date DESC";
     $result = $conn->query($query);
-
 } else {
-
     $stmt = $conn->prepare("
-        SELECT dd.id AS dispatch_detail_id,
-               sd.id AS stock_detail_id,
-               sd.serial_number,
-               sd.bill_no,
-               v.vendor_name,
-               dm.dispatch_date,
-               im.item_name,
-               im.stock_type,
-               dd.quantity,
+        SELECT dd.id AS dispatch_detail_id, sd.id AS stock_detail_id, sd.serial_number, sd.bill_no,
+               v.vendor_name, dm.dispatch_date, im.item_name, im.stock_type, dd.quantity,
                IFNULL(da_assigned.assigned_count,0) AS assigned_count
         FROM dispatch_details dd
         JOIN dispatch_master dm ON dm.id = dd.dispatch_id
@@ -140,77 +90,56 @@ if ($role === 'SuperAdmin') {
         JOIN items_master im ON sd.stock_item_id = im.id
         JOIN vendors v ON v.id = sd.vendor_id
         LEFT JOIN (
-            SELECT dispatch_detail_id, COUNT(*) AS assigned_count
-            FROM division_assets
-            GROUP BY dispatch_detail_id
+            SELECT dispatch_detail_id, COUNT(*) AS assigned_count FROM division_assets GROUP BY dispatch_detail_id
         ) da_assigned ON da_assigned.dispatch_detail_id = dd.id
-        WHERE dm.division_id=?
-        ORDER BY dm.dispatch_date DESC
-    ");
-
+        WHERE dm.division_id=? ORDER BY dm.dispatch_date DESC");
     $stmt->bind_param("i", $division_id);
     $stmt->execute();
     $result = $stmt->get_result();
 }
 
-/* ================= GROUP ITEMS ================= */
 $grouped = [];
-
 while ($row = $result->fetch_assoc()) {
-
-    // NON-SERIAL (Bulk)
     if ($row['stock_type'] === 'non_serial') {
-
-        $remaining = $row['quantity'] - $row['assigned_count'];
-
         for ($i = 1; $i <= $row['quantity']; $i++) {
-
             if ($i > $row['assigned_count']) {
-                $rowCopy = $row;
-                $rowCopy['unit_index'] = $i;
+                $rowCopy = $row; $rowCopy['unit_index'] = $i;
                 $grouped[$row['item_name']][] = $rowCopy;
             }
         }
-    }
-
-    // SERIAL
-    else {
-
+    } else {
         if ((int)$row['assigned_count'] === 0) {
-            $row['unit_index'] = 0;
-            $grouped[$row['item_name']][] = $row;
+            $row['unit_index'] = 0; $grouped[$row['item_name']][] = $row;
         }
     }
 }
 
-/* ================= TOAST MESSAGE ================= */
-$toast_message = $_SESSION['toast_message'] ?? '';
-$toast_type = $_SESSION['toast_type'] ?? 'success';
-
-unset($_SESSION['toast_message'], $_SESSION['toast_type']);
-
 ob_start();
 ?>
 
-
 <div class="container-fluid mt-4">
     <div class="card border-0 shadow-sm rounded-4">
-        <div class="card-body">
-            <h5 class="fw-semibold mb-3"><i class="bi <?= $page_icon ?> me-2"></i>Assign Asset ID</h5>
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="fw-bold m-0"><i class="bi <?= $page_icon ?> me-2 text-primary"></i>Assign Asset ID</h5>
+                <div class="input-group input-group-sm w-25">
+                    <span class="input-group-text bg-white border-end-0 rounded-pill-start"><i class="bi bi-search"></i></span>
+                    <input type="text" id="assetSearch" class="form-control border-start-0 rounded-pill-end" placeholder="Search item or serial...">
+                </div>
+            </div>
 
             <div class="table-responsive">
-                <table class="table table-sm table-hover align-middle mb-0">
-                    <thead class="border-bottom">
-                        <tr>
-                            <th>Sl.No</th>
-                            <th>Item</th>
+                <table class="table table-hover align-middle mb-0" id="assetTable">
+                    <thead class="bg-light">
+                        <tr class="small text-muted text-uppercase">
+                            <th class="ps-3">Sl</th>
+                            <th>Item Details</th>
                             <th>Serial / Unit</th>
-                            <th>Bill No</th>
-                            <th>Vendor</th>
+                            <th>Bill / Vendor</th>
                             <th>Dispatch Date</th>
                             <?php if ($role !== 'SuperAdmin'): ?>
-                                <th>Division Asset ID</th>
-                                <th>Action</th>
+                                <th width="200">Internal Asset ID</th>
+                                <th class="text-end pe-3">Action</th>
                             <?php endif; ?>
                         </tr>
                     </thead>
@@ -218,55 +147,45 @@ ob_start();
                         <?php
                         $sl = 1;
                         if (empty($grouped)) {
-                            echo "<tr><td colspan='8' class='text-center text-muted py-4'>
-                                    <i class='bi bi-check-circle me-2'></i>All dispatched items are already assigned.
-                                  </td></tr>";
+                            echo "<tr><td colspan='8' class='text-center py-5 text-muted'><i class='bi bi-check-circle-fill text-success d-block mb-2' style='font-size:2rem;'></i>All items are already assigned.</td></tr>";
                         }
 
                         foreach ($grouped as $item_name => $items) {
-                            echo "<tr class='group-header'><td colspan='8'>
-                                    <i class='bi bi-box-seam me-2 text-primary'></i>"
-                                    . htmlspecialchars($item_name) .
-                                  "</td></tr>";
+                            echo "<tr class='group-header'><td colspan='8' class='bg-primary-subtle text-primary fw-bold small ps-3'><i class='bi bi-folder2-open me-2'></i>" . htmlspecialchars($item_name) . "</td></tr>";
                             foreach ($items as $row) {
                         ?>
-                        <tr>
-                            <?php if ($role !== 'SuperAdmin'): ?>
-                            <form method="POST">
-                            <?php endif; ?>
-                                <td><?= $sl++ ?></td>
-                                <td><?= htmlspecialchars($row['item_name'] ?? '-') ?></td>
+                        <tr class="asset-row">
+                            <?php if ($role !== 'SuperAdmin'): ?><form method="POST"><?php endif; ?>
+                                <td class="ps-3 text-muted"><?= $sl++ ?></td>
+                                <td class="fw-semibold"><?= htmlspecialchars($row['item_name'] ?? '-') ?></td>
                                 <td>
-                                    <?= $row['stock_type'] === 'non_serial'
-                                        ? "Unit " . ($row['unit_index'] ?? '-') 
-                                        : htmlspecialchars($row['serial_number'] ?? '-') ?>
-
+                                    <?php if($row['stock_type'] === 'non_serial'): ?>
+                                        <span class="badge bg-secondary-subtle text-secondary border">Unit <?= $row['unit_index'] ?></span>
+                                    <?php else: ?>
+                                        <code class="text-dark fw-bold"><?= htmlspecialchars($row['serial_number'] ?? '-') ?></code>
+                                    <?php endif; ?>
                                 </td>
-                                <td><?= htmlspecialchars($row['bill_no'] ?? '-') ?></td>
-                                <td><?= htmlspecialchars($row['vendor_name'] ?? '-') ?></td>
-                                <td><?= htmlspecialchars($row['dispatch_date'] ?? '-') ?></td>
+                                <td>
+                                    <div class="small">#<?= htmlspecialchars($row['bill_no'] ?? '-') ?></div>
+                                    <div class="small text-muted"><?= htmlspecialchars($row['vendor_name'] ?? '-') ?></div>
+                                </td>
+                                <td class="small text-muted"><?= date('d M Y', strtotime($row['dispatch_date'])) ?></td>
 
                                 <?php if ($role !== 'SuperAdmin'): ?>
-                                <td style="max-width:160px;">
-                                    <input type="text" name="division_asset_id" class="form-control form-control-sm" placeholder="Enter Asset ID" required>
-                                    <input type="hidden" name="dispatch_detail_id" value="<?= $row['dispatch_detail_id'] ?? 0 ?>">
-                                    <input type="hidden" name="stock_detail_id" value="<?= $row['stock_detail_id'] ?? 0 ?>">
-                                    <input type="hidden" name="unit_index" value="<?= $row['unit_index'] ?? 0 ?>">
-                                </td>
                                 <td>
-                                    <button type="submit" name="assign" class="btn btn-success btn-sm">
-                                        <i class="bi bi-check-circle"></i>
+                                    <input type="text" name="division_asset_id" class="form-control form-control-sm border-primary-subtle rounded-3" placeholder="Enter ID..." required>
+                                    <input type="hidden" name="dispatch_detail_id" value="<?= $row['dispatch_detail_id'] ?>">
+                                    <input type="hidden" name="stock_detail_id" value="<?= $row['stock_detail_id'] ?>">
+                                    <input type="hidden" name="unit_index" value="<?= $row['unit_index'] ?>">
+                                </td>
+                                <td class="text-end pe-3">
+                                    <button type="submit" name="assign" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
+                                        <i class="bi bi-plus-lg me-1"></i>Assign
                                     </button>
                                 </td>
-                                <?php endif; ?>
-                            <?php if ($role !== 'SuperAdmin'): ?>
-                            </form>
-                            <?php endif; ?>
+                            </form><?php endif; ?>
                         </tr>
-                        <?php
-                            }
-                        }
-                        ?>
+                        <?php } } ?>
                     </tbody>
                 </table>
             </div>
@@ -274,33 +193,35 @@ ob_start();
     </div>
 </div>
 
-<!-- Bootstrap Toast -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
-    <div id="assetToast" class="toast align-items-center text-bg-<?= $toast_type ?> border-0" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-            <div class="toast-body"><?= htmlspecialchars($toast_message) ?></div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<?php if(isset($_SESSION['swal_msg'])): ?>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const toastEl = document.getElementById('assetToast');
-    if (toastEl && toastEl.querySelector('.toast-body').textContent.trim() !== '') {
-        const bsToast = new bootstrap.Toast(toastEl);
-        bsToast.show();
-    }
+    Swal.fire({
+        icon: '<?= $_SESSION['swal_type'] ?>',
+        title: '<?= $_SESSION['swal_type'] == "success" ? "Success" : "Error" ?>',
+        text: '<?= $_SESSION['swal_msg'] ?>',
+        timer: 3000, showConfirmButton: false, toast: true, position: 'top-end'
+    });
+</script>
+<?php unset($_SESSION['swal_type'], $_SESSION['swal_msg']); endif; ?>
+
+<script>
+document.getElementById('assetSearch').addEventListener('keyup', function() {
+    let filter = this.value.toLowerCase();
+    document.querySelectorAll('.asset-row').forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(filter) ? '' : 'none';
+    });
 });
 </script>
 
 <style>
-.table td, .table th { font-size: 13px; white-space: nowrap; }
-.group-header { background: #f8f9fa; font-weight: 600; }
+    .group-header { height: 35px; vertical-align: middle; }
+    .asset-row td { font-size: 0.85rem; padding: 12px 8px; }
+    input[name="division_asset_id"]:focus { border-color: #0d6efd; box-shadow: 0 0 0 0.2rem rgba(13,110,253,.15); }
+    .table-hover tbody tr.asset-row:hover { background-color: #fcfdfe; }
 </style>
 
 <?php
 $content = ob_get_clean();
-include "../stock/stocklayout.php";
+include "../divisions/divisionslayout.php";
 ?>

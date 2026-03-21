@@ -195,12 +195,16 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <a href="assigned_assets.php" class="nav-link <?= ($current_page == 'assigned_assets.php') ? 'active' : '' ?>">
                 <i class="bi bi-check-circle"></i> View My Assets
             </a>
+            
         </div>
 
         <div class="nav-group-label p-3 small fw-bold text-uppercase opacity-50">Maintenance</div>
         <div class="nav flex-column">
             <a href="returned_assets.php" class="nav-link <?= ($current_page == 'returned_assets.php') ? 'active' : '' ?>">
                 <i class="bi bi-arrow-return-left"></i> Returned Assets
+            </a>
+            <a href="asset_logs.php" class="nav-link <?= ($current_page == 'asset_logs.php') ? 'active' : '' ?>">
+                <i class="bi bi-arrow-return-left"></i> Asset Audit Logs 
             </a>
         </div>
     </div>
@@ -293,5 +297,24 @@ $current_page = basename($_SERVER['PHP_SELF']);
         if (event.persisted) { window.location.reload(); }
     };
 </script>
+<?php if (isset($_SESSION['swal_msg'])): ?>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        Swal.fire({
+            icon: '<?= $_SESSION['swal_type'] ?? "success" ?>',
+            title: '<?= ($_SESSION['swal_type'] == "success") ? "Done!" : "Notice" ?>',
+            text: '<?= $_SESSION['swal_msg'] ?>',
+            timer: 3000,
+            showConfirmButton: false,
+            timerProgressBar: true
+        });
+    });
+</script>
+<?php 
+    // CRITICAL: Clear the session so the alert doesn't repeat on refresh
+    unset($_SESSION['swal_msg']);
+    unset($_SESSION['swal_type']);
+endif; 
+?>
 </body>
 </html>

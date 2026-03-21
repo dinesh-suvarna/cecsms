@@ -5,7 +5,6 @@ include "../includes/session.php";
 
 /**
  * 1. MANDATORY SECURITY GATE
- * Prevent non-SuperAdmins from executing this script via URL manipulation.
  */
 if ($_SESSION['role'] !== 'SuperAdmin') {
     $_SESSION['error_msg'] = "Access Denied: Only SuperAdmins can approve lifecycle changes.";
@@ -13,16 +12,17 @@ if ($_SESSION['role'] !== 'SuperAdmin') {
     exit;
 }
 
-// Default states for the SweetAlert UI
 $status_icon = 'info';
 $status_title = 'Processing...';
 $status_text = 'Initializing request.';
 $redirect = "returned_assets.php";
 
-if (isset($_GET['id'])) {
+if (isset($_GET['id']) && isset($_GET['action'])) {
     $id = intval($_GET['id']);
+    $action = $_GET['action']; // 'approve' or 'deny'
+    $deny_reason = isset($_GET['reason']) ? trim($_GET['reason']) : '';
 
-    // 2. Fetch details to know how to route the asset
+    // Fetch asset details
     $stmt = $conn->prepare("
         SELECT da.stock_detail_id, da.status, im.item_name, da.division_asset_id 
         FROM division_assets da
@@ -38,67 +38,74 @@ if (isset($_GET['id'])) {
         $stock_id = $asset['stock_detail_id'];
         $request_type = $asset['status'];
         $asset_tag = $asset['division_asset_id'];
-        $item_name = $asset['item_name'];
+        $admin_id = $_SESSION['user_id'];
 
         $conn->begin_transaction();
 
         try {
-            if ($request_type == 'return_requested') {
-            // Ensure we have the PERMANENT stock_detail_id
-            $stock_id = $asset['stock_detail_id']; 
-            $asset_tag = $asset['division_asset_id'];
-            $admin_id = $_SESSION['user_id'];
+            if ($action === 'deny') {
+                /* ================= DENIAL LOGIC ================= */
+                $stmt_revert = $conn->prepare("UPDATE division_assets SET status = 'assigned' WHERE id = ?");
+                $stmt_revert->bind_param("i", $id);
+                $stmt_revert->execute();
 
-            $conn->begin_transaction();
-
-            try {
-                // 1. Log the completion of the lifecycle
-                $log_notes = "Asset $asset_tag returned to stock. Processed by SuperAdmin.";
+                // Log the rejection so it shows up in red in the Audit Trail
+                $log_notes = "Request Rejected: " . $deny_reason;
                 $log_stmt = $conn->prepare("INSERT INTO asset_logs (asset_id, action_type, performed_by, notes) VALUES (?, 'completed', ?, ?)");
                 $log_stmt->bind_param("iis", $stock_id, $admin_id, $log_notes);
                 $log_stmt->execute();
 
-                // 2. Update Stock to Available
-                $conn->query("UPDATE stock_details SET status = 'available' WHERE id = $stock_id");
+                $status_icon = 'error';
+                $status_title = 'Request Denied';
+                $status_text = "The request for $asset_tag has been rejected and reverted to assigned status.";
 
-                // 3. Remove from Active Divisions & Dispatch
-                // We fetch the dispatch ID right before deleting
-                $res = $conn->query("SELECT dispatch_detail_id FROM division_assets WHERE id = $id");
-                $dd_id = $res->fetch_assoc()['dispatch_detail_id'] ?? null;
+            } else {
+                /* ================= APPROVAL LOGIC ================= */
+                if ($request_type == 'return_requested') {
+                    $log_notes = "Asset $asset_tag returned to stock. Approved by Admin.";
+                    $log_stmt = $conn->prepare("INSERT INTO asset_logs (asset_id, action_type, performed_by, notes) VALUES (?, 'completed', ?, ?)");
+                    $log_stmt->bind_param("iis", $stock_id, $admin_id, $log_notes);
+                    $log_stmt->execute();
 
-                $conn->query("DELETE FROM division_assets WHERE id = $id");
-                if ($dd_id) {
-                    $conn->query("DELETE FROM dispatch_details WHERE id = $dd_id");
+                    $conn->query("UPDATE stock_details SET status = 'available' WHERE id = $stock_id");
+                    
+                    $res = $conn->query("SELECT dispatch_detail_id FROM division_assets WHERE id = $id");
+                    $dd_id = $res->fetch_assoc()['dispatch_detail_id'] ?? null;
+
+                    $conn->query("DELETE FROM division_assets WHERE id = $id");
+                    if ($dd_id) { $conn->query("DELETE FROM dispatch_details WHERE id = $dd_id"); }
+
+                    $status_icon = 'success';
+                    $status_title = 'Return Approved';
+                    $status_text = "Asset $asset_tag is now back in available stock.";
+
+                } elseif ($request_type == 'repair_requested') {
+                    // Log the transfer to repair
+                    $log_notes = "Repair approved. Asset $asset_tag moved to maintenance.";
+                    $log_stmt = $conn->prepare("INSERT INTO asset_logs (asset_id, action_type, performed_by, notes) VALUES (?, 'repair_requested', ?, ?)");
+                    $log_stmt->bind_param("iis", $stock_id, $admin_id, $log_notes);
+                    $log_stmt->execute();
+
+                    $conn->query("UPDATE stock_details SET status = 'maintenance' WHERE id = $stock_id");
+                    $conn->query("UPDATE division_assets SET status = 'under_repair' WHERE id = $id");
+                    
+                    $status_icon = 'warning';
+                    $status_title = 'Repair Authorized';
+                    $status_text = "Asset $asset_tag is now marked as under repair.";
+
+                } elseif ($request_type == 'dispose_requested') {
+                    $log_notes = "Asset $asset_tag decommissioned and sent to E-Waste.";
+                    $log_stmt = $conn->prepare("INSERT INTO asset_logs (asset_id, action_type, performed_by, notes) VALUES (?, 'dispose_requested', ?, ?)");
+                    $log_stmt->bind_param("iis", $stock_id, $admin_id, $log_notes);
+                    $log_stmt->execute();
+
+                    $conn->query("UPDATE stock_details SET status = 'disposed' WHERE id = $stock_id");
+                    $conn->query("DELETE FROM division_assets WHERE id = $id");
+                    
+                    $status_icon = 'info';
+                    $status_title = 'Asset Disposed';
+                    $status_text = "Asset $asset_tag has been moved to e-waste records.";
                 }
-
-                $conn->commit();
-                $status_icon = 'success';
-            } catch (Exception $e) {
-                $conn->rollback();
-                $status_icon = 'error';
-                $status_text = $e->getMessage();
-            }
-
-
-
-
-            } elseif ($request_type == 'repair_requested') {
-                // ROUTE: Maintenance (Locked from dispatch)
-                $conn->query("UPDATE stock_details SET status = 'maintenance' WHERE id = $stock_id");
-                $conn->query("UPDATE division_assets SET status = 'under_repair' WHERE id = $id");
-                
-                $status_icon = 'warning';
-                $status_title = 'Sent for Repair';
-                $status_text = "Asset $asset_tag moved to Maintenance. Update progress in the Services module.";
-
-            } elseif ($request_type == 'dispose_requested') {
-                // ROUTE: E-Waste (Decommissioned)
-                $conn->query("UPDATE stock_details SET status = 'disposed' WHERE id = $stock_id");
-                $conn->query("DELETE FROM division_assets WHERE id = $id");
-                
-                $status_icon = 'error';
-                $status_title = 'Asset Decommissioned';
-                $status_text = "Asset $asset_tag has been moved to E-Waste records.";
             }
 
             $conn->commit();
@@ -111,7 +118,7 @@ if (isset($_GET['id'])) {
     } else {
         $status_icon = 'error';
         $status_title = 'Record Not Found';
-        $status_text = "This asset request no longer exists or has already been processed.";
+        $status_text = "Request no longer exists or was already processed.";
     }
 }
 ?>
@@ -119,19 +126,11 @@ if (isset($_GET['id'])) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Processing Request</title>
+    <title>Processing...</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: #f8fafc; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
-            margin: 0; 
-        }
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; }
     </style>
 </head>
 <body>
@@ -140,11 +139,11 @@ if (isset($_GET['id'])) {
             icon: '<?= $status_icon ?>',
             title: '<?= $status_title ?>',
             text: '<?= $status_text ?>',
-            confirmButtonColor: '#10b981',
+            confirmButtonColor: '<?= ($status_icon == 'error') ? '#ef4444' : '#10b981' ?>',
             confirmButtonText: 'Return to List',
             allowOutsideClick: false,
             customClass: {
-                popup: 'rounded-4 shadow-lg',
+                popup: 'rounded-4 shadow-lg border-0',
                 confirmButton: 'rounded-3 px-4 py-2 fw-bold'
             }
         }).then(() => {

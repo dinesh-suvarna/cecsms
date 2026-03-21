@@ -10,6 +10,35 @@ $page_icon  = "bi-shield-check";
 $role = $_SESSION['role'] ?? '';
 $division_id = $_SESSION['division_id'] ?? 0;
 
+/* ================= HELPERS ================= */
+function getAssetIcon($itemName) {
+    $name = strtolower($itemName);
+    
+    switch (true) {
+        case (strpos($name, 'computer') !== false || strpos($name, 'desktop') !== false):
+            return 'bi-pc-display';
+        case (strpos($name, 'laptop') !== false):
+            return 'bi-laptop';
+        case (strpos($name, 'monitor') !== false):
+            return 'bi-display';
+        case (strpos($name, 'printer') !== false):
+            return 'bi-printer';
+        case (strpos($name, 'keyboard') !== false):
+            return 'bi-keyboard';
+        case (strpos($name, 'mouse') !== false):
+            return 'bi-mouse3';
+        case (strpos($name, 'ups') !== false || strpos($name, 'battery') !== false):
+            return 'bi-lightning-charge';
+        case (strpos($name, 'table') !== false || strpos($name, 'desk') !== false):
+            return 'bi-table';
+        case (strpos($name, 'chair') !== false):
+            return 'bi-person-workspace';
+        case (strpos($name, 'camera') !== false || strpos($name, 'cctv') !== false):
+            return 'bi-camera-video';
+        default:
+            return 'bi-box-seam'; // Fallback icon
+    }
+}
 /* ================= FETCH REQUESTED ASSETS ================= */
 $query = "SELECT 
             da.id,
@@ -20,7 +49,8 @@ $query = "SELECT
             u.unit_code,
             u.unit_name,
             da.status,
-            da.assigned_at
+            da.assigned_at,
+            al.notes -- Added to fetch the remarks
         FROM division_assets da
         JOIN dispatch_details dd ON da.dispatch_detail_id = dd.id
         JOIN dispatch_master dm ON dd.dispatch_id = dm.id
@@ -28,6 +58,8 @@ $query = "SELECT
         JOIN items_master im ON sd.stock_item_id = im.id
         JOIN divisions d ON dm.division_id = d.id
         LEFT JOIN units u ON dm.unit_id = u.id 
+        -- Join asset_logs to get the notes for the specific requested action
+        LEFT JOIN asset_logs al ON sd.id = al.asset_id AND al.action_type = da.status
         WHERE da.status IN ('return_requested', 'repair_requested', 'dispose_requested') ";
 
 // Security: Non-SuperAdmins only see their own division's requests
@@ -132,11 +164,25 @@ ob_start();
                             <td><span class="badge-request <?= $badge_class ?>"><?= $label ?></span></td>
                             
                             <?php if ($role === 'SuperAdmin'): ?>
-                            <td class="text-end pe-4">
-                                <button type="button" class="btn btn-approve shadow-sm" 
-                                        onclick="processItem('<?= $row['id'] ?>', '<?= $label ?>', '<?= $row['division_asset_id'] ?>')">
-                                    <i class="bi bi-check2-circle me-1"></i> Process
-                                </button>
+                            <?php 
+                            // Prepare the unit display string for JS
+                            $unitFullName = (!empty($row['unit_code']) ? $row['unit_code'] . " - " : "") . $row['unit_name'];
+                            ?>
+                            <td>
+                            <button type="button" class="btn btn-approve shadow-sm" 
+                                    onclick="processItem(
+                                        '<?= $row['id'] ?>', 
+                                        '<?= $label ?>', 
+                                        '<?= $row['division_asset_id'] ?>', 
+                                        '<?= addslashes($row['item_name']) ?>', 
+                                        '<?= $row['serial_number'] ?>', 
+                                        '<?= addslashes($row['notes'] ?? "") ?>',
+                                        '<?= getAssetIcon($row['item_name']) ?>',
+                                        '<?= addslashes($unitFullName) ?>',
+                                        '<?= addslashes($row['department']) ?>' // New: Division Name
+                                    )">
+                                <i class="bi bi-check2-circle me-1"></i> Process
+                            </button>
                             </td>
                             <?php endif; ?>
                         </tr>
@@ -151,47 +197,76 @@ ob_start();
         </div>
     </div>
 </div>
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-function processItem(id, type, assetTag) {
-    let confirmText = "";
-    let iconColor = "#10b981";
-
-    // Dynamic messaging based on request type
-    if(type === 'RETURN') {
-        confirmText = "Confirm that " + assetTag + " has been received and will be moved back to available stock.";
-    } else if(type === 'REPAIR') {
-        confirmText = "Mark " + assetTag + " for maintenance. This will lock it from further dispatch.";
-        iconColor = "#0ea5e9";
-    } else {
-        confirmText = "Proceed with decommissioning " + assetTag + ". This move is permanent.";
-        iconColor = "#ef4444";
-    }
+// Add 'unitName' to the parameters list
+function processItem(id, type, assetTag, itemName, serial, notes, iconClass, unitName, divisionName) {
+    let iconColor = (type === 'REPAIR') ? '#0ea5e9' : (type === 'RETURN') ? '#10b981' : '#ef4444';
+    const displayNotes = notes ? notes : "No remarks provided by department.";
+    
+    // Combine Division and Unit for a breadcrumb effect
+    const locationPath = `${divisionName} <i class="bi bi-chevron-right mx-1" style="font-size: 0.6rem;"></i> ${unitName}`;
 
     Swal.fire({
-        title: 'Approve ' + type + '?',
-        text: confirmText,
-        icon: 'warning',
+        title: '<div class="text-start fw-bold mb-0">Lifecycle Action</div>',
+        html: `
+            <div class="text-start mt-3">
+                <div class="p-3 border rounded-4 bg-light mb-3">
+                    <div class="d-flex align-items-center gap-3 mb-2">
+                        <div class="bg-white p-2 rounded-3 border shadow-sm">
+                            <i class="bi ${iconClass} fs-3 text-emerald-600"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">${itemName}</h6>
+                            <small class="text-muted">ID: ${assetTag} | SN: ${serial}</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-inline-flex align-items-center bg-white border rounded-pill px-3 py-1 shadow-sm">
+                        <i class="bi bi-geo-alt-fill text-danger me-2" style="font-size: 0.75rem;"></i>
+                        <span class="fw-bold text-dark" style="font-size: 0.7rem; letter-spacing: 0.02em;">
+                            ${locationPath}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="extra-small text-uppercase fw-bold text-muted mb-1">Action Remarks / Reason</label>
+                    <div class="p-3 border rounded-3 bg-white italic small text-secondary shadow-sm">
+                        "${displayNotes}"
+                    </div>
+                </div>
+
+                <div id="denySection" style="display:none;">
+                    <label class="extra-small text-uppercase fw-bold text-danger mb-1">Reason for Rejection</label>
+                    <textarea id="denyReason" class="form-control form-control-sm border-danger shadow-sm" placeholder="Enter reason to notify department..."></textarea>
+                </div>
+            </div>
+        `,
+        // ... (rest of the SweetAlert logic for Approve/Deny remains same)
         showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: 'Approve ' + type,
+        denyButtonText: 'Deny Request',
         confirmButtonColor: iconColor,
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Yes, Process It',
-        cancelButtonText: 'Cancel',
-        reverseButtons: true,
-        customClass: {
-            popup: 'rounded-4 shadow-lg border-0',
-            confirmButton: 'rounded-3 px-4 py-2 fw-bold',
-            cancelButton: 'rounded-3 px-4 py-2'
+        preDeny: () => {
+            const denySection = document.getElementById('denySection');
+            if (denySection.style.display === 'none') {
+                denySection.style.display = 'block';
+                return false; 
+            }
+            const reason = document.getElementById('denyReason').value;
+            if (!reason) {
+                Swal.showValidationMessage('Please provide a reason for denial');
+                return false;
+            }
+            return { action: 'deny', reason: reason };
         }
     }).then((result) => {
         if (result.isConfirmed) {
-            // Optional: Show a loading state before redirect
-            Swal.fire({
-                title: 'Updating Records...',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading() }
-            });
-            window.location.href = 'process_request.php?id=' + id + '&action=approve';
+            window.location.href = `process_request.php?id=${id}&action=approve`;
+        } else if (result.isDenied) {
+            window.location.href = `process_request.php?id=${id}&action=deny&reason=${encodeURIComponent(result.value.reason)}`;
         }
     });
 }
@@ -199,5 +274,5 @@ function processItem(id, type, assetTag) {
 
 <?php
 $content = ob_get_clean();
-include "../stock/stocklayout.php";
+include "../admin/adminlayout.php";
 ?>

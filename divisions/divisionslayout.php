@@ -7,6 +7,26 @@ header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
 $current_page = basename($_SERVER['PHP_SELF']);
+
+// Fetch recent notifications for the logged-in user's division
+$notif_division_id = $_SESSION['division_id'] ?? 0;
+$notif_query = "
+    SELECT al.*, im.item_name 
+    FROM asset_logs al
+    JOIN stock_details sd ON al.asset_id = sd.id
+    JOIN items_master im ON sd.stock_item_id = im.id
+    LEFT JOIN division_assets da ON sd.id = da.stock_detail_id
+    LEFT JOIN dispatch_details dd ON da.dispatch_detail_id = dd.id
+    LEFT JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+    WHERE (dm.division_id = $notif_division_id OR al.performed_by IN (
+        SELECT id FROM users WHERE division_id = $notif_division_id
+    ))
+    AND al.action_type IN ('REPAIR_APPROVED', 'REPAIR_REJECTED', 'RETURN_APPROVED', 'RETURN_REJECTED', 'repair_requested', 'return_requested')
+    ORDER BY al.created_at DESC LIMIT 5";
+$notifications = $conn->query($notif_query);
+$notif_count = $notifications->num_rows;
+
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -200,9 +220,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <div class="nav-group-label p-3 small fw-bold text-uppercase opacity-50">Maintenance</div>
         <div class="nav flex-column">
-            <a href="returned_assets.php" class="nav-link <?= ($current_page == 'returned_assets.php') ? 'active' : '' ?>">
-                <i class="bi bi-arrow-return-left"></i> Returned Assets
-            </a>
+
             <a href="asset_logs.php" class="nav-link <?= ($current_page == 'asset_logs.php') ? 'active' : '' ?>">
                 <i class="bi bi-arrow-return-left"></i> Asset Audit Logs 
             </a>
@@ -218,51 +236,96 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
 <main class="main-wrapper">
     <header class="top-navbar">
-        <div class="d-flex align-items-center gap-3">
-            <button class="btn btn-light d-lg-none border-0 shadow-sm rounded-3" id="menuToggle">
-                <i class="bi bi-list fs-5"></i>
+    <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-light d-lg-none border-0 shadow-sm rounded-3" id="menuToggle">
+            <i class="bi bi-list fs-5"></i>
+        </button>
+        
+        <a href="../admin/admin_dashboard.php" class="nav-home-icon d-flex align-items-center justify-content-center text-decoration-none border rounded-3" style="width:38px; height:38px;" title="Main Admin Panel">
+            <i class="bi bi-house-door text-muted"></i>
+        </a>
+
+        <div>
+            <h5 class="mb-0 fw-bold text-dark lh-1 mb-1"><?= htmlspecialchars($page_title) ?></h5>
+            <p class="text-muted mb-0 d-none d-md-block" style="font-size: 11px; letter-spacing: 0.02rem;">
+                Division asset tracking and status management.
+            </p>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-3">
+        <div class="dropdown">
+            <button class="btn btn-light border rounded-3 position-relative" style="width: 38px; height: 38px;" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-bell text-muted"></i>
+                <?php if($notif_count > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
+                        <?= $notif_count ?>
+                    </span>
+                <?php endif; ?>
             </button>
-            
-            <a href="../admin/admin_dashboard.php" class="nav-home-icon d-flex align-items-center justify-content-center text-decoration-none border rounded-3" style="width:38px; height:38px;" title="Main Admin Panel">
-                <i class="bi bi-house-door text-muted"></i>
-            </a>
-
-            <div>
-                <h5 class="mb-0 fw-bold text-dark lh-1 mb-1"><?= htmlspecialchars($page_title) ?></h5>
-                <p class="text-muted mb-0 d-none d-md-block" style="font-size: 11px; letter-spacing: 0.02rem;">
-                    Division asset tracking and status management.
-                </p>
-            </div>
-        </div>
-
-        <div class="d-flex align-items-center gap-3">
-            <div class="d-none d-sm-flex align-items-center gap-2 text-muted small border-end pe-3">
-                <i class="bi bi-calendar-event"></i>
-                <?= date('D, M j, Y') ?>
-            </div>
-
-            <div class="dropdown">
-                <div class="user-profile shadow-sm border" data-bs-toggle="dropdown" aria-expanded="false">
-                    <div class="text-end d-none d-md-block">
-                        <p class="small fw-bold mb-0 text-dark"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></p>
-                        <span class="badge bg-emerald-soft text-success" style="font-size: 9px;">
-                            <?= htmlspecialchars($_SESSION['role'] ?? 'Division') ?>
-                        </span>
-                    </div>
-                    <div class="avatar bg-light border rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
-                        <i class="bi bi-person-fill text-success fs-5"></i>
-                    </div>
+            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-0 overflow-hidden" style="width: 300px;">
+                <li class="p-3 border-bottom bg-light">
+                    <h6 class="mb-0 fw-bold small">Notifications</h6>
+                </li>
+                <div style="max-height: 350px; overflow-y: auto;">
+                    <?php if($notif_count > 0): ?>
+                        <?php while($n = $notifications->fetch_assoc()): 
+                            $is_rejected = strpos($n['action_type'], 'REJECTED') !== false;
+                            $icon = $is_rejected ? 'bi-x-circle-fill text-danger' : 'bi-check-circle-fill text-success';
+                            $bg = $is_rejected ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)';
+                        ?>
+                        <li>
+                            <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start" href="asset_logs.php" style="background: <?= $bg ?>; white-space: normal;">
+                                <i class="bi <?= $icon ?> fs-5 mt-1"></i>
+                                <div>
+                                    <p class="mb-1 small fw-bold text-dark">
+                                        <?= str_replace('_', ' ', $n['action_type']) ?>
+                                    </p>
+                                    <p class="mb-1 extra-small text-muted">
+                                        Your request for <strong><?= $n['item_name'] ?></strong> has been <?= $is_rejected ? 'rejected' : 'approved' ?>.
+                                    </p>
+                                    <span class="text-muted italic" style="font-size: 10px;"><?= date('M d, H:i', strtotime($n['created_at'])) ?></span>
+                                </div>
+                            </a>
+                        </li>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <li class="p-4 text-center text-muted small">
+                            <i class="bi bi-bell-slash d-block fs-2 opacity-25 mb-2"></i>
+                            No new updates.
+                        </li>
+                    <?php endif; ?>
                 </div>
-                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-2" style="min-width: 180px;">
-                    <li>
-                        <a class="dropdown-item py-2 text-danger fw-bold rounded-3" href="../logout.php">
-                            <i class="bi bi-box-arrow-right me-2"></i> Logout
-                        </a>
-                    </li>
-                </ul>
-            </div>
+                <li>
+                    <a class="dropdown-item text-center py-2 fw-bold text-success small border-top" href="asset_logs.php">
+                        View All Activity
+                    </a>
+                </li>
+            </ul>
         </div>
-    </header>
+
+        <div class="dropdown">
+            <div class="user-profile shadow-sm border" data-bs-toggle="dropdown" aria-expanded="false">
+                <div class="text-end d-none d-md-block">
+                    <p class="small fw-bold mb-0 text-dark"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></p>
+                    <span class="badge bg-emerald-soft text-success" style="font-size: 9px;">
+                        <?= htmlspecialchars($_SESSION['role'] ?? 'Division') ?>
+                    </span>
+                </div>
+                <div class="avatar bg-light border rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                    <i class="bi bi-person-fill text-success fs-5"></i>
+                </div>
+            </div>
+            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-2" style="min-width: 180px;">
+                <li>
+                    <a class="dropdown-item py-2 text-danger fw-bold rounded-3" href="../logout.php">
+                        <i class="bi bi-box-arrow-right me-2"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</header>
 
     <div class="animate-fade-in">
         <?php if (isset($main_content)) echo $main_content; ?>

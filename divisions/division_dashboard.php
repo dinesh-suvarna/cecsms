@@ -11,26 +11,31 @@ $role = $_SESSION['role'] ?? '';
 
 /* ================= FETCH ANALYTICS ================= */
 
-// 1. General Stats
+// 1. General Stats - FIXED JOIN AND COUNT LOGIC
 $stats_query = "SELECT 
     COUNT(da.id) as total,
     SUM(CASE WHEN da.status = 'assigned' THEN 1 ELSE 0 END) as active,
     SUM(CASE WHEN da.status LIKE '%_requested' THEN 1 ELSE 0 END) as pending,
-    SUM(CASE WHEN da.status = 'repair_requested' THEN 1 ELSE 0 END) as in_repair
+    SUM(CASE WHEN da.status = 'under_repair' THEN 1 ELSE 0 END) as in_repair
     FROM division_assets da
-    JOIN dispatch_details dd ON dd.id = da.dispatch_detail_id
-    JOIN dispatch_master dm ON dm.id = dd.dispatch_id
-    WHERE 1=1 " . ($role !== 'SuperAdmin' ? " AND dm.division_id = $division_id" : "");
+    LEFT JOIN dispatch_details dd ON dd.id = da.dispatch_detail_id
+    LEFT JOIN dispatch_master dm ON dm.id = dd.dispatch_id
+    WHERE 1=1 ";
 
-$stats = $conn->query($stats_query)->fetch_assoc();
+if ($role !== 'SuperAdmin') {
+    $stats_query .= " AND dm.division_id = $division_id";
+}
+
+$stats_result = $conn->query($stats_query);
+$stats = $stats_result ? $stats_result->fetch_assoc() : ['total'=>0, 'active'=>0, 'pending'=>0, 'in_repair'=>0];
 
 // 2. Asset Distribution (Categories)
 $dist_query = "SELECT im.item_name, COUNT(*) as count 
     FROM division_assets da
     JOIN stock_details sd ON sd.id = da.stock_detail_id
     JOIN items_master im ON im.id = sd.stock_item_id
-    JOIN dispatch_details dd ON dd.id = da.dispatch_detail_id
-    JOIN dispatch_master dm ON dm.id = dd.dispatch_id
+    LEFT JOIN dispatch_details dd ON dd.id = da.dispatch_detail_id
+    LEFT JOIN dispatch_master dm ON dm.id = dd.dispatch_id
     WHERE da.status = 'assigned' " . ($role !== 'SuperAdmin' ? " AND dm.division_id = $division_id" : "") . "
     GROUP BY im.item_name ORDER BY count DESC";
 $distribution = $conn->query($dist_query);
@@ -40,8 +45,8 @@ $req_query = "SELECT da.division_asset_id, im.item_name, da.status, da.assigned_
     FROM division_assets da
     JOIN stock_details sd ON sd.id = da.stock_detail_id
     JOIN items_master im ON im.id = sd.stock_item_id
-    JOIN dispatch_details dd ON dd.id = da.dispatch_detail_id
-    JOIN dispatch_master dm ON dm.id = dd.dispatch_id
+    LEFT JOIN dispatch_details dd ON dd.id = da.dispatch_detail_id
+    LEFT JOIN dispatch_master dm ON dm.id = dd.dispatch_id
     WHERE da.status LIKE '%_requested' " . ($role !== 'SuperAdmin' ? " AND dm.division_id = $division_id" : "") . "
     ORDER BY da.id DESC LIMIT 5";
 $recent_requests = $conn->query($req_query);
@@ -49,23 +54,23 @@ $recent_requests = $conn->query($req_query);
 // 4. Asset Health Metrics
 $health_query = "SELECT 
     SUM(CASE WHEN da.status = 'assigned' THEN 1 ELSE 0 END) as healthy,
-    SUM(CASE WHEN da.status = 'repair_requested' THEN 1 ELSE 0 END) as repairing,
-    SUM(CASE WHEN da.status IN ('return_requested', 'dispose_requested') THEN 1 ELSE 0 END) as outgoing
+    SUM(CASE WHEN da.status = 'under_repair' THEN 1 ELSE 0 END) as repairing,
+    SUM(CASE WHEN da.status IN ('return_requested', 'repair_requested', 'dispose_requested') THEN 1 ELSE 0 END) as outgoing
     FROM division_assets da
-    JOIN dispatch_details dd ON dd.id = da.dispatch_detail_id
-    JOIN dispatch_master dm ON dm.id = dd.dispatch_id
+    LEFT JOIN dispatch_details dd ON dd.id = da.dispatch_detail_id
+    LEFT JOIN dispatch_master dm ON dm.id = dd.dispatch_id
     WHERE 1=1 " . ($role !== 'SuperAdmin' ? " AND dm.division_id = $division_id" : "");
 $health_data = $conn->query($health_query)->fetch_assoc();
 
-// 5. Recent Activity Logs
+// 5. Recent Activity Logs - FIXED JOIN (Joining on stock_detail_id is safer)
 $log_query = "SELECT al.action_type, al.created_at, im.item_name, al.notes
     FROM asset_logs al
-    JOIN division_assets da ON al.asset_id = da.id
-    JOIN stock_details sd ON da.stock_detail_id = sd.id
+    JOIN stock_details sd ON al.asset_id = sd.id
     JOIN items_master im ON sd.stock_item_id = im.id
-    JOIN dispatch_details dd ON dd.id = da.dispatch_detail_id
-    JOIN dispatch_master dm ON dm.id = dd.dispatch_id
-    WHERE 1=1 " . ($role !== 'SuperAdmin' ? " AND dm.division_id = $division_id" : "") . "
+    LEFT JOIN division_assets da ON sd.id = da.stock_detail_id
+    LEFT JOIN dispatch_details dd ON dd.id = da.dispatch_detail_id
+    LEFT JOIN dispatch_master dm ON dm.id = dd.dispatch_id
+    WHERE 1=1 " . ($role !== 'SuperAdmin' ? " AND (dm.division_id = $division_id OR al.performed_by = {$_SESSION['user_id']})" : "") . "
     ORDER BY al.created_at DESC LIMIT 5";
 $recent_logs = $conn->query($log_query);
 
@@ -119,7 +124,7 @@ ob_start();
                     <div class="icon-shape bg-blue-soft me-3"><i class="bi bi-layers"></i></div>
                     <div>
                         <small class="text-muted fw-bold text-uppercase extra-small">Total Assets</small>
-                        <h4 class="fw-bold mb-0"><?= $stats['total'] ?></h4>
+                        <h4 class="fw-bold mb-0"><?= number_format($stats['total']) ?></h4>
                     </div>
                 </div>
             </div>
@@ -130,7 +135,7 @@ ob_start();
                     <div class="icon-shape bg-emerald-soft me-3"><i class="bi bi-check-circle"></i></div>
                     <div>
                         <small class="text-muted fw-bold text-uppercase extra-small">Active</small>
-                        <h4 class="fw-bold mb-0 text-success"><?= $stats['active'] ?></h4>
+                        <h4 class="fw-bold mb-0 text-success"><?= number_format($stats['active']) ?></h4>
                     </div>
                 </div>
             </div>
@@ -141,7 +146,7 @@ ob_start();
                     <div class="icon-shape bg-amber-soft me-3"><i class="bi bi-clock-history"></i></div>
                     <div>
                         <small class="text-muted fw-bold text-uppercase extra-small">Pending</small>
-                        <h4 class="fw-bold mb-0 text-warning"><?= $stats['pending'] ?></h4>
+                        <h4 class="fw-bold mb-0 text-warning"><?= number_format($stats['pending']) ?></h4>
                     </div>
                 </div>
             </div>
@@ -152,7 +157,7 @@ ob_start();
                     <div class="icon-shape bg-light me-3 text-info"><i class="bi bi-tools"></i></div>
                     <div>
                         <small class="text-muted fw-bold text-uppercase extra-small">In Repair</small>
-                        <h4 class="fw-bold mb-0"><?= $stats['in_repair'] ?></h4>
+                        <h4 class="fw-bold mb-0"><?= number_format($stats['in_repair']) ?></h4>
                     </div>
                 </div>
             </div>
@@ -174,19 +179,19 @@ ob_start();
                     </div>
                     <div class="text-center">
                         <div class="text-danger fw-bold h5 mb-0"><?= $health_data['outgoing'] ?? 0 ?></div>
-                        <small class="text-muted extra-small fw-bold">OUTGOING</small>
+                        <small class="text-muted extra-small fw-bold">REQUESTED</small>
                     </div>
                 </div>
 
                 <h6 class="fw-bold mb-3 pt-3 border-top">Category Breakdown</h6>
                 <div class="overflow-auto pe-2" style="max-height: 220px;">
-                    <?php if($distribution->num_rows > 0): 
+                    <?php if($distribution && $distribution->num_rows > 0): 
                         while($row = $distribution->fetch_assoc()): 
                         $pct = ($stats['active'] > 0) ? ($row['count'] / $stats['active']) * 100 : 0;
                     ?>
                     <div class="mb-3">
                         <div class="d-flex justify-content-between mb-1">
-                            <span class="text-dark small fw-medium"><?= $row['item_name'] ?></span>
+                            <span class="text-dark small fw-medium"><?= htmlspecialchars($row['item_name']) ?></span>
                             <span class="fw-bold small"><?= $row['count'] ?></span>
                         </div>
                         <div class="progress progress-thin">
@@ -205,22 +210,48 @@ ob_start();
                 <div class="card-header bg-transparent border-0 p-4 pb-0">
                     <ul class="nav nav-pills nav-fill bg-light rounded-3 p-1" id="dashTab" role="tablist">
                         <li class="nav-item">
-                            <button class="nav-link active py-2 fw-bold small" data-bs-toggle="tab" data-bs-target="#tab-requests">
-                                Pending Requests
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link py-2 fw-bold small" data-bs-toggle="tab" data-bs-target="#tab-logs">
+                            <button class="nav-link active py-2 fw-bold small" data-bs-toggle="tab" data-bs-target="#tab-logs">
                                 Recent Activity
                             </button>
                         </li>
+                        <li class="nav-item">
+                            <button class="nav-link  py-2 fw-bold small" data-bs-toggle="tab" data-bs-target="#tab-requests">
+                                Pending Requests
+                            </button>
+                        </li>
+                        
                     </ul>
                 </div>
 
                 <div class="tab-content p-4 pt-3">
-                    <div class="tab-pane fade show active" id="tab-requests">
-                        <div class="overflow-auto pe-2" style="max-height: 330px;">
-                            <?php if ($recent_requests->num_rows > 0): ?>
+                    <div class="tab-pane fade show active" id="tab-logs"> <div class="overflow-auto pe-2" style="max-height: 330px;">
+                            <?php if ($recent_logs && $recent_logs->num_rows > 0): ?>
+                                <div class="ps-2">
+                                <?php while($log = $recent_logs->fetch_assoc()): ?>
+                                    <div class="timeline-item">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <small class="fw-bold text-dark text-uppercase" style="font-size: 0.7rem;">
+                                                <?= str_replace('_', ' ', $log['action_type']) ?>
+                                            </small>
+                                            <small class="text-muted extra-small"><?= date('M d', strtotime($log['created_at'])) ?></small>
+                                        </div>
+                                        <div class="text-muted extra-small mt-1">
+                                            <strong><?= htmlspecialchars($log['item_name']) ?>:</strong> <?= htmlspecialchars($log['notes'] ?: 'Action processed') ?>
+                                        </div>
+                                    </div>
+                                <?php endwhile; ?>
+                                </div>
+                                <div class="text-center mt-2">
+                                    <a href="asset_logs.php" class="text-success extra-small fw-bold text-decoration-none">VIEW FULL AUDIT LOG →</a>
+                                </div>
+                            <?php else: ?>
+                                <div class="text-center py-5 text-muted small">No recent activity recorded.</div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-requests"> <div class="overflow-auto pe-2" style="max-height: 330px;">
+                            <?php if ($recent_requests && $recent_requests->num_rows > 0): ?>
                                 <?php while($req = $recent_requests->fetch_assoc()): 
                                     $status_label = str_replace('_', ' ', $req['status']);
                                     $badge = strpos($req['status'], 'repair') !== false ? 'bg-info' : (strpos($req['status'], 'dispose') !== false ? 'bg-danger' : 'bg-warning');
@@ -248,33 +279,6 @@ ob_start();
                                     <i class="bi bi-shield-check text-light display-4"></i>
                                     <p class="text-muted small mt-2">No pending lifecycle requests.</p>
                                 </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane fade" id="tab-logs">
-                        <div class="overflow-auto pe-2" style="max-height: 330px;">
-                            <?php if ($recent_logs->num_rows > 0): ?>
-                                <div class="ps-2">
-                                <?php while($log = $recent_logs->fetch_assoc()): ?>
-                                    <div class="timeline-item">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <small class="fw-bold text-dark text-uppercase" style="font-size: 0.7rem;">
-                                                <?= str_replace('_', ' ', $log['action_type']) ?>
-                                            </small>
-                                            <small class="text-muted extra-small"><?= date('M d', strtotime($log['created_at'])) ?></small>
-                                        </div>
-                                        <div class="text-muted extra-small mt-1">
-                                            <strong><?= $log['item_name'] ?>:</strong> <?= htmlspecialchars($log['notes'] ?: 'Action processed') ?>
-                                        </div>
-                                    </div>
-                                <?php endwhile; ?>
-                                </div>
-                                <div class="text-center mt-2">
-                                    <a href="asset_logs.php" class="text-success extra-small fw-bold text-decoration-none">VIEW FULL AUDIT LOG →</a>
-                                </div>
-                            <?php else: ?>
-                                <div class="text-center py-5 text-muted small">No recent activity recorded.</div>
                             <?php endif; ?>
                         </div>
                     </div>

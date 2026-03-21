@@ -65,16 +65,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
             text-decoration: none;
         }
 
-        .nav-group-label {
-            padding: 1.5rem 1.5rem 0.5rem;
-            font-size: 0.72rem;
-            letter-spacing: 0.1rem;
-            text-transform: uppercase;
-            font-weight: 700;
-            color: var(--text-muted);
-            opacity: 0.7;
-        }
-
         #sidebar .nav-link {
             margin: 0.2rem 1rem;
             padding: 0.8rem 1.1rem;
@@ -87,12 +77,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
             font-weight: 600;
             transition: all 0.2s;
             text-decoration: none;
-        }
-
-        #sidebar .nav-link:hover {
-            background: #f1f5f9;
-            color: var(--primary-accent);
-            transform: translateX(4px);
         }
 
         #sidebar .nav-link.active {
@@ -108,9 +92,13 @@ $current_page = basename($_SERVER['PHP_SELF']);
             padding: 1.5rem;
             transition: margin 0.3s ease-in-out;
             position: relative;
+            z-index: 1; /* Keep content below modals */
         }
 
+        /* 1. Fix the layering issue: Header must be higher than content */
         .top-navbar {
+            position: relative;
+            z-index: 1050; /* Higher than main-wrapper's z-index */
             background: rgba(255, 255, 255, 0.9);
             border: 1px solid var(--border-color);
             border-radius: 16px;
@@ -123,36 +111,47 @@ $current_page = basename($_SERVER['PHP_SELF']);
             backdrop-filter: blur(8px);
         }
 
-        .nav-home-icon {
-            width: 38px;
-            height: 38px;
-            background-color: #fff;
-            color: var(--text-muted);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid var(--border-color);
-            text-decoration: none;
-            transition: all 0.2s;
+        /* 2. Force dropdowns to the absolute top of the stack */
+        .dropdown-menu {
+            z-index: 3000 !important; 
         }
 
-        .nav-home-icon:hover {
-            background-color: var(--primary-accent);
-            color: #fff;
-            border-color: var(--primary-accent);
-        }
-
+        /* 3. Profile layout alignment fix */
         .user-profile {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 5px 12px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            background: #fff;
+            gap: 12px;
             cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 12px;
+            transition: background 0.2s;
         }
+
+        .user-profile:hover {
+            background: rgba(0, 0, 0, 0.04);
+        }
+        /* Ensure the avatar stays perfectly round */
+        .avatar {
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        /* Optional: Make the badge look a bit sharper */
+        .user-profile .badge {
+            padding: 3px 6px;
+            font-weight: 600;
+        }
+        /* --- THE "CATCH" FROM MASTERLAYOUT: MODAL FIXES --- */
+        .modal {
+            z-index: 1065 !important;
+        }
+        .modal-backdrop {
+            z-index: 1060 !important;
+        }
+        .dropdown-menu {
+            z-index: 2000 !important;
+        }
+        .bg-emerald-soft { background-color: rgba(16, 185, 129, 0.1); }
 
         .animate-fade-in {
             animation: fadeIn 0.4s ease-out forwards;
@@ -164,7 +163,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         }
 
         @media (max-width: 992px) {
-            #sidebar { transform: translateX(-100%); }
+            #sidebar { transform: translateX(-100%); z-index: 2000; }
             .main-wrapper { margin-left: 0; }
             #sidebar.show { transform: translateX(0); }
         }
@@ -181,14 +180,14 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </a>
 
     <div class="overflow-y-auto flex-grow-1">
-        <div class="nav-group-label">Overview</div>
+        <div class="nav-group-label p-3 small fw-bold text-uppercase opacity-50">Overview</div>
         <div class="nav flex-column">
             <a href="division_dashboard.php" class="nav-link <?= ($current_page == 'division_dashboard.php') ? 'active' : '' ?>">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
         </div>
 
-        <div class="nav-group-label">Asset Management</div>
+        <div class="nav-group-label p-3 small fw-bold text-uppercase opacity-50">Asset Management</div>
         <div class="nav flex-column">
             <a href="assign_asset.php" class="nav-link <?= ($current_page == 'assign_asset.php') ? 'active' : '' ?>">
                 <i class="bi bi-tag"></i> Assign Asset ID
@@ -198,7 +197,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
             </a>
         </div>
 
-        <div class="nav-group-label">Maintenance</div>
+        <div class="nav-group-label p-3 small fw-bold text-uppercase opacity-50">Maintenance</div>
         <div class="nav flex-column">
             <a href="returned_assets.php" class="nav-link <?= ($current_page == 'returned_assets.php') ? 'active' : '' ?>">
                 <i class="bi bi-arrow-return-left"></i> Returned Assets
@@ -220,8 +219,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 <i class="bi bi-list fs-5"></i>
             </button>
             
-            <a href="../admin/admin_dashboard.php" class="nav-home-icon" title="Main Admin Panel">
-                <i class="bi bi-house-door"></i>
+            <a href="../admin/admin_dashboard.php" class="nav-home-icon d-flex align-items-center justify-content-center text-decoration-none border rounded-3" style="width:38px; height:38px;" title="Main Admin Panel">
+                <i class="bi bi-house-door text-muted"></i>
             </a>
 
             <div>
@@ -239,20 +238,20 @@ $current_page = basename($_SERVER['PHP_SELF']);
             </div>
 
             <div class="dropdown">
-                <div class="user-profile shadow-sm" data-bs-toggle="dropdown">
+                <div class="user-profile shadow-sm border" data-bs-toggle="dropdown" aria-expanded="false">
                     <div class="text-end d-none d-md-block">
-                        <p class="small fw-bold mb-0"><?= htmlspecialchars($_SESSION['username'] ?? 'Division User') ?></p>
+                        <p class="small fw-bold mb-0 text-dark"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></p>
                         <span class="badge bg-emerald-soft text-success" style="font-size: 9px;">
                             <?= htmlspecialchars($_SESSION['role'] ?? 'Division') ?>
                         </span>
                     </div>
-                    <div class="avatar bg-light border rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
-                        <i class="bi bi-person text-success"></i>
+                    <div class="avatar bg-light border rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="bi bi-person-fill text-success fs-5"></i>
                     </div>
                 </div>
-                <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-2" style="min-width: 180px;">
                     <li>
-                        <a class="dropdown-item py-2 text-danger fw-bold" href="../logout.php">
+                        <a class="dropdown-item py-2 text-danger fw-bold rounded-3" href="../logout.php">
                             <i class="bi bi-box-arrow-right me-2"></i> Logout
                         </a>
                     </li>
@@ -267,9 +266,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </div>
 </main>
 
+<?php if (isset($modal_html)) echo $modal_html; ?>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Sidebar Mobile Toggle
     const menuToggle = document.getElementById('menuToggle');
     const sidebar = document.getElementById('sidebar');
     if(menuToggle) {
@@ -278,7 +278,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
         });
     }
 
-    // Auto-scroll to active link
     document.addEventListener("DOMContentLoaded", function() {
         const sidebarContainer = document.querySelector('.overflow-y-auto');
         const activeLink = document.querySelector('#sidebar .nav-link.active');
@@ -290,7 +289,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
         }
     });
 
-    // Back button cache fix
     window.onpageshow = function(event) {
         if (event.persisted) { window.location.reload(); }
     };

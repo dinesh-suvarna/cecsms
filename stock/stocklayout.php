@@ -218,7 +218,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <div class="nav-group-label">General</div>
         <div class="nav flex-column">
             <a href="dashboard.php" class="nav-link <?= ($current_page == 'dashboard.php') ? 'active' : '' ?>">
-                <i class="bi bi-speedometer2"></i> Dashboard
+                <i class="bi bi-grid-1x2"></i> Dashboard
             </a>
         </div>
 

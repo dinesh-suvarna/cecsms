@@ -13,6 +13,7 @@ $role = $_SESSION['role'] ?? '';
 $division_id = $_SESSION['division_id'] ?? 0;
 $user_id = $_SESSION['user_id'] ?? 0;
 
+
 /* ================= HANDLE ASSIGNMENT ================= */
 if ($role !== 'SuperAdmin' && isset($_POST['assign'])) {
     $dispatch_detail_id = (int)($_POST['dispatch_detail_id'] ?? 0);
@@ -21,19 +22,20 @@ if ($role !== 'SuperAdmin' && isset($_POST['assign'])) {
     $unit_index         = (int)($_POST['unit_index'] ?? 0);
 
     if (!empty($division_asset_id)) {
-        $insert = $conn->prepare("
-            INSERT INTO division_assets 
-            (dispatch_detail_id, stock_detail_id, division_asset_id, assigned_by, unit_index) 
-            VALUES (?, ?, ?, ?, ?)
-        ");
-        $insert->bind_param("iisii", $dispatch_detail_id, $stock_detail_id, $division_asset_id, $user_id, $unit_index);
-
+        $conn->begin_transaction(); // Use transaction to ensure both tables update
         try {
+            $insert = $conn->prepare("
+                INSERT INTO division_assets 
+                (dispatch_detail_id, stock_detail_id, division_asset_id, assigned_by, unit_index) 
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            $insert->bind_param("iisii", $dispatch_detail_id, $stock_detail_id, $division_asset_id, $user_id, $unit_index);
             $insert->execute();
 
-            /* ===== CHECK IF ALL UNITS ASSIGNED ===== */
+            /* ===== CHECK TOTAL PROGRESS FOR THIS DISPATCH ===== */
+            // We count how many units are now in division_assets for this dispatch_detail_id
             $check = $conn->prepare("
-                SELECT dd.quantity, COUNT(da.id) AS assigned
+                SELECT dd.quantity, COUNT(da.id) AS assigned_count
                 FROM dispatch_details dd
                 LEFT JOIN division_assets da ON da.dispatch_detail_id = dd.id
                 WHERE dd.id = ?
@@ -42,12 +44,16 @@ if ($role !== 'SuperAdmin' && isset($_POST['assign'])) {
             $check->execute();
             $res = $check->get_result()->fetch_assoc();
 
-            if ($res['assigned'] >= $res['quantity']) {
-                $update = $conn->prepare("UPDATE stock_details SET status='assigned' WHERE id=?");
+            /* ===== UPDATE STOCK STATUS ===== */
+            // If it's a serialized item, quantity is 1, so it will trigger immediately.
+            // If it's bulk, it triggers once the last unit is given an ID.
+            if ($res['assigned_count'] >= $res['quantity']) {
+                $update = $conn->prepare("UPDATE stock_details SET status='dispatched' WHERE id=?");
                 $update->bind_param("i", $stock_detail_id);
                 $update->execute();
-                $update->close();
             }
+
+            $conn->commit();
 
             $_SESSION['swal_type'] = "success";
             $_SESSION['swal_msg']  = "Asset $division_asset_id assigned successfully!";
@@ -55,8 +61,9 @@ if ($role !== 'SuperAdmin' && isset($_POST['assign'])) {
             exit;
 
         } catch (mysqli_sql_exception $e) {
+            $conn->rollback();
             $_SESSION['swal_type'] = "error";
-            $_SESSION['swal_msg']  = ($e->getCode() == 1062) ? "Duplicate Asset ID: $division_asset_id already exists!" : "Database error!";
+            $_SESSION['swal_msg']  = ($e->getCode() == 1062) ? "Duplicate Asset ID: $division_asset_id exists!" : "Database error: " . $e->getMessage();
             header("Location: " . $_SERVER['PHP_SELF']);
             exit;
         }

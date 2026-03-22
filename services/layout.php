@@ -220,7 +220,7 @@ header("Pragma: no-cache");
         <div class="nav-group-label">Main Menu</div>
         <div class="nav flex-column">
             <a href="index.php" class="nav-link <?= ($current_page=='index.php')?'active':'' ?>">
-                <i class="bi bi-speedometer2"></i> Dashboard
+                <i class="bi bi-grid-1x2"></i> Dashboard
             </a>
         </div>
 

@@ -207,11 +207,7 @@ if($row['stock_type'] === 'serial') {
     $sl++;
     echo"<td></td>";
 
-    /* ================= SERIAL / NON-SERIAL DISPLAY ================= */
-    $displayCell = "";
-    $statusBadge  = "";
-    $stockId      = (int)$row['id'];
-
+   
 /* ================= SERIAL / NON-SERIAL DISPLAY ================= */
 
 $displayCell = "";

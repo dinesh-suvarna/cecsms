@@ -203,7 +203,7 @@ $notif_count = $notifications->num_rows;
         <div class="nav-group-label p-3 small fw-bold text-uppercase opacity-50">Overview</div>
         <div class="nav flex-column">
             <a href="division_dashboard.php" class="nav-link <?= ($current_page == 'division_dashboard.php') ? 'active' : '' ?>">
-                <i class="bi bi-speedometer2"></i> Dashboard
+                <i class="bi bi-grid-1x2"></i> Dashboard
             </a>
         </div>
 
@@ -241,7 +241,7 @@ $notif_count = $notifications->num_rows;
             <i class="bi bi-list fs-5"></i>
         </button>
         
-        <a href="../admin/admin_dashboard.php" class="nav-home-icon d-flex align-items-center justify-content-center text-decoration-none border rounded-3" style="width:38px; height:38px;" title="Main Admin Panel">
+        <a href="/cecsms/index.php" class="nav-home-icon d-flex align-items-center justify-content-center text-decoration-none border rounded-3" style="width:38px; height:38px;" title="Main Admin Panel">
             <i class="bi bi-house-door text-muted"></i>
         </a>
 

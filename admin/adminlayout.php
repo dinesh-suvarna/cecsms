@@ -1,4 +1,5 @@
 <?php 
+require_once __DIR__ . "/auth.php"; 
 $role = $_SESSION["role"] ?? 'User'; 
 if (!isset($page_title)) $page_title = "Admin Panel";
 
@@ -248,48 +249,54 @@ header("Pragma: no-cache");
             <div class="nav-group-label">General</div>
             <div class="nav flex-column">
                 <a href="/cecsms/index.php" class="nav-link <?= ($current_page=='admin_dashboard.php' || $current_page=='index.php')?'active':'' ?>">
-                    <i class="bi bi-speedometer2"></i> Dashboard
+                    <i class="bi bi-grid-1x2"></i> Dashboard
                 </a>
             </div>
 
-            <?php if(in_array($role,['SuperAdmin','Admin'])): ?>
+            <?php if(in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN])): ?>
                 <div class="nav-group-label">System Control</div>
                 <div class="nav flex-column">
                     <a href="/cecsms/users/manage_users.php" class="nav-link <?= ($current_page=='manage_users.php')?'active':'' ?>">
                         <i class="bi bi-people"></i> User Management
                     </a>
+                    
+                    <?php if($role === ROLE_SUPERADMIN): ?>
                     <a href="/cecsms/master/master_dashboard.php" class="nav-link <?= ($current_page=='master_dashboard.php')?'active':'' ?>">
                         <i class="bi bi-database-gear"></i> Master Data
                     </a>
+                    
+
                     <a href="/cecsms/services/index.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'],'services'))?'active':'' ?>">
                         <i class="bi bi-tools"></i> Services
                     </a>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
 
             <div class="nav-group-label">Inventory Modules</div>
             <div class="nav flex-column">
-                <a href="/cecsms/stock/dashboard.php" 
-                class="nav-link d-flex justify-content-between align-items-center <?= ($current_page == 'dashboard.php') ? 'active' : '' ?>">
+                <a href="<?= ($role === ROLE_SUPERADMIN) ? '/cecsms/stock/dashboard.php' : '/cecsms/divisions/division_dashboard.php' ?>" 
+                class="nav-link d-flex justify-content-between align-items-center <?= ($current_page == 'dashboard.php' || $current_page == 'division_dashboard.php') ? 'active' : '' ?>">
                     <span><i class="bi bi-pc-display me-2"></i> Computer Stock</span>
                 </a>
+                <?php if($role === ROLE_SUPERADMIN): ?>
                 <li class="nav-item">
                     <a class="nav-link <?= ($page_title == 'Lifecycle Approvals') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">
                         <i class="bi bi-arrow-down-left-square me-2"></i>
                         <span>Stock Transitions</span>
                         <?php 
-                        // Optional: Show a count of pending requests to the SuperAdmin
-                        $count_query = "SELECT COUNT(*) as total FROM division_assets WHERE status IN ('return_requested', 'repair_requested', 'dispose_requested')";
-                        $count_res = $conn->query($count_query);
-                        $count_data = $count_res->fetch_assoc();
-                        if ($count_data['total'] > 0): 
-                        ?>
-                            <span class="badge rounded-pill bg-warning text-dark ms-auto small"><?= $count_data['total'] ?></span>
-                        <?php endif; ?>
+                        if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN])) {
+                            $count_query = "SELECT COUNT(*) as total FROM division_assets WHERE status IN ('return_requested', 'repair_requested', 'dispose_requested')";
+                            $count_res = $conn->query($count_query);
+                            $count_data = $count_res->fetch_assoc();
+                            if ($count_data['total'] > 0): ?>
+                                <span class="badge rounded-pill bg-warning text-dark ms-auto small"><?= $count_data['total'] ?></span>
+                            <?php endif; 
+                        } ?>
                     </a>
                 </li>
 
-                <?php if(in_array($role,['SuperAdmin','Admin'])): ?>
+                
                     <a href="/cecsms/ewaste/index.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'],'ewaste'))?'active':'' ?>">
                         <i class="bi bi-recycle"></i> E-Waste
                     </a>
@@ -326,8 +333,6 @@ header("Pragma: no-cache");
     <div class="d-flex align-items-center gap-3">
         <div class="dropdown me-2">
             <?php 
-            // Corrected Query: Join through the dispatch chain to get Division and Item names
-            // We also join asset_logs to get the specific "Notes" for this transition
             $notif_query = "SELECT 
                                 da.status, 
                                 d.division_name, 
@@ -349,7 +354,7 @@ header("Pragma: no-cache");
                             
             $notif_res = $conn->query($notif_query);
             
-            // We use the same criteria for the count
+            
             $count_query = "SELECT COUNT(*) as total FROM division_assets WHERE status IN ('return_requested', 'repair_requested', 'dispose_requested')";
             $count_res = $conn->query($count_query);
             $count_data = $count_res->fetch_assoc();

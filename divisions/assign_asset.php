@@ -14,6 +14,7 @@ $division_id = $_SESSION['division_id'] ?? 0;
 $user_id = $_SESSION['user_id'] ?? 0;
 
 
+
 /* ================= HANDLE ASSIGNMENT ================= */
 if ($role !== 'SuperAdmin' && isset($_POST['assign'])) {
     $dispatch_detail_id = (int)($_POST['dispatch_detail_id'] ?? 0);
@@ -22,8 +23,9 @@ if ($role !== 'SuperAdmin' && isset($_POST['assign'])) {
     $unit_index         = (int)($_POST['unit_index'] ?? 0);
 
     if (!empty($division_asset_id)) {
-        $conn->begin_transaction(); // Use transaction to ensure both tables update
+        $conn->begin_transaction(); 
         try {
+            // 1. Insert into division_assets
             $insert = $conn->prepare("
                 INSERT INTO division_assets 
                 (dispatch_detail_id, stock_detail_id, division_asset_id, assigned_by, unit_index) 
@@ -32,41 +34,44 @@ if ($role !== 'SuperAdmin' && isset($_POST['assign'])) {
             $insert->bind_param("iisii", $dispatch_detail_id, $stock_detail_id, $division_asset_id, $user_id, $unit_index);
             $insert->execute();
 
-            /* ===== CHECK TOTAL PROGRESS FOR THIS DISPATCH ===== */
-            // We count how many units are now in division_assets for this dispatch_detail_id
-            $check = $conn->prepare("
-                SELECT dd.quantity, COUNT(da.id) AS assigned_count
-                FROM dispatch_details dd
-                LEFT JOIN division_assets da ON da.dispatch_detail_id = dd.id
-                WHERE dd.id = ?
+            // 2. Get total original quantity vs total dispatched across ALL records
+            $statusCheck = $conn->prepare("
+                SELECT 
+                    sd.quantity AS total_stock,
+                    (SELECT SUM(dd.quantity) FROM dispatch_details dd WHERE dd.stock_detail_id = sd.id) AS total_dispatched
+                FROM stock_details sd
+                WHERE sd.id = ?
             ");
-            $check->bind_param("i", $dispatch_detail_id);
-            $check->execute();
-            $res = $check->get_result()->fetch_assoc();
+            $statusCheck->bind_param("i", $stock_detail_id);
+            $statusCheck->execute();
+            $statusRes = $statusCheck->get_result()->fetch_assoc();
 
-            /* ===== UPDATE STOCK STATUS ===== */
-            // If it's a serialized item, quantity is 1, so it will trigger immediately.
-            // If it's bulk, it triggers once the last unit is given an ID.
-            if ($res['assigned_count'] >= $res['quantity']) {
+            // 3. Update stock status based on exhaustion of physical stock
+            if ($statusRes['total_dispatched'] >= $statusRes['total_stock']) {
                 $update = $conn->prepare("UPDATE stock_details SET status='dispatched' WHERE id=?");
-                $update->bind_param("i", $stock_detail_id);
-                $update->execute();
+            } else {
+                // Keep available if there is remaining bulk balance
+                $update = $conn->prepare("UPDATE stock_details SET status='available' WHERE id=?");
             }
+            $update->bind_param("i", $stock_detail_id);
+            $update->execute();
 
+            // 4. Commit all changes
             $conn->commit();
 
             $_SESSION['swal_type'] = "success";
             $_SESSION['swal_msg']  = "Asset $division_asset_id assigned successfully!";
-            header("Location: " . $_SERVER['PHP_SELF']);
-            exit;
-
+            
         } catch (mysqli_sql_exception $e) {
             $conn->rollback();
             $_SESSION['swal_type'] = "error";
-            $_SESSION['swal_msg']  = ($e->getCode() == 1062) ? "Duplicate Asset ID: $division_asset_id exists!" : "Database error: " . $e->getMessage();
-            header("Location: " . $_SERVER['PHP_SELF']);
-            exit;
+            $_SESSION['swal_msg']  = ($e->getCode() == 1062) 
+                ? "Duplicate Asset ID: $division_asset_id exists!" 
+                : "Database error: " . $e->getMessage();
         }
+        
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
     }
 }
 

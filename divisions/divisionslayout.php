@@ -7,26 +7,52 @@ header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
 $current_page = basename($_SERVER['PHP_SELF']);
-
-// Fetch recent notifications for the logged-in user's division
 $notif_division_id = $_SESSION['division_id'] ?? 0;
+
+/**
+ * REWRITTEN QUERY:
+ * 1. Fetches Repair/Return status updates from asset_logs
+ * 2. Fetches Dispatches from SuperAdmin where items don't have a Division Asset ID yet
+ */
 $notif_query = "
-    SELECT al.*, im.item_name 
-    FROM asset_logs al
-    JOIN stock_details sd ON al.asset_id = sd.id
-    JOIN items_master im ON sd.stock_item_id = im.id
-    LEFT JOIN division_assets da ON sd.id = da.stock_detail_id
-    LEFT JOIN dispatch_details dd ON da.dispatch_detail_id = dd.id
-    LEFT JOIN dispatch_master dm ON dd.dispatch_id = dm.id
-    WHERE (dm.division_id = $notif_division_id OR al.performed_by IN (
-        SELECT id FROM users WHERE division_id = $notif_division_id
-    ))
-    AND al.action_type IN ('REPAIR_APPROVED', 'REPAIR_REJECTED', 'RETURN_APPROVED', 'RETURN_REJECTED', 'repair_requested', 'return_requested')
-    ORDER BY al.created_at DESC LIMIT 5";
+    /* 1. Fetch Repair/Return status updates from asset_logs */
+    (SELECT 
+        al.id AS ref_id, 
+        al.action_type, 
+        al.created_at, 
+        im.item_name, 
+        'log' AS notif_source
+     FROM asset_logs al
+     INNER JOIN stock_details sd ON al.asset_id = sd.id
+     INNER JOIN items_master im ON sd.stock_item_id = im.id
+     LEFT JOIN division_assets da ON sd.id = da.stock_detail_id
+     LEFT JOIN dispatch_details dd ON da.dispatch_detail_id = dd.id
+     LEFT JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+     WHERE (dm.division_id = $notif_division_id OR al.performed_by IN (
+         SELECT id FROM users WHERE division_id = $notif_division_id
+     ))
+     /* Ensure these match your asset_logs.action_type ENUM or logic */
+     AND al.action_type IN ('assigned', 'return_requested', 'repair_requested'))
+
+    UNION ALL
+
+    /* 2. Fetch New Dispatches (Active status and no Division Asset assigned yet) */
+    (SELECT 
+        dm.id AS ref_id, 
+        'NEW_DISPATCH' AS action_type, 
+        dm.created_at AS created_at, 
+        'Inventory Stock' AS item_name, 
+        'dispatch' AS notif_source
+     FROM dispatch_master dm
+     INNER JOIN dispatch_details dd ON dm.id = dd.dispatch_id
+     LEFT JOIN division_assets da ON dd.id = da.dispatch_detail_id
+     WHERE dm.division_id = $notif_division_id 
+     AND dm.status = 'active' 
+     AND da.id IS NULL  /* This is the key: shows items waiting for an Asset ID */
+     GROUP BY dm.id)";
+
 $notifications = $conn->query($notif_query);
 $notif_count = $notifications->num_rows;
-
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -270,25 +296,36 @@ $notif_count = $notifications->num_rows;
                 <div style="max-height: 350px; overflow-y: auto;">
                     <?php if($notif_count > 0): ?>
                         <?php while($n = $notifications->fetch_assoc()): 
-                            $is_rejected = strpos($n['action_type'], 'REJECTED') !== false;
-                            $icon = $is_rejected ? 'bi-x-circle-fill text-danger' : 'bi-check-circle-fill text-success';
-                            $bg = $is_rejected ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)';
-                        ?>
-                        <li>
-                            <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start" href="asset_logs.php" style="background: <?= $bg ?>; white-space: normal;">
-                                <i class="bi <?= $icon ?> fs-5 mt-1"></i>
-                                <div>
-                                    <p class="mb-1 small fw-bold text-dark">
-                                        <?= str_replace('_', ' ', $n['action_type']) ?>
-                                    </p>
-                                    <p class="mb-1 extra-small text-muted">
-                                        Your request for <strong><?= $n['item_name'] ?></strong> has been <?= $is_rejected ? 'rejected' : 'approved' ?>.
-                                    </p>
-                                    <span class="text-muted italic" style="font-size: 10px;"><?= date('M d, H:i', strtotime($n['created_at'])) ?></span>
-                                </div>
-                            </a>
-                        </li>
-                        <?php endwhile; ?>
+    $type = $n['action_type'];
+    $is_dispatch = ($type === 'NEW_DISPATCH');
+    $is_rejected = strpos($type, 'REJECTED') !== false;
+
+    // Configuration based on type
+    if ($is_dispatch) {
+        $icon = 'bi-box-seam-fill text-primary';
+        $bg = 'rgba(13, 110, 253, 0.05)';
+        $link = 'assign_asset.php'; // Link to the assignment page
+        $title = "New Dispatch Received";
+        $message = "Items have arrived. Please <strong>Assign Asset IDs</strong>.";
+    } else {
+        $icon = $is_rejected ? 'bi-x-circle-fill text-danger' : 'bi-check-circle-fill text-success';
+        $bg = $is_rejected ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)';
+        $link = 'asset_logs.php';
+        $title = str_replace('_', ' ', $type);
+        $message = "Your request for <strong>" . $n['item_name'] . "</strong> has been " . ($is_rejected ? 'rejected' : 'approved') . ".";
+    }
+?>
+<li>
+    <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start" href="<?= $link ?>" style="background: <?= $bg ?>; white-space: normal;">
+        <i class="bi <?= $icon ?> fs-5 mt-1"></i>
+        <div>
+            <p class="mb-1 small fw-bold text-dark"><?= $title ?></p>
+            <p class="mb-1 extra-small text-muted"><?= $message ?></p>
+            <span class="text-muted italic" style="font-size: 10px;"><?= date('M d, H:i', strtotime($n['created_at'])) ?></span>
+        </div>
+    </a>
+</li>
+<?php endwhile; ?>
                     <?php else: ?>
                         <li class="p-4 text-center text-muted small">
                             <i class="bi bi-bell-slash d-block fs-2 opacity-25 mb-2"></i>

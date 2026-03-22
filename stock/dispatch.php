@@ -60,7 +60,7 @@ if(isset($_POST['submit'])){
         notify("warning", "Select at least one item");
         header("Location: " . $_SERVER['PHP_SELF']);
     exit;
-        //$error = "Select at least one item.";
+        
     }
 
     if(empty($error)){
@@ -85,14 +85,13 @@ if(isset($_POST['submit'])){
                 $insertDetails->execute();
             }
 
-            // Find this section near line 83
+            
             foreach($bulk_qty as $sid => $qty){
                 $sid = (int)$sid;
                 $qty = (int)$qty;
                 if($qty <= 0) continue;
 
-                // REMOVE OR COMMENT OUT THIS LINE:
-                // $updateBulk->execute(); 
+                
 
                 // ONLY record the dispatch
                 $insertDetails->bind_param("iii", $dispatch_id, $sid, $qty);
@@ -121,34 +120,71 @@ ob_start();
 ?>
 
 <style>
-    .inventory-source { max-height: 650px; overflow-y: auto; padding-right: 10px; }
+    /* Layout Containers */
+    .inventory-source { 
+        max-height: 650px; 
+        overflow-y: auto; 
+        padding-right: 10px; 
+    }
+    
+    .sticky-top-card { 
+        position: sticky; 
+        top: 20px; 
+    }
+
+    /* Grid for Serials */
+    .serial-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 10px;
+        width: 100%;
+    }
+
+    /* Combined Button Logic */
+    .btn-hardware {
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        text-align: left;
+        width: 100%;
+        padding: 5px 12px;
+        font-size: 0.8rem;
+        border-radius: 8px; /* Slightly more modern than 20px for grid items */
+        border: 1px solid #dee2e6;
+        background: #fff;
+        transition: all 0.2s ease;
+        
+        /* Text Truncation Logic */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .btn-hardware:hover {
+        border-color: #4361ee;
+        background-color: #f8f9ff;
+        color: #4361ee;
+    }
+
+    /* Utility Classes */
     .item-hidden { display: none !important; }
-    .model-header { cursor: pointer; background: #f8f9fa; transition: 0.2s; }
+    
+    .category-label { 
+        font-size: 0.75rem; 
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 1px; 
+        color: #adb5bd; 
+        margin-top: 1rem;
+    }
+
+    .model-header { 
+        cursor: pointer; 
+        background: #f8f9fa; 
+        transition: 0.2s; 
+    }
     .model-header:hover { background: #e9ecef; }
-    .sticky-top-card { position: sticky; top: 20px; }
-    .btn-add-item { font-size: 0.8rem; border-radius: 20px; }
-    .category-label { font-size: 0.75rem; letter-spacing: 1px; color: #6c757d; }
-
-   
-.serial-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* Adjust 160px based on serial length */
-    gap: 10px;
-    width: 100%;
-}
-
-.btn-add-item {
-    text-align: left; /* Keeps text aligned even if button grows */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.btn-hardware {
-    min-height: 40px; 
-    justify-content: start; /* Keeps icon and text aligned to the left */
-    text-align: left;
-}
 </style>
 
 <div class="container-fluid mt-4">
@@ -312,7 +348,48 @@ ob_start();
 </div>
 
 <script>
-// --- AJAX & SEARCH (RETAINED) ---
+document.getElementById('stockSearch').addEventListener('keyup', function() {
+    let filter = this.value.toLowerCase();
+    
+    // 1. Loop through every accordion item (The Model level)
+    document.querySelectorAll('.accordion-item').forEach(accordion => {
+        let hasVisibleHardware = false;
+        
+        // 2. Loop through every serial/hardware button inside this accordion
+        accordion.querySelectorAll('.btn-hardware').forEach(btn => {
+            // Check item name, serial, or data-attributes
+            let content = btn.innerText.toLowerCase() + " " + btn.dataset.serial.toLowerCase();
+            
+            if (content.includes(filter)) {
+                btn.classList.remove('d-none'); // Show matching button
+                hasVisibleHardware = true;
+            } else {
+                btn.classList.add('d-none'); // Hide non-matching button
+            }
+        });
+
+        // 3. Handle Accordion Visibility & Auto-Open
+        const collapseElement = accordion.querySelector('.accordion-collapse');
+        const bsCollapse = bootstrap.Collapse.getInstance(collapseElement) || new bootstrap.Collapse(collapseElement, {toggle: false});
+
+        if (hasVisibleHardware && filter !== "") {
+            accordion.classList.remove('d-none');
+            bsCollapse.show(); // Auto-expand to show the result
+        } else if (hasVisibleHardware && filter === "") {
+            accordion.classList.remove('d-none');
+            bsCollapse.hide(); // Collapse back when search is cleared
+        } else {
+            accordion.classList.add('d-none'); // Hide the whole model if no match
+        }
+    });
+
+    // 4. Hide Category Labels (Desktop/Laptop/etc) if all their children are hidden
+    document.querySelectorAll('.category-section').forEach(section => {
+        const visibleItems = section.querySelectorAll('.accordion-item:not(.d-none)');
+        section.style.display = (visibleItems.length > 0) ? '' : 'none';
+    });
+});
+
 const institutionSelect = document.querySelector("[name='institution_id']");
 const divisionSelect    = document.querySelector("[name='division_id']");
 const unitSelect        = document.querySelector("[name='unit_id']");
@@ -388,12 +465,7 @@ function updateUI() {
     }
 }
 
-document.getElementById('stockSearch').addEventListener('keyup', function() {
-    let filter = this.value.toLowerCase();
-    document.querySelectorAll('.accordion-item').forEach(item => {
-        item.style.display = item.innerText.toLowerCase().includes(filter) ? '' : 'none';
-    });
-});
+
 </script>
 
 <?php

@@ -223,7 +223,7 @@ $notif_count = $notifications->num_rows;
     </div>
 
     <div class="p-3 border-top mt-auto">
-        <a href="../logout.php" class="btn btn-outline-danger w-100 rounded-pill btn-sm fw-bold">
+        <a href="../admin/logout.php" class="btn btn-outline-danger w-100 rounded-pill btn-sm fw-bold">
             <i class="bi bi-power me-2"></i> Logout
         </a>
     </div>
@@ -343,7 +343,7 @@ $notif_count = $notifications->num_rows;
                 </div>
                 <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-2" style="min-width: 180px;">
                     <li>
-                        <a class="dropdown-item py-2 text-danger fw-bold rounded-3" href="../logout.php">
+                        <a class="dropdown-item py-2 text-danger fw-bold rounded-3" href="../admin/logout.php">
                             <i class="bi bi-box-arrow-right me-2"></i> Logout
                         </a>
                     </li>

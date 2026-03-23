@@ -36,7 +36,7 @@ SELECT
     dd.quantity, im.model_name,si.item_name, sd.id AS stock_detail_id, sd.serial_number, si.category,
     i.institution_name, dm.institution_id,
     d.division_name, dm.division_id,
-    un.unit_name, dm.unit_id
+    un.unit_name, dm.unit_id, un.unit_code
 FROM dispatch_details dd
 LEFT JOIN dispatch_master dm ON dd.dispatch_id = dm.id
 LEFT JOIN stock_details sd ON dd.stock_detail_id = sd.id
@@ -55,7 +55,7 @@ $grouped = [];
 while($row = $result->fetch_assoc()){
     $inst = $row['institution_name'] ?? 'Unknown';
     $div  = $row['division_name'] ?? 'Unknown';
-    $unit = $row['unit_name'] ?? 'Unknown';
+    $unit_label = ($row['unit_code'] ? $row['unit_code'] . " - " : "") . ($row['unit_name'] ?? 'General/Unassigned');
 
     $grouped[$inst]['id'] = $row['institution_id'];
     $grouped[$inst]['computer_total'] ??= 0;
@@ -63,15 +63,15 @@ while($row = $result->fetch_assoc()){
     $grouped[$inst]['divisions'][$div]['id'] = $row['division_id'];
     $grouped[$inst]['divisions'][$div]['computer_total'] ??= 0;
 
-    $grouped[$inst]['divisions'][$div]['units'][$unit]['id'] = $row['unit_id'];
-    $grouped[$inst]['divisions'][$div]['units'][$unit]['computer_total'] ??= 0;
-    $grouped[$inst]['divisions'][$div]['units'][$unit]['rows'][] = $row;
+    $grouped[$inst]['divisions'][$div]['units'][$unit_label]['id'] = $row['unit_id'];
+    $grouped[$inst]['divisions'][$div]['units'][$unit_label]['computer_total'] ??= 0;
+    $grouped[$inst]['divisions'][$div]['units'][$unit_label]['rows'][] = $row;
 
     $qty = !empty($row['serial_number']) ? 1 : (int)$row['quantity'];
     if($row['category'] === 'Computer'){
         $grouped[$inst]['computer_total'] += $qty;
         $grouped[$inst]['divisions'][$div]['computer_total'] += $qty;
-        $grouped[$inst]['divisions'][$div]['units'][$unit]['computer_total'] += $qty;
+        $grouped[$inst]['divisions'][$div]['units'][$unit_label]['computer_total'] += $qty;
     }
 }
 ?>

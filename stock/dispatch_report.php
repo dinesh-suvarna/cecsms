@@ -33,7 +33,7 @@ $institutions = $conn->query("SELECT id, institution_name FROM institutions ORDE
 $query = "
 SELECT 
     dm.id AS dispatch_id, dm.status, dm.dispatch_date, 
-    dd.quantity, si.item_name, sd.id AS stock_detail_id, sd.serial_number, si.category,
+    dd.quantity, im.model_name,si.item_name, sd.id AS stock_detail_id, sd.serial_number, si.category,
     i.institution_name, dm.institution_id,
     d.division_name, dm.division_id,
     un.unit_name, dm.unit_id
@@ -41,6 +41,7 @@ FROM dispatch_details dd
 LEFT JOIN dispatch_master dm ON dd.dispatch_id = dm.id
 LEFT JOIN stock_details sd ON dd.stock_detail_id = sd.id
 LEFT JOIN items_master si ON sd.stock_item_id = si.id
+LEFT JOIN item_models im ON sd.model_id = im.id
 LEFT JOIN institutions i ON dm.institution_id = i.id
 LEFT JOIN divisions d ON dm.division_id = d.id
 LEFT JOIN units un ON dm.unit_id = un.id
@@ -219,7 +220,7 @@ while($row = $result->fetch_assoc()){
                                                                 <a href="view_stock_details.php?highlight_id=<?= $row['stock_detail_id'] ?>" 
                                                                 class="text-decoration-none text-dark hover-link">
                                                                     <i class="bi bi-box-arrow-in-up-right small text-primary me-1"></i>
-                                                                    <?= htmlspecialchars($row['item_name']) ?>
+                                                                    <?= htmlspecialchars($row['model_name'] ?? $row['item_name']) ?>
                                                                 </a>
                                                             </td>
                                                             <td>

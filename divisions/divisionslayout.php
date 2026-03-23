@@ -15,7 +15,6 @@ $notif_division_id = $_SESSION['division_id'] ?? 0;
  * 2. Fetches Dispatches from SuperAdmin where items don't have a Division Asset ID yet
  */
 $notif_query = "
-    /* 1. Fetch Repair/Return status updates from asset_logs */
     (SELECT 
         al.id AS ref_id, 
         al.action_type, 
@@ -31,12 +30,10 @@ $notif_query = "
      WHERE (dm.division_id = $notif_division_id OR al.performed_by IN (
          SELECT id FROM users WHERE division_id = $notif_division_id
      ))
-     /* Ensure these match your asset_logs.action_type ENUM or logic */
-     AND al.action_type IN ('assigned', 'return_requested', 'repair_requested'))
-
+     AND al.action_type IN ('assigned', 'return_requested', 'repair_requested')
+     AND al.is_read = 0) 
     UNION ALL
 
-    /* 2. Fetch New Dispatches (Active status and no Division Asset assigned yet) */
     (SELECT 
         dm.id AS ref_id, 
         'NEW_DISPATCH' AS action_type, 
@@ -48,8 +45,9 @@ $notif_query = "
      LEFT JOIN division_assets da ON dd.id = da.dispatch_detail_id
      WHERE dm.division_id = $notif_division_id 
      AND dm.status = 'active' 
-     AND da.id IS NULL  /* This is the key: shows items waiting for an Asset ID */
-     GROUP BY dm.id)";
+     AND da.id IS NULL
+     GROUP BY dm.id)
+     ORDER BY created_at DESC";
 
 $notifications = $conn->query($notif_query);
 $notif_count = $notifications->num_rows;
@@ -85,7 +83,6 @@ $notif_count = $notifications->num_rows;
             overflow-x: hidden;
         }
 
-        /* --- SIDEBAR --- */
         #sidebar {
             width: var(--sb-width);
             height: 100vh;
@@ -131,20 +128,18 @@ $notif_count = $notifications->num_rows;
             box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.25);
         }
 
-        /* --- MAIN CONTENT --- */
         .main-wrapper {
             margin-left: var(--sb-width);
             min-height: 100vh;
             padding: 1.5rem;
             transition: margin 0.3s ease-in-out;
             position: relative;
-            z-index: 1; /* Keep content below modals */
+            z-index: 1;
         }
 
-        /* 1. Fix the layering issue: Header must be higher than content */
         .top-navbar {
             position: relative;
-            z-index: 1050; /* Higher than main-wrapper's z-index */
+            z-index: 1050; 
             background: rgba(255, 255, 255, 0.9);
             border: 1px solid var(--border-color);
             border-radius: 16px;
@@ -157,12 +152,6 @@ $notif_count = $notifications->num_rows;
             backdrop-filter: blur(8px);
         }
 
-        /* 2. Force dropdowns to the absolute top of the stack */
-        .dropdown-menu {
-            z-index: 3000 !important; 
-        }
-
-        /* 3. Profile layout alignment fix */
         .user-profile {
             display: flex;
             align-items: center;
@@ -173,30 +162,12 @@ $notif_count = $notifications->num_rows;
             transition: background 0.2s;
         }
 
-        .user-profile:hover {
-            background: rgba(0, 0, 0, 0.04);
-        }
-        /* Ensure the avatar stays perfectly round */
-        .avatar {
-            flex-shrink: 0;
-            overflow: hidden;
-        }
+        .user-profile:hover { background: rgba(0, 0, 0, 0.04); }
+        .avatar { flex-shrink: 0; overflow: hidden; }
 
-        /* Optional: Make the badge look a bit sharper */
-        .user-profile .badge {
-            padding: 3px 6px;
-            font-weight: 600;
-        }
-        /* --- THE "CATCH" FROM MASTERLAYOUT: MODAL FIXES --- */
-        .modal {
-            z-index: 1065 !important;
-        }
-        .modal-backdrop {
-            z-index: 1060 !important;
-        }
-        .dropdown-menu {
-            z-index: 2000 !important;
-        }
+        .modal { z-index: 1065 !important; }
+        .modal-backdrop { z-index: 1060 !important; }
+        .dropdown-menu { z-index: 2000 !important; }
         .bg-emerald-soft { background-color: rgba(16, 185, 129, 0.1); }
 
         .animate-fade-in {
@@ -241,12 +212,10 @@ $notif_count = $notifications->num_rows;
             <a href="assigned_assets.php" class="nav-link <?= ($current_page == 'assigned_assets.php') ? 'active' : '' ?>">
                 <i class="bi bi-check-circle"></i> View My Assets
             </a>
-            
         </div>
 
         <div class="nav-group-label p-3 small fw-bold text-uppercase opacity-50">Maintenance</div>
         <div class="nav flex-column">
-
             <a href="asset_logs.php" class="nav-link <?= ($current_page == 'asset_logs.php') ? 'active' : '' ?>">
                 <i class="bi bi-arrow-return-left"></i> Asset Audit Logs 
             </a>
@@ -262,107 +231,126 @@ $notif_count = $notifications->num_rows;
 
 <main class="main-wrapper">
     <header class="top-navbar">
-    <div class="d-flex align-items-center gap-3">
-        <button class="btn btn-light d-lg-none border-0 shadow-sm rounded-3" id="menuToggle">
-            <i class="bi bi-list fs-5"></i>
-        </button>
-        
-        <a href="/cecsms/index.php" class="nav-home-icon d-flex align-items-center justify-content-center text-decoration-none border rounded-3" style="width:38px; height:38px;" title="Main Admin Panel">
-            <i class="bi bi-house-door text-muted"></i>
-        </a>
-
-        <div>
-            <h5 class="mb-0 fw-bold text-dark lh-1 mb-1"><?= htmlspecialchars($page_title) ?></h5>
-            <p class="text-muted mb-0 d-none d-md-block" style="font-size: 11px; letter-spacing: 0.02rem;">
-                Division asset tracking and status management.
-            </p>
-        </div>
-    </div>
-
-    <div class="d-flex align-items-center gap-3">
-        <div class="dropdown">
-            <button class="btn btn-light border rounded-3 position-relative" style="width: 38px; height: 38px;" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-bell text-muted"></i>
-                <?php if($notif_count > 0): ?>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
-                        <?= $notif_count ?>
-                    </span>
-                <?php endif; ?>
+        <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-light d-lg-none border-0 shadow-sm rounded-3" id="menuToggle">
+                <i class="bi bi-list fs-5"></i>
             </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-0 overflow-hidden" style="width: 300px;">
-                <li class="p-3 border-bottom bg-light">
-                    <h6 class="mb-0 fw-bold small">Notifications</h6>
-                </li>
-                <div style="max-height: 350px; overflow-y: auto;">
-                    <?php if($notif_count > 0): ?>
-                        <?php while($n = $notifications->fetch_assoc()): 
-    $type = $n['action_type'];
-    $is_dispatch = ($type === 'NEW_DISPATCH');
-    $is_rejected = strpos($type, 'REJECTED') !== false;
+            
+            <a href="/cecsms/index.php" class="nav-home-icon d-flex align-items-center justify-content-center text-decoration-none border rounded-3" style="width:38px; height:38px;" title="Main Admin Panel">
+                <i class="bi bi-house-door text-muted"></i>
+            </a>
 
-    // Configuration based on type
-    if ($is_dispatch) {
-        $icon = 'bi-box-seam-fill text-primary';
-        $bg = 'rgba(13, 110, 253, 0.05)';
-        $link = 'assign_asset.php'; // Link to the assignment page
-        $title = "New Dispatch Received";
-        $message = "Items have arrived. Please <strong>Assign Asset IDs</strong>.";
-    } else {
-        $icon = $is_rejected ? 'bi-x-circle-fill text-danger' : 'bi-check-circle-fill text-success';
-        $bg = $is_rejected ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)';
-        $link = 'asset_logs.php';
-        $title = str_replace('_', ' ', $type);
-        $message = "Your request for <strong>" . $n['item_name'] . "</strong> has been " . ($is_rejected ? 'rejected' : 'approved') . ".";
-    }
-?>
-<li>
-    <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start" href="<?= $link ?>" style="background: <?= $bg ?>; white-space: normal;">
-        <i class="bi <?= $icon ?> fs-5 mt-1"></i>
-        <div>
-            <p class="mb-1 small fw-bold text-dark"><?= $title ?></p>
-            <p class="mb-1 extra-small text-muted"><?= $message ?></p>
-            <span class="text-muted italic" style="font-size: 10px;"><?= date('M d, H:i', strtotime($n['created_at'])) ?></span>
-        </div>
-    </a>
-</li>
-<?php endwhile; ?>
-                    <?php else: ?>
-                        <li class="p-4 text-center text-muted small">
-                            <i class="bi bi-bell-slash d-block fs-2 opacity-25 mb-2"></i>
-                            No new updates.
-                        </li>
-                    <?php endif; ?>
-                </div>
-                <li>
-                    <a class="dropdown-item text-center py-2 fw-bold text-success small border-top" href="asset_logs.php">
-                        View All Activity
-                    </a>
-                </li>
-            </ul>
-        </div>
-
-        <div class="dropdown">
-            <div class="user-profile shadow-sm border" data-bs-toggle="dropdown" aria-expanded="false">
-                <div class="text-end d-none d-md-block">
-                    <p class="small fw-bold mb-0 text-dark"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></p>
-                    <span class="badge bg-emerald-soft text-success" style="font-size: 9px;">
-                        <?= htmlspecialchars($_SESSION['role'] ?? 'Division') ?>
-                    </span>
-                </div>
-                <div class="avatar bg-light border rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
-                    <i class="bi bi-person-fill text-success fs-5"></i>
-                </div>
+            <div>
+                <h5 class="mb-0 fw-bold text-dark lh-1 mb-1"><?= htmlspecialchars($page_title) ?></h5>
+                <p class="text-muted mb-0 d-none d-md-block" style="font-size: 11px; letter-spacing: 0.02rem;">
+                    Division asset tracking and status management.
+                </p>
             </div>
-            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-2" style="min-width: 180px;">
-                <li>
-                    <a class="dropdown-item py-2 text-danger fw-bold rounded-3" href="../logout.php">
-                        <i class="bi bi-box-arrow-right me-2"></i> Logout
-                    </a>
-                </li>
-            </ul>
         </div>
-    </div>
-</header>
+
+        <div class="d-flex align-items-center gap-3">
+            <div class="dropdown">
+                <button class="btn btn-light border rounded-3 position-relative" style="width: 38px; height: 38px;" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-bell text-muted"></i>
+                    <span id="notif-badge-container">
+                        <?php if($notif_count > 0): ?>
+                            <span id="notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
+                                <?= $notif_count ?>
+                            </span>
+                        <?php endif; ?>
+                    </span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-0 overflow-hidden" style="width: 300px;">
+                    <li class="p-3 border-bottom bg-light">
+                        <h6 class="mb-0 fw-bold small">Notifications</h6>
+                        <?php if($notif_count > 0): ?>
+                            <a href="mark_all_read.php" class="text-success fw-bold text-decoration-none" style="font-size: 10px;">
+                                Mark all as read
+                            </a>
+                        <?php endif; ?>
+                    </li>
+                    
+                    
+                    <div id="notif-list" style="max-height: 350px; overflow-y: auto;">
+                        <?php if($notif_count > 0): ?>
+                            <?php while($n = $notifications->fetch_assoc()): 
+                                $type = $n['action_type'];
+                                $ref_id = $n['ref_id'];
+                                $source = $n['notif_source'];
+                                $is_dispatch = ($type === 'NEW_DISPATCH');
+                                
+                                // Define $is_rejected based on the action_type string
+                                $is_rejected = (strpos($type, 'rejected') !== false || strpos($type, 'REJECTED') !== false);
+
+                                if ($is_dispatch) {
+                                    $icon = 'bi-box-seam-fill text-primary';
+                                    $bg = 'rgba(13, 110, 253, 0.05)';
+                                    // Dispatches clear automatically once an Asset ID is assigned, 
+                                    // so we can link directly to the assignment page.
+                                    $link = 'assign_asset.php'; 
+                                    $title = "New Dispatch Received";
+                                    $message = "Items have arrived. Please <strong>Assign Asset IDs</strong>.";
+                                } else {
+                                    $icon = $is_rejected ? 'bi-x-circle-fill text-danger' : 'bi-check-circle-fill text-success';
+                                    $bg = $is_rejected ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)';
+                                    
+                                    // ROUTE THROUGH TRACKER:
+                                    // Point to mark_notif_read.php so the DB updates is_read = 1 before redirecting
+                                    $link = "mark_notif_read.php?id=" . urlencode($ref_id);
+                                    
+                                    $title = str_replace('_', ' ', $type);
+                                    $message = "Your request for <strong>" . htmlspecialchars($n['item_name']) . "</strong> has been " . ($is_rejected ? 'rejected' : 'approved') . ".";
+                                }
+                            ?>
+                            <li>
+                                <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start" href="<?= $link ?>" style="background: <?= $bg ?>; white-space: normal;">
+                                    <i class="bi <?= $icon ?> fs-5 mt-1"></i>
+                                    <div>
+                                        <p class="mb-1 small fw-bold text-dark"><?= strtoupper($title) ?></p>
+                                        <p class="mb-1 extra-small text-muted" style="font-size: 11px;"><?= $message ?></p>
+                                        <span class="text-muted italic" style="font-size: 10px;"><?= date('M d, H:i', strtotime($n['created_at'])) ?></span>
+                                    </div>
+                                </a>
+                            </li>
+                            <?php endwhile; ?>
+                        <?php else: ?>
+                            <li class="p-4 text-center text-muted small">
+                                <i class="bi bi-bell-slash d-block fs-2 opacity-25 mb-2"></i>
+                                No new updates.
+                            </li>
+                        <?php endif; ?>
+                    </div>
+
+                    <li>
+                        <a class="dropdown-item text-center py-2 fw-bold text-success small border-top" href="asset_logs.php">
+                            View All Activity
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="dropdown">
+                <div class="user-profile shadow-sm border" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="text-end d-none d-md-block">
+                        <p class="small fw-bold mb-0 text-dark"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></p>
+                        <span class="badge bg-emerald-soft text-success" style="font-size: 9px;">
+                            <?= htmlspecialchars($_SESSION['role'] ?? 'Division') ?>
+                        </span>
+                    </div>
+                    <div class="avatar bg-light border rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="bi bi-person-fill text-success fs-5"></i>
+                    </div>
+                </div>
+                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 p-2" style="min-width: 180px;">
+                    <li>
+                        <a class="dropdown-item py-2 text-danger fw-bold rounded-3" href="../logout.php">
+                            <i class="bi bi-box-arrow-right me-2"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </header>
 
     <div class="animate-fade-in">
         <?php if (isset($main_content)) echo $main_content; ?>
@@ -374,6 +362,7 @@ $notif_count = $notifications->num_rows;
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // SIDEBAR TOGGLE
     const menuToggle = document.getElementById('menuToggle');
     const sidebar = document.getElementById('sidebar');
     if(menuToggle) {
@@ -382,6 +371,7 @@ $notif_count = $notifications->num_rows;
         });
     }
 
+    // AUTO-SCROLL SIDEBAR TO ACTIVE
     document.addEventListener("DOMContentLoaded", function() {
         const sidebarContainer = document.querySelector('.overflow-y-auto');
         const activeLink = document.querySelector('#sidebar .nav-link.active');
@@ -393,10 +383,34 @@ $notif_count = $notifications->num_rows;
         }
     });
 
+    // CACHE RELOAD FIX
     window.onpageshow = function(event) {
         if (event.persisted) { window.location.reload(); }
     };
+
+    // LIVE NOTIFICATION POLLING
+    function fetchNotifications() {
+        fetch('get_notifications.php')
+            .then(response => response.json())
+            .then(data => {
+                // Update Badge Container
+                const badgeContainer = document.getElementById('notif-badge-container');
+                if (data.count > 0) {
+                    badgeContainer.innerHTML = `<span id="notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">${data.count}</span>`;
+                } else {
+                    badgeContainer.innerHTML = '';
+                }
+
+                // Update List
+                document.getElementById('notif-list').innerHTML = data.html;
+            })
+            .catch(error => console.error('Live Notif Error:', error));
+    }
+
+    // Poll every 15 seconds
+    setInterval(fetchNotifications, 15000);
 </script>
+
 <?php if (isset($_SESSION['swal_msg'])): ?>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -411,7 +425,6 @@ $notif_count = $notifications->num_rows;
     });
 </script>
 <?php 
-    // CRITICAL: Clear the session so the alert doesn't repeat on refresh
     unset($_SESSION['swal_msg']);
     unset($_SESSION['swal_type']);
 endif; 

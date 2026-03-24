@@ -70,5 +70,14 @@ if (isset($_SESSION['last_activity'])) {
     }
 }
 
-/* Update last activity */
+/* Update last activity in Session */
 $_SESSION['last_activity'] = time();
+
+/* Update last activity in Database */
+// We check if $conn exists because some pages might include session before db
+if (isset($_SESSION['user_id']) && isset($conn)) {
+    $uid = intval($_SESSION['user_id']);
+    // Using NOW() keeps it synced with the database server time
+    $conn->query("UPDATE users SET last_activity = NOW() WHERE id = $uid");
+}
+

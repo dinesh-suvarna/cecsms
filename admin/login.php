@@ -30,17 +30,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $password = trim($_POST["password"]);
 
     $stmt = $conn->prepare("SELECT * FROM users WHERE username=? AND status='Active'");
-    $stmt->bind_param("s",$username);
+    $stmt->bind_param("s", $username);
     $stmt->execute();
-
     $result = $stmt->get_result();
 
-    if($result->num_rows === 1){
-
+    if ($result->num_rows === 1) {
         $user = $result->fetch_assoc();
 
-        if(password_verify($password,$user["password"])){
-
+        if (password_verify($password, $user["password"])) {
+            
             session_regenerate_id(true);
 
             $_SESSION["user_id"] = $user["id"];
@@ -49,14 +47,63 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION["institution_id"] = $user["institution_id"];
             $_SESSION["last_activity"] = time();
 
+            // --- 4. PREPARE LOG DATA ---
+            $ip = $_SERVER['REMOTE_ADDR'];
+            $ua = $_SERVER['HTTP_USER_AGENT'];
+
+            // Detect OS
+            $os = "Unknown OS";
+            if (preg_match('/windows|win32/i', $ua)) $os = 'Windows';
+            else if (preg_match('/android/i', $ua)) $os = 'Android';
+            else if (preg_match('/iphone|ipad/i', $ua)) $os = 'iOS';
+            else if (preg_match('/macintosh|mac os x/i', $ua)) $os = 'macOS';
+            else if (preg_match('/linux/i', $ua)) $os = 'Linux';
+
+            // Detect Browser
+            
+            $browser = "Unknown Browser";
+            if (preg_match('/edg/i', $ua)) {
+                $browser = 'Edge';
+            } else if (preg_match('/brave/i', $ua) || (isset($_SERVER['HTTP_SEC_CH_UA']) && strpos($_SERVER['HTTP_SEC_CH_UA'], 'Brave') !== false)) {
+                $browser = 'Brave';
+            } else if (preg_match('/firefox/i', $ua)) {
+                $browser = 'Firefox';
+            } else if (preg_match('/opr|opera/i', $ua)) {
+                $browser = 'Opera';
+            } else if (preg_match('/chrome/i', $ua)) {
+                $browser = 'Chrome';
+            } else if (preg_match('/safari/i', $ua)) {
+                $browser = 'Safari';
+            } else if (preg_match('/msie|trident/i', $ua)) {
+                $browser = 'IE';
+            }
+
+            // Fetch Location (Only if not localhost)
+            $city = "Local"; $country = "Localhost"; $cCode = "";
+            if ($ip !== '127.0.0.1' && $ip !== '::1') {
+                // The @ suppresses errors if the API is down
+                $details = @json_decode(file_get_contents("http://ip-api.com/json/{$ip}"));
+                if ($details && $details->status === 'success') {
+                    $city = $details->city;
+                    $country = $details->country;
+                    $cCode = strtolower($details->countryCode);
+                }
+            }
+
+            // --- 5. SAVE LOG TO DATABASE ---
+            $log_query = "INSERT INTO login_logs (user_id, ip_address, user_agent, browser, os, city, country, country_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            $log_stmt = $conn->prepare($log_query);
+            $log_stmt->bind_param("isssssss", $user['id'], $ip, $ua, $browser, $os, $city, $country, $cCode);
+            $log_stmt->execute();
+            $log_stmt->close(); 
+
             header("Location: ../index.php");
             exit();
 
-        }else{
+        } else {
             $error = "Invalid Password!";
         }
-
-    }else{
+    } else {
         $error = "User not found or inactive!";
     }
 

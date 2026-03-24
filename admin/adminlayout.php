@@ -296,14 +296,52 @@ header("Pragma: no-cache");
                     </a>
                 </li>
 
+                    <a href="/cecsms/master/reports.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'], 'reports.php') !== false) ? 'active' : '' ?>">
+                        <i class="bi bi-file-earmark-bar-graph"></i> Reports
+                    </a>
+
                 
                     <a href="/cecsms/ewaste/index.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'],'ewaste'))?'active':'' ?>">
                         <i class="bi bi-recycle"></i> E-Waste
                     </a>
                 <?php endif; ?>
             </div>
-        </div>
-
+            <?php if($role === ROLE_SUPERADMIN): ?>
+                <div class="nav-group-label mt-4">System Audit</div>
+                <div class="nav flex-column">
+                    
+                    <div class="nav-item">
+                        <a class="nav-link d-flex justify-content-between align-items-center <?= (strpos($current_page, 'history') !== false) ? 'active' : 'collapsed' ?>" 
+                        data-bs-toggle="collapse" 
+                        href="#logsMenu" 
+                        role="button" 
+                        aria-expanded="<?= (strpos($current_page, 'history') !== false) ? 'true' : 'false' ?>">
+                            <span><i class="bi bi-journal-text me-2"></i> Logs</span>
+                            <i class="bi bi-chevron-down small transition-icon"></i>
+                        </a>
+                        
+                        <div class="collapse <?= (strpos($current_page, 'history') !== false) ? 'show' : '' ?>" id="logsMenu">
+                            <div class="nav flex-column ms-3 border-start border-light-subtle">
+                                <a href="/cecsms/admin/login_logs.php" 
+                                class="nav-link d-flex justify-content-between align-items-center py-2 <?= ($page_title == 'Login History') ? 'text-primary fw-bold' : 'small text-muted' ?>">
+                                    <span><i class="bi bi-dot"></i> Login History</span>
+                                    
+                                    <?php 
+                                    // Optional: Show a tiny green badge if someone is currently active
+                                    $online_query = "SELECT COUNT(*) as active FROM users WHERE last_activity > NOW() - INTERVAL 5 MINUTE";
+                                    $online_res = $conn->query($online_query);
+                                    $online_count = $online_res->fetch_assoc()['active'];
+                                    if ($online_count > 0): ?>
+                                        <span class="badge rounded-pill bg-success extra-small" style="font-size: 0.6rem;"><?= $online_count ?> Live</span>
+                                    <?php endif; ?>
+                                </a>
+                                
+                                </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+            
         <div class="p-3 border-top mt-auto">
             <a href="/cecsms/admin/logout.php" class="btn btn-outline-danger w-100 rounded-pill btn-sm fw-bold">
                 <i class="bi bi-power me-2"></i> Logout

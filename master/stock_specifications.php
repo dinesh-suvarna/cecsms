@@ -125,7 +125,7 @@ if($msg): ?>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted">Model Name</label>
-                        <input type="text" name="model_name" class="form-control rounded-3" placeholder="e.g. Latitude 5420" required>
+                        <input type="text" name="model_name" class="form-control rounded-3" placeholder="e.g. Veriton M200-H510" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted">Processor</label>

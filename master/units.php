@@ -106,9 +106,9 @@ ob_start();
                     <?php endif; ?>
 
                     <div class="mb-3">
-                        <label class="small fw-bold">Division</label>
+                        <label class="small fw-bold">Department</label>
                         <select name="division_id" id="division" class="form-select" required>
-                            <option value="">Select Division</option>
+                            <option value="">Select Department</option>
                         </select>
                     </div>
 
@@ -118,7 +118,7 @@ ob_start();
                             <input type="text" name="unit_code" class="form-control">
                         </div>
                         <div class="col-md-8">
-                            <label class="small fw-bold">Unit Name</label>
+                            <label class="small fw-bold">Lab/Facilities Name</label>
                             <input type="text" name="unit_name" class="form-control" required>
                         </div>
                     </div>
@@ -134,7 +134,7 @@ ob_start();
                         </select>
                     </div>
 
-                    <button name="add_unit" class="btn btn-primary w-100 rounded-pill">Save Unit</button>
+                    <button name="add_unit" class="btn btn-primary w-100 rounded-pill">Save Lab/Facilities</button>
                 </form>
             </div>
         </div>
@@ -197,7 +197,7 @@ ob_start();
                                 <div class="d-flex align-items-center w-100">
                                     <div class="icon-box me-3 bg-light p-2 rounded-3"><i class="bi bi-building text-primary"></i></div>
                                     <span class="fw-bold"><?= $inst ?></span>
-                                    <span class="badge-saas badge-inst ms-auto me-3"><?= $instDivCounts[$row['inst_id']] ?? 0 ?> Divisions</span>
+                                    <span class="badge-saas badge-inst ms-auto me-3"><?= $instDivCounts[$row['inst_id']] ?? 0 ?> Departments</span>
                                 </div>
                             </button>
                         </h2>
@@ -219,7 +219,7 @@ ob_start();
                             <button class="accordion-button div-header collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $divId ?>">
                                 <i class="bi bi-folder2 text-muted me-2"></i>
                                 <span class="fw-semibold text-dark"><?= $div ?></span>
-                                <span class="badge-saas badge-div ms-2"><?= $divisionCounts[$row['div_id']] ?? 0 ?> Units</span>
+                                <span class="badge-saas badge-div ms-2"><?= $divisionCounts[$row['div_id']] ?? 0 ?> Lab/Facilities</span>
                             </button>
                         </h2>
                         <div id="<?= $divId ?>" class="accordion-collapse collapse" data-bs-parent="#divAcc_<?= $instId ?>">
@@ -228,7 +228,7 @@ ob_start();
                                     <thead>
                                         <tr>
                                             <th class="ps-3">Code</th>
-                                            <th>Unit Name</th>
+                                            <th>Lab/Facilities Name</th>
                                             <th>Type</th>
                                             <th class="text-end pe-3">Action</th>
                                         </tr>

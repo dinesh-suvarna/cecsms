@@ -139,7 +139,7 @@ ob_start();
 <div class="card-body p-4">
 
 <h5 class="fw-bold mb-4">
-<i class="bi bi-diagram-3 text-primary me-2"></i>Add Division
+<i class="bi bi-diagram-3 text-primary me-2"></i>Add Department
 </h5>
 
 <?php if($success): ?>
@@ -170,7 +170,7 @@ echo "<option value='{$row['id']}'>{$row['institution_name']}</option>";
 <?php endif; ?>
 
 <div class="mb-3">
-<label class="small fw-bold">Division Name</label>
+<label class="small fw-bold">Department Name</label>
 <input type="text" name="division_name"
 value="<?= htmlspecialchars($division_name) ?>"
 class="form-control" required>

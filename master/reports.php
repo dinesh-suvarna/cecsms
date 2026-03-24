@@ -48,6 +48,20 @@ ob_start();
         color: white;
         border-radius: 8px;
     }
+    /* Custom Emerald Button */
+.btn-emerald {
+    background-color: var(--emerald-600);
+    border-color: var(--emerald-600);
+    color: #fff !important;
+    transition: all 0.2s ease;
+}
+
+.btn-emerald:hover {
+    background-color: var(--emerald-700);
+    border-color: var(--emerald-700);
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+    transform: translateY(-1px);
+}
 
     
     @media print {
@@ -83,6 +97,7 @@ ob_start();
         print-color-adjust: exact;
     }
 }
+
 </style>
 
 <div class="container-fluid mt-4">
@@ -122,7 +137,7 @@ ob_start();
                     </select>
                 </div>
                 <div class="col-md-3 text-end">
-                    <button type="button" onclick="window.print()" class="btn btn-dark btn-sm px-4">
+                    <button type="button" onclick="window.print()" class="btn btn-emerald btn-sm px-4">
                         <i class="bi bi-printer-fill me-2"></i>Print Report
                     </button>
                 </div>

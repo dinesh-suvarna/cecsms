@@ -248,7 +248,21 @@ ob_start();
                             foreach($grouped as $cat => $items): ?>
                                 <div class="category-section mb-3">
                                     <p class="category-label fw-bold text-uppercase mb-2"><?= $cat ?></p>
-                                    <?php foreach($items as $itemName => $models): ?>
+                                    
+                                    <?php foreach($items as $itemName => $models): 
+                                        // --- ICON LOGIC START ---
+                                        $lowerItem = strtolower($itemName);
+                                        if (str_contains($lowerItem, 'mouse')) { $itemIcon = 'bi-mouse3'; }
+                                        elseif (str_contains($lowerItem, 'keyboard')) { $itemIcon = 'bi-keyboard'; }
+                                        elseif (str_contains($lowerItem, 'computer') || str_contains($lowerItem, 'desktop') || str_contains($lowerItem, 'monitor')) { $itemIcon = 'bi-pc-display'; }
+                                        elseif (str_contains($lowerItem, 'printer')) { $itemIcon = 'bi-printer'; }
+                                        elseif (str_contains($lowerItem, 'scanner')) { $itemIcon = 'bi-qr-code-scan'; }
+                                        elseif (str_contains($lowerItem, 'cctv') || str_contains($lowerItem, 'camera')) { $itemIcon = 'bi-camera-video'; }
+                                        elseif (str_contains($lowerItem, 'ups') || str_contains($lowerItem, 'battery')) { $itemIcon = 'bi-lightning-charge'; }
+                                        else { $itemIcon = 'bi-box'; }
+                                        // --- ICON LOGIC END ---
+                                    ?>
+                                        
                                         <div class="accordion accordion-flush mb-2" id="acc-<?= md5($itemName) ?>">
                                             <?php foreach($models as $modelName => $units): 
                                                 $m_idx++;
@@ -257,38 +271,18 @@ ob_start();
                                                 <div class="accordion-item border rounded-3 mb-2 overflow-hidden shadow-sm">
                                                     <h2 class="accordion-header">
                                                         <button class="accordion-button collapsed py-2 px-3 small fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $collapseId ?>">
-                                                            <i class="bi bi-cpu me-2"></i> <?= htmlspecialchars($itemName) ?> - <?= htmlspecialchars($modelName) ?>
+                                                            <i class="bi <?= $itemIcon ?> me-2 text-primary"></i> 
+                                                            <?= htmlspecialchars($itemName) ?> - <?= htmlspecialchars($modelName) ?>
                                                             <span class="badge bg-light text-dark ms-auto me-2 border"><?= count($units) ?></span>
                                                         </button>
                                                     </h2>
+                                                    
                                                     <div id="<?= $collapseId ?>" class="accordion-collapse collapse" data-bs-parent="#acc-<?= md5($itemName) ?>">
                                                         <div class="accordion-body p-2 bg-white">
-                                                            <div class="serial-grid"> <?php 
-                                                                foreach($units as $u): 
+                                                            <div class="serial-grid"> 
+                                                                <?php foreach($units as $u): 
                                                                     $available = $u['quantity'] - $u['dispatched_qty']; 
                                                                     if($available <= 0) continue;
-                                                                    $lowerItem = strtolower($itemName);
-                                                                    $lowerCat  = strtolower($cat);
-                                                                    
-                                                                    // Comprehensive Icon Logic
-                                                                    if (str_contains($lowerItem, 'mouse')) {
-                                                                        $icon = 'bi-mouse3';
-                                                                    } elseif (str_contains($lowerItem, 'keyboard')) {
-                                                                        $icon = 'bi-keyboard';
-                                                                    } elseif (str_contains($lowerItem, 'computer') || str_contains($lowerItem, 'desktop') || str_contains($lowerItem, 'monitor')) {
-                                                                        $icon = 'bi-pc-display';
-                                                                    } elseif (str_contains($lowerItem, 'printer')) {
-                                                                        $icon = 'bi-printer';
-                                                                    } elseif (str_contains($lowerItem, 'scanner')) {
-                                                                        $icon = 'bi-qr-code-scan'; // Or 'bi-scanner' if using latest Bootstrap Icons
-                                                                    } elseif (str_contains($lowerItem, 'cctv') || str_contains($lowerItem, 'camera')) {
-                                                                        $icon = 'bi-camera-video';
-                                                                    } elseif (str_contains($lowerItem, 'ups') || str_contains($lowerItem, 'battery')) {
-                                                                        $icon = 'bi-lightning-charge';
-                                                                    } else {
-                                                                        $icon = 'bi-box'; // Your requested default
-                                                                    }
-                                                            
                                                                 ?>
                                                                     <button type="button" 
                                                                         id="btn-stock-<?= $u['id'] ?>"
@@ -299,7 +293,7 @@ ob_start();
                                                                         data-type="<?= $u['serial_number'] ? 'serial' : 'bulk' ?>"
                                                                         data-max="<?= $available ?>">
                                                                         
-                                                                        <i class="bi <?= $icon ?> me-2 text-primary"></i>
+                                                                        <i class="bi <?= $itemIcon ?> me-2 text-primary"></i>
                                                                         <?= $u['serial_number'] ?: "QTY: $available" ?>
                                                                     </button>
                                                                 <?php endforeach; ?>

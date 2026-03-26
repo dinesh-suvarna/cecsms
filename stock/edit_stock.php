@@ -231,5 +231,7 @@ Back
 </div>
 </div>
 
-</body>
-</html>
+<?php
+$content = ob_get_clean();
+include "stocklayout.php";
+?>

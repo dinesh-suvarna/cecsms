@@ -24,7 +24,7 @@ if (isset($_POST['update_asset_id'])) {
     header("Location: " . $_SERVER['PHP_SELF']);
     exit;
 }
-/* ================= HANDLE ASSET ACTION ================= */
+
 /* ================= HANDLE ASSET ACTION ================= */
 if (isset($_POST['asset_action'])) {
     $db_id    = (int)$_POST['asset_id']; // This is the ID from division_assets

@@ -183,6 +183,62 @@ $current_page = basename($_SERVER['PHP_SELF']);
             cursor: pointer;
         }
 
+        /* --- GLOBAL UI RESET --- */
+        
+        *, 
+        *:focus, 
+        *:active, 
+        *:focus-visible,
+        .form-control, 
+        .form-select, 
+        .btn, 
+        .input-group,
+        .input-group-text {
+            outline: none !important;
+            box-shadow: none !important; /* This kills the blue glow */
+            -webkit-tap-highlight-color: transparent; /* Fix for mobile blue tap */
+        }
+
+        /* 2. Custom Focus State (Emerald Theme) */
+        .form-control:focus, 
+        .form-select:focus {
+            border-color: var(--primary-accent) !important;
+            background-color: #fff !important;
+            /* This creates a very tiny, soft green shadow instead of a thick blue one */
+            box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.1) !important;
+        }
+
+        /* 3.Search Bar  */
+        .input-group:focus-within {
+            box-shadow: none !important;
+            border-radius: 10px; /* Adjust to match your UI */
+        }
+
+        .btn:focus, .btn:active {
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        .input-group.rounded-pill {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .input-group.rounded-pill:focus-within {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important; /* Soft shadow instead of blue */
+            border-color: #10b981 !important; /* Changes the pill border to emerald */
+        }
+
+        #inventorySearch:focus {
+            outline: none !important;
+            box-shadow: none !important;
+            background-color: transparent !important;
+        }
+
+        .input-group-text, #inventorySearch {
+            border: none !important;
+            box-shadow: none !important;
+        }
+
         /* --- UI UTILITIES --- */
         .bg-emerald-soft { background-color: rgba(16, 185, 129, 0.1); }
         .modal-backdrop { z-index: 1040 !important; }
@@ -230,6 +286,13 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <a href="view_stock_details.php" class="nav-link <?= ($current_page == 'view_stock_details.php') ? 'active' : '' ?>">
                 <i class="bi bi-list-ul"></i> View Stock Details
             </a>
+            <a href="add_components.php" class="nav-link <?= ($current_page == 'add_components.php') ? 'active' : '' ?>">
+                <i class="bi bi-plugin"></i> Components & ICs
+            </a>
+            <a href="view_components.php" class="nav-link <?= ($current_page == 'view_components.php') ? 'active' : '' ?>">
+                <i class="bi bi-layers-half"></i> Component Stock
+            </a>
+            
         </div>
 
         <div class="nav-group-label">Logistics</div>
@@ -303,8 +366,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <div class="animate-fade-in">
         <?php if (isset($content)) echo $content; ?>
     </div>
-</main>
 
+    
+</main>
+<?php if(isset($modal_html)) echo $modal_html; ?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     // Sidebar Mobile Toggle

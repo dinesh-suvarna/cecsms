@@ -296,6 +296,6 @@ ob_start();
 
 <?php 
 $content = ob_get_clean();
-$conn->close();
+//$conn->close();
 include "layout.php"; 
 ?>

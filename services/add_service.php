@@ -166,6 +166,6 @@ document.addEventListener("DOMContentLoaded", function(){
 <?php
 /* ✅ STORE CONTENT & LOAD LAYOUT */
 $content = ob_get_clean();
-$conn->close();
+//$conn->close();
 include "layout.php";
 ?>

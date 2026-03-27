@@ -286,6 +286,92 @@ h5 {
 
 
         <div class="d-flex align-items-center gap-3">
+            <div class="dropdown me-2">
+            <?php 
+            $notif_query = "SELECT 
+                                da.status, 
+                                d.division_name, 
+                                im.item_name,
+                                al.notes,
+                                al.created_at
+                            FROM division_assets da 
+                            JOIN stock_details sd ON da.stock_detail_id = sd.id
+                            JOIN items_master im ON sd.stock_item_id = im.id
+                            JOIN dispatch_details dd ON da.dispatch_detail_id = dd.id
+                            JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+                            JOIN divisions d ON dm.division_id = d.id
+                            -- Get the latest log entry for this asset to show the remarks/notes
+                            LEFT JOIN asset_logs al ON sd.id = al.asset_id 
+                                AND al.action_type = da.status
+                            WHERE da.status IN ('return_requested', 'repair_requested', 'dispose_requested')
+                            GROUP BY da.id -- Ensure unique asset rows
+                            ORDER BY al.created_at DESC LIMIT 5";
+                            
+            $notif_res = $conn->query($notif_query);
+            
+            
+            $count_query = "SELECT COUNT(*) as total FROM division_assets WHERE status IN ('return_requested', 'repair_requested', 'dispose_requested')";
+            $count_res = $conn->query($count_query);
+            $count_data = $count_res->fetch_assoc();
+            $pending_count = $count_data['total'] ?? 0;
+            ?>
+            
+            <button class="btn btn-light position-relative border shadow-sm rounded-circle p-0 d-flex align-items-center justify-content-center" 
+                    style="width: 38px; height: 38px;" data-bs-toggle="dropdown">
+                <i class="bi bi-bell text-muted fs-5"></i>
+                <?php if ($pending_count > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="font-size: 10px;">
+                        <?= $pending_count ?>
+                    </span>
+                <?php endif; ?>
+            </button>
+
+            <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-3 p-0 rounded-4 overflow-hidden" style="width: 320px;">
+                <div class="p-3 border-bottom bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold">Stock Transitions</h6>
+                        <span class="badge bg-success-subtle text-success small"><?= $pending_count ?> Pending</span>
+                    </div>
+                </div>
+                <div class="max-vh-50 overflow-y-auto" style="max-height: 350px;">
+                    <?php if ($notif_res && $notif_res->num_rows > 0): ?>
+                        <?php while($n = $notif_res->fetch_assoc()): 
+                            $type = strtoupper(str_replace('_requested', '', $n['status']));
+                            $icon = ($type == 'REPAIR') ? 'bi-tools text-info' : (($type == 'RETURN') ? 'bi-arrow-left-circle text-warning' : 'bi-trash text-danger');
+                            $bg = ($type == 'REPAIR') ? 'bg-info-subtle' : (($type == 'RETURN') ? 'bg-warning-subtle' : 'bg-danger-subtle');
+                        ?>
+                            <a href="/cecsms/divisions/returned_assets.php" class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start" style="white-space: normal;">
+                                <div class="<?= $bg ?> rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="bi <?= $icon ?> fs-5"></i>
+                                </div>
+                                <div class="w-100">
+                                    <div class="d-flex justify-content-between">
+                                        <p class="mb-0 small fw-bold text-dark"><?= htmlspecialchars($n['division_name']) ?></p>
+                                        <span class="text-muted" style="font-size: 9px;"><?= date('H:i', strtotime($n['created_at'])) ?></span>
+                                    </div>
+                                    <p class="mb-1 text-muted" style="font-size: 0.8rem;">
+                                        <strong><?= $type ?>:</strong> <?= htmlspecialchars($n['item_name']) ?>
+                                    </p>
+                                    <?php if(!empty($n['notes'])): ?>
+                                        <div class="bg-light p-1 px-2 rounded small text-muted italic" style="font-size: 0.75rem; border-left: 3px solid #dee2e6;">
+                                            "<?= htmlspecialchars($n['notes']) ?>"
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </a>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <div class="p-4 text-center">
+                            <i class="bi bi-check2-circle fs-1 text-muted opacity-25"></i>
+                            <p class="text-muted small mt-2">All caught up!</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <a href="/cecsms/divisions/returned_assets.php" class="dropdown-item text-center p-2 small fw-bold text-primary bg-light border-top">
+                    View All Approvals
+                </a>
+            </div>
+        </div>
             <div class="d-none d-sm-flex align-items-center gap-2 text-muted small border-end pe-3">
                 <i class="bi bi-calendar-event"></i>
                 <?= date('D, M j, Y') ?>

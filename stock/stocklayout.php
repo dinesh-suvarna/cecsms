@@ -288,10 +288,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <a href="view_stock_details.php" class="nav-link <?= ($current_page == 'view_stock_details.php') ? 'active' : '' ?>">
                 <i class="bi bi-list-ul"></i> View Stock Details
             </a>
-            <a href="add_components.php" class="nav-link <?= ($current_page == 'add_components.php') ? 'active' : '' ?>">
+            <!-- <a href="add_components.php" class="nav-link <?= ($current_page == 'add_components.php') ? 'active' : '' ?>">
                 <i class="bi bi-plugin"></i> Components & ICs
-            </a>
-            <a href="view_components.php" class="nav-link <?= ($current_page == 'view_components.php') ? 'active' : '' ?>">
+            </a> -->
+            <a href="../divisions/view_components.php" class="nav-link <?= ($current_page == '../divisions/view_components.php') ? 'active' : '' ?>">
                 <i class="bi bi-layers-half"></i> Component Stock
             </a>
             

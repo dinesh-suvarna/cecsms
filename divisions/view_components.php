@@ -338,7 +338,7 @@ ob_start();
 $modal_html = ob_get_clean();
 
 if ($user_role === 'SuperAdmin') {
-    include "stocklayout.php";
+    include "../stock/stocklayout.php";
 } else {
     include "../divisions/divisionslayout.php";
 }

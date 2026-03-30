@@ -212,6 +212,12 @@ $notif_count = $notifications->num_rows;
             <a href="assigned_assets.php" class="nav-link <?= ($current_page == 'assigned_assets.php') ? 'active' : '' ?>">
                 <i class="bi bi-check-circle"></i> View My Assets
             </a>
+            <a href="add_components.php" class="nav-link <?= ($current_page == 'add_components.php') ? 'active' : '' ?>">
+                <i class="bi bi-plugin"></i> Components & ICs
+            </a>
+            <a href="view_components.php" class="nav-link <?= ($current_page == 'view_components.php') ? 'active' : '' ?>">
+                <i class="bi bi-layers-half"></i> Component Stock
+            </a>
         </div>
 
         <div class="nav-group-label p-3 small fw-bold text-uppercase opacity-50">Maintenance</div>
@@ -328,6 +334,10 @@ $notif_count = $notifications->num_rows;
                     </li>
                 </ul>
             </div>
+            <div class="d-none d-sm-flex align-items-center gap-2 text-muted small border-end pe-3">
+            <i class="bi bi-calendar-event"></i>
+            <?= date('D, M j, Y') ?>
+        </div>
 
             <div class="dropdown">
                 <div class="user-profile shadow-sm border" data-bs-toggle="dropdown" aria-expanded="false">

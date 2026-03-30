@@ -277,8 +277,9 @@ header("Pragma: no-cache");
             <div class="nav flex-column">
                 <a href="<?= ($role === ROLE_SUPERADMIN) ? '/cecsms/stock/dashboard.php' : '/cecsms/divisions/division_dashboard.php' ?>" 
                 class="nav-link d-flex justify-content-between align-items-center <?= ($current_page == 'dashboard.php' || $current_page == 'division_dashboard.php') ? 'active' : '' ?>">
-                    <span><i class="bi bi-pc-display me-2"></i> Computer Stock</span>
+                    <span><i class="bi bi-pc-display me-2"></i> Assets & Components</span>
                 </a>
+
                 <?php if($role === ROLE_SUPERADMIN): ?>
                 <li class="nav-item">
                     <a class="nav-link <?= ($page_title == 'Lifecycle Approvals') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">

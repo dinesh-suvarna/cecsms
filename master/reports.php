@@ -23,8 +23,21 @@ $result = $conn->query($sql);
 $unit_data = ($f_unit) ? $conn->query("SELECT unit_name, unit_code FROM units WHERE id='$f_unit'")->fetch_assoc() : null;
 $unit_display_header = ($unit_data) ? $unit_data['unit_code'] . " - " . $unit_data['unit_name'] : "All Units";
 
-$display_inst = $f_inst ? $conn->query("SELECT institution_name FROM institutions WHERE id='$f_inst'")->fetch_column() : "All Institutions";
-$display_dept = $f_dept ? $conn->query("SELECT division_name FROM divisions WHERE id='$f_dept'")->fetch_column() : "All Departments";
+$display_inst = "All Institutions";
+if ($f_inst) {
+    $res = $conn->query("SELECT institution_name FROM institutions WHERE id='$f_inst'");
+    if ($row = $res->fetch_assoc()) {
+        $display_inst = $row['institution_name'];
+    }
+}
+
+$display_dept = "All Departments";
+if ($f_dept) {
+    $res = $conn->query("SELECT division_name FROM divisions WHERE id='$f_dept'");
+    if ($row = $res->fetch_assoc()) {
+        $display_dept = $row['division_name'];
+    }
+}
 
 ob_start();
 ?>

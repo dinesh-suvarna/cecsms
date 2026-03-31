@@ -9,6 +9,23 @@ header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
 $current_page = basename($_SERVER['PHP_SELF']);
+
+// --- PENDING ASSET COUNT LOGIC ---
+$pending_count = 0;
+if (isset($conn)) {
+    $count_res = $conn->query("
+        SELECT COUNT(*) as total FROM (
+            SELECT s.id
+            FROM furniture_stock s
+            LEFT JOIN furniture_assets fa ON s.id = fa.stock_id
+            GROUP BY s.id, s.total_qty
+            HAVING COUNT(fa.id) < s.total_qty
+        ) as pending_queue
+    ");
+    if ($count_res) {
+        $pending_count = $count_res->fetch_assoc()['total'];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -145,6 +162,33 @@ $current_page = basename($_SERVER['PHP_SELF']);
             border: 1px solid var(--border-color);
             background: #fff;
         }
+        
+        .pulse-badge {
+            font-size: 0.65rem;
+            padding: 4px 8px;
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            }
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(220, 53, 69, 0);
+            }
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+            }
+        }
+
+        #sidebar .nav-link {
+            display: flex;
+            align-items: center;
+            
+        }
 
         .bg-emerald-soft { background-color: rgba(16, 185, 129, 0.1); }
 
@@ -189,6 +233,15 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <div class="nav flex-column">
             <a href="add_furniture.php" class="nav-link <?= ($current_page == 'add_furniture.php') ? 'active' : '' ?>">
                 <i class="bi bi-plus-circle"></i> Add Furniture Stock
+            </a>
+            <a href="tag_assets.php" class="nav-link <?= ($current_page == 'tag_assets.php') ? 'active' : '' ?>">
+                <i class="bi bi-stack"></i> 
+                <span class="flex-grow-1">Add Asset ID</span>
+                <?php if ($pending_count > 0): ?>
+                    <span class="badge rounded-pill bg-danger shadow-sm pulse-badge">
+                        <?= $pending_count ?>
+                    </span>
+                <?php endif; ?>
             </a>
             <a href="view_furniture.php" class="nav-link <?= ($current_page == 'view_furniture.php') ? 'active' : '' ?>">
                 <i class="bi bi-stack"></i> Furniture Inventory

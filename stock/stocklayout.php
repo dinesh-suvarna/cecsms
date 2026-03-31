@@ -275,17 +275,17 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <div class="overflow-y-auto flex-grow-1">
         <div class="nav-group-label">General</div>
         <div class="nav flex-column">
-            <a href="dashboard.php" class="nav-link <?= ($current_page == 'dashboard.php') ? 'active' : '' ?>">
+            <a href="../stock/dashboard.php" class="nav-link <?= ($current_page == 'dashboard.php') ? 'active' : '' ?>">
                 <i class="bi bi-grid-1x2"></i> Dashboard
             </a>
         </div>
 
         <div class="nav-group-label">Inventory</div>
         <div class="nav flex-column">
-            <a href="add_stock_details.php" class="nav-link <?= ($current_page == 'add_stock_details.php') ? 'active' : '' ?>">
+            <a href="../stock/add_stock_details.php" class="nav-link <?= ($current_page == 'add_stock_details.php') ? 'active' : '' ?>">
                 <i class="bi bi-plus-circle"></i> Add Stock Details
             </a>
-            <a href="view_stock_details.php" class="nav-link <?= ($current_page == 'view_stock_details.php') ? 'active' : '' ?>">
+            <a href="../stock/view_stock_details.php" class="nav-link <?= ($current_page == 'view_stock_details.php') ? 'active' : '' ?>">
                 <i class="bi bi-list-ul"></i> View Stock Details
             </a>
             <!-- <a href="add_components.php" class="nav-link <?= ($current_page == 'add_components.php') ? 'active' : '' ?>">
@@ -299,10 +299,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <div class="nav-group-label">Logistics</div>
         <div class="nav flex-column">
-            <a href="dispatch.php" class="nav-link <?= ($current_page == 'dispatch.php') ? 'active' : '' ?>">
+            <a href="../stock/dispatch.php" class="nav-link <?= ($current_page == 'dispatch.php') ? 'active' : '' ?>">
                 <i class="bi bi-truck"></i> Dispatch Stock
             </a>
-            <a href="dispatch_report.php" class="nav-link <?= ($current_page == 'dispatch_report.php') ? 'active' : '' ?>">
+            <a href="../stock/dispatch_report.php" class="nav-link <?= ($current_page == 'dispatch_report.php') ? 'active' : '' ?>">
                 <i class="bi bi-file-earmark-text"></i> Dispatch Report
             </a>
         </div>

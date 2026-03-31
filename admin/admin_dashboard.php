@@ -184,7 +184,7 @@ $role = $_SESSION['role'] ?? '';
                     <div class="icon-box"><i class="bi bi-grid-1x2"></i></div>
                     <h5>Furniture Stock</h5>
                     <p>Asset management for office equipment and laboratory furniture.</p>
-                    <a href="/cecsms/furniture/index.php" class="saas-btn">Inventory</a>
+                    <a href="/cecsms/furniture_stock/manage_furniture_types.php" class="saas-btn">Inventory</a>
                 </div>
             </div>
 

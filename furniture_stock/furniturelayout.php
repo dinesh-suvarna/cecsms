@@ -1,6 +1,8 @@
 <?php
 require_once "../admin/auth.php"; 
 $role = $_SESSION["role"] ?? 'User'; 
+$user_division = $_SESSION['division_id'] ?? 0; // Get the division from session
+
 if (!isset($page_title)) $page_title = "Furniture Dashboard";
 
 // --- CACHE CONTROL ---
@@ -10,20 +12,30 @@ header("Pragma: no-cache");
 
 $current_page = basename($_SERVER['PHP_SELF']);
 
-// --- PENDING ASSET COUNT LOGIC ---
+// --- PENDING ASSET COUNT LOGIC (Division Aware) ---
 $pending_count = 0;
 if (isset($conn)) {
-    $count_res = $conn->query("
+    // We join units to filter by division_id for non-SuperAdmins
+    $count_sql = "
         SELECT COUNT(*) as total FROM (
             SELECT s.id
             FROM furniture_stock s
+            JOIN units u ON s.unit_id = u.id
             LEFT JOIN furniture_assets fa ON s.id = fa.stock_id
-            GROUP BY s.id, s.total_qty
+            WHERE 1=1";
+
+    // Filter by division if the user is not a SuperAdmin
+    if ($role !== 'SuperAdmin') {
+        $count_sql .= " AND u.division_id = '$user_division'";
+    }
+
+    $count_sql .= " GROUP BY s.id, s.total_qty
             HAVING COUNT(fa.id) < s.total_qty
-        ) as pending_queue
-    ");
+        ) as pending_queue";
+
+    $count_res = $conn->query($count_sql);
     if ($count_res) {
-        $pending_count = $count_res->fetch_assoc()['total'];
+        $pending_count = $count_res->fetch_assoc()['total'] ?? 0;
     }
 }
 ?>
@@ -219,6 +231,12 @@ if (isset($conn)) {
     </a>
 
     <div class="overflow-y-auto flex-grow-1">
+    <div class="nav-group-label">General</div>
+        <div class="nav flex-column">
+            <a href="../furniture_stock/furniture_dashboard.php" class="nav-link <?= ($current_page == 'furniture_dashboard.php') ? 'active' : '' ?>">
+                <i class="bi bi-grid-1x2"></i> Dashboard
+            </a>
+        </div>
         <div class="nav-group-label">Master Data</div>
         <div class="nav flex-column">
             <a href="manage_furniture_types.php" class="nav-link <?= ($current_page == 'manage_furniture_types.php') ? 'active' : '' ?>">
@@ -234,6 +252,9 @@ if (isset($conn)) {
             <a href="add_furniture.php" class="nav-link <?= ($current_page == 'add_furniture.php') ? 'active' : '' ?>">
                 <i class="bi bi-plus-circle"></i> Add Furniture Stock
             </a>
+            <a href="view_furniture.php" class="nav-link <?= ($current_page == 'view_furniture.php') ? 'active' : '' ?>">
+                <i class="bi bi-stack"></i> Furniture Inventory
+            </a>
             <a href="tag_assets.php" class="nav-link <?= ($current_page == 'tag_assets.php') ? 'active' : '' ?>">
                 <i class="bi bi-stack"></i> 
                 <span class="flex-grow-1">Add Asset ID</span>
@@ -243,8 +264,8 @@ if (isset($conn)) {
                     </span>
                 <?php endif; ?>
             </a>
-            <a href="view_furniture.php" class="nav-link <?= ($current_page == 'view_furniture.php') ? 'active' : '' ?>">
-                <i class="bi bi-stack"></i> Furniture Inventory
+            <a href="view_Assets.php" class="nav-link <?= ($current_page == 'view_assets.php') ? 'active' : '' ?>">
+                <i class="bi bi-stack"></i> View Assets
             </a>
         </div>
 
@@ -273,7 +294,7 @@ if (isset($conn)) {
                 <i class="bi bi-list fs-5"></i>
             </button>
             
-            <a href="../stock/dashboard.php" class="nav-home-icon text-decoration-none" title="Back to Main Dashboard">
+            <a href="/cecsms/index.php" class="nav-home-icon text-decoration-none" title="Back to Main Dashboard">
                 <i class="bi bi-grid-fill"></i>
             </a>
 

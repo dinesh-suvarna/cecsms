@@ -280,6 +280,11 @@ header("Pragma: no-cache");
                     <span><i class="bi bi-pc-display me-2"></i> Assets & Components</span>
                 </a>
 
+                 <a href="<?= ($role === ROLE_SUPERADMIN) ? '/cecsms/furniture_stock/furniture_dashboard.php' : '/cecsms/furniture_stock/furniture_dashboard.php' ?>" 
+                class="nav-link d-flex justify-content-between align-items-center <?= ($current_page == 'furniture_dashboard.php' || $current_page == 'furniture_dashboard.php') ? 'active' : '' ?>">
+                    <span><i class="bi bi-fill box"></i> Furniture Stock</span>
+                </a>
+
                 <?php if($role === ROLE_SUPERADMIN): ?>
                 <li class="nav-item">
                     <a class="nav-link <?= ($page_title == 'Lifecycle Approvals') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">

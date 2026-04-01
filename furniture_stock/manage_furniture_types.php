@@ -2,7 +2,13 @@
 include "../config/db.php";
 session_start();
 
-if ($_SESSION['role'] !== 'SuperAdmin') { header("Location: ../index.php"); exit(); }
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
+    header("Location: ../index.php");
+    exit();
+}
+
+$user_role = $_SESSION['role'];
+$user_division = $_SESSION['division_id'] ?? 0;
 
 $message = "";
 

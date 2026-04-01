@@ -2,16 +2,29 @@
 include "../config/db.php";
 session_start();
 
-// 1. Fetch ALL pending stock entries (The Stack)
-$all_pending_query = $conn->query("
-    SELECT s.id, s.total_qty, s.bill_no, i.item_name,
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
+    header("Location: ../index.php");
+    exit();
+}
+
+$user_role = $_SESSION['role'];
+$user_division = $_SESSION['division_id'] ?? 0;
+
+// 1. Fetch pending stock entries - Filtered by Division
+$query_str = "
+    SELECT s.id, s.total_qty, s.bill_no, i.item_name, u.division_id,
     (SELECT COUNT(fa.id) FROM furniture_assets fa WHERE fa.stock_id = s.id) as assigned_count
     FROM furniture_stock s
     JOIN furniture_items i ON s.furniture_item_id = i.id
-    GROUP BY s.id, s.total_qty, s.bill_no, i.item_name
-    HAVING assigned_count < s.total_qty
-    ORDER BY s.id ASC
-");
+    JOIN units u ON s.unit_id = u.id
+    WHERE 1=1";
+
+if ($user_role !== 'SuperAdmin') {
+    $query_str .= " AND u.division_id = '$user_division'";
+}
+
+$query_str .= " GROUP BY s.id HAVING assigned_count < s.total_qty ORDER BY s.id ASC";
+$all_pending_query = $conn->query($query_str);
 
 $pending_list = [];
 while($row = $all_pending_query->fetch_assoc()) {
@@ -38,20 +51,35 @@ if ($stock_id > 0) {
 }
 
 // 4. Handle Generation
+$error_message = ""; // Initialize error variable
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_tags']) && $stock) {
     $qty = (int)$stock['total_qty'];
     if ($current_assets < $qty) {
-        $prefix = mysqli_real_escape_string($conn, $_POST['prefix']);
+        $prefix = strtoupper(mysqli_real_escape_string($conn, $_POST['prefix']));
         $start_no = (int)$_POST['start_no'];
         $remaining = $qty - $current_assets;
+        $duplicates = [];
 
         for ($i = 0; $i < $remaining; $i++) {
             $current_no = str_pad($start_no + $i, 2, '0', STR_PAD_LEFT);
             $full_tag = $prefix . $current_no;
-            $conn->query("INSERT IGNORE INTO furniture_assets (stock_id, asset_tag) VALUES ($stock_id, '$full_tag')");
+
+            // Manual Check for Duplicates instead of INSERT IGNORE
+            $check = $conn->query("SELECT id FROM furniture_assets WHERE asset_tag = '$full_tag'");
+            if ($check->num_rows > 0) {
+                $duplicates[] = $full_tag;
+            } else {
+                $conn->query("INSERT INTO furniture_assets (stock_id, asset_tag) VALUES ($stock_id, '$full_tag')");
+            }
         }
-        header("Location: tag_assets.php?msg=success"); // Reload to show next in stack
-        exit();
+
+        if (!empty($duplicates)) {
+            $error_message = "The following tags are already in use: " . implode(", ", $duplicates);
+        } else {
+            header("Location: tag_assets.php?msg=success");
+            exit();
+        }
     }
 }
 
@@ -133,11 +161,24 @@ ob_start();
 
                         <form method="POST">
                             <div class="row g-4">
-                                <div class="col-md-8">
+                               <div class="col-md-8">
                                     <label class="form-label small fw-bold text-muted text-uppercase">ID Prefix Pattern</label>
-                                    <input type="text" name="prefix" class="form-control form-control-lg rounded-3 border-light-subtle bg-light" 
-                                           placeholder="e.g. CEC/CSE/2021-22/CT6-1S/" required>
-                                    <div class="form-text mt-2">Example: <strong>CEC/CSE/2021-22/CT6-1S/</strong></div>
+                                    
+                                    <input type="text" 
+                                        id="prefixInput" 
+                                        name="prefix" 
+                                        class="form-control form-control-lg rounded-3 border-light-subtle bg-light fw-bold" 
+                                        placeholder="e.g. CEC/CSE/2021-22/CT6-1S/" 
+                                        style="text-transform: uppercase; letter-spacing: 1px; font-size: 1.2rem;" 
+                                        required>
+                                    
+                                    <div class="mt-2 d-flex align-items-center gap-2">
+                                        <span class="text-muted small">Live Preview:</span>
+                                        <span id="prefixPreview" class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-2 font-monospace" style="display:none;">
+                                            </span>
+                                    </div>
+                                    
+                                    <div class="form-text mt-1">Example: <strong>CEC/CSE/2021-22/CT6-1S/</strong></div>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small fw-bold text-muted text-uppercase">Starting No.</label>
@@ -162,7 +203,62 @@ ob_start();
     .list-group-item { transition: all 0.2s; border-bottom: 1px solid #f8f9fa !important; }
     .list-group-item:hover { background-color: #f8f9fa; }
     .bg-primary-subtle { background-color: #eef2ff !important; }
+    
+    .font-monospace {
+        font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+        letter-spacing: 1px;
+    }
+
+    #prefixInput::placeholder {
+        text-transform: none; 
+        font-weight: normal;
+        font-size: 1rem;
+    }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// 1. Get the element first
+const prefixInput = document.getElementById('prefixInput');
+
+// 2. ONLY attach the listener if the element actually exists on the page
+if (prefixInput) {
+    prefixInput.addEventListener('input', function() {
+        // Force the value to uppercase
+        this.value = this.value.toUpperCase();
+        
+        // Update the Live Preview badge
+        const preview = document.getElementById('prefixPreview');
+        if (this.value.length > 0) {
+            preview.style.display = 'inline-block';
+            preview.textContent = this.value + "01"; 
+        } else {
+            preview.style.display = 'none';
+        }
+    });
+}
+
+// Show success message from URL (this works regardless of the input existing)
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('msg') === 'success') {
+    Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: 'Asset IDs generated successfully!',
+        timer: 2000,
+        showConfirmButton: false
+    });
+}
+
+// Show error message from PHP variable
+<?php if (!empty($error_message)): ?>
+    Swal.fire({
+        icon: 'error',
+        title: 'Duplicate Detected',
+        text: '<?= addslashes($error_message) ?>',
+        confirmButtonColor: '#3085d6'
+    });
+<?php endif; ?>
+</script>
 
 <?php 
 $content = ob_get_clean(); 

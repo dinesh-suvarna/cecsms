@@ -93,7 +93,7 @@ ob_start();
                             <i class="bi bi-building text-primary me-2"></i>
                             <?= htmlspecialchars($display_label) ?> 
                             <span class="badge bg-light text-muted border rounded-pill ms-3 fw-normal small">
-                                <?= count($items) ?> Unique Items
+                                <?= count($items) ?> Items
                             </span>
                         </button>
                     </h2>

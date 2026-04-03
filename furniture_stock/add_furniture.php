@@ -90,7 +90,7 @@ ob_start();
                 <div class="d-flex justify-content-between align-items-center mb-5">
                     <div class="d-flex align-items-center">
                         <div class="bg-primary bg-opacity-10 p-3 rounded-3 me-3 text-primary">
-                            <i class="bi <?= $is_edit ? 'bi-pencil-square' : 'bi-plus-circle' ?> fs-4"></i>
+                            <i class="bi <?= $is_edit ? 'bi-pencil-square' : 'bi-stack' ?> fs-4"></i>
                         </div>
                         <div>
                             <h4 class="fw-bold mb-0"><?= $is_edit ? "Modify Item" : "Stock Entry" ?></h4>

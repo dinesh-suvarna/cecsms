@@ -223,7 +223,7 @@ if (isset($conn)) {
 <body>
 
 <nav id="sidebar">
-    <a href="dashboard.php" class="sidebar-brand">
+    <a href="furniture_dashboard.php" class="sidebar-brand">
         <div class="bg-success text-white rounded-3 px-2 py-1 shadow-sm">
             <i class="bi bi-chair"></i>
         </div>
@@ -240,23 +240,24 @@ if (isset($conn)) {
         <div class="nav-group-label">Master Data</div>
         <div class="nav flex-column">
             <a href="manage_furniture_types.php" class="nav-link <?= ($current_page == 'manage_furniture_types.php') ? 'active' : '' ?>">
-                <i class="bi bi-tags"></i> Furniture Registry
+                <i class="bi-journal-text"></i> Furniture Registry
             </a>
-            <a href="../services/vendor_manager.php" class="nav-link <?= ($current_page == '../services/vendor_manager.php.php') ? 'active' : '' ?>">
-                <i class="bi bi-tags"></i> Add Vendor
+            <a href="../services/vendor_manager.php?type=Furniture" 
+            class="nav-link <?= ($_GET['type'] ?? '') == 'Furniture' ? 'active' : '' ?>">
+                <i class="bi bi-person-vcard-fill"></i> Manage Vendors
             </a>
         </div>
 
         <div class="nav-group-label">Inventory Management</div>
         <div class="nav flex-column">
             <a href="add_furniture.php" class="nav-link <?= ($current_page == 'add_furniture.php') ? 'active' : '' ?>">
-                <i class="bi bi-plus-circle"></i> Add Furniture Stock
+                <i class="bi-box-seam"></i> Add Furniture Stock
             </a>
             <a href="view_furniture.php" class="nav-link <?= ($current_page == 'view_furniture.php') ? 'active' : '' ?>">
-                <i class="bi bi-stack"></i> Furniture Inventory
+                <i class="bi-boxes"></i> Furniture Inventory
             </a>
             <a href="tag_assets.php" class="nav-link <?= ($current_page == 'tag_assets.php') ? 'active' : '' ?>">
-                <i class="bi bi-stack"></i> 
+                <i class="bi-upc-scan"></i> 
                 <span class="flex-grow-1">Add Asset ID</span>
                 <?php if ($pending_count > 0): ?>
                     <span class="badge rounded-pill bg-danger shadow-sm pulse-badge">
@@ -265,7 +266,7 @@ if (isset($conn)) {
                 <?php endif; ?>
             </a>
             <a href="view_Assets.php" class="nav-link <?= ($current_page == 'view_assets.php') ? 'active' : '' ?>">
-                <i class="bi bi-stack"></i> View Assets
+                <i class="bi-list-ul"></i> View Assets
             </a>
         </div>
 
@@ -295,7 +296,7 @@ if (isset($conn)) {
             </button>
             
             <a href="/cecsms/index.php" class="nav-home-icon text-decoration-none" title="Back to Main Dashboard">
-                <i class="bi bi-grid-fill"></i>
+                <i class="bi bi-house-door"></i>
             </a>
 
             <div>

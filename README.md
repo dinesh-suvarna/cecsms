@@ -1,79 +1,110 @@
 # CECSMS 🖥️📦
-### Computer Equipment & Consumables Stock Management System
+### Computer Equipment & Consumables Stock Management System  
 
-**CECSMS** is a professional, web-based inventory and asset management solution designed for large-scale institutions. It streamlines the tracking of hardware lifecycles—from procurement and departmental assignment to maintenance and final e-waste disposal.
-
----
-
-## 🚀 Key Features
-
-* **📦 Asset & Stock Management:** Real-time tracking of hardware inventory and consumable levels (toners, peripherals, etc.).
-* **🚚 Dispatch Tracking:** Monitor the movement of equipment from central stores to specific institutional divisions.
-* **📍 Unit Asset Assignment:** Granular tracking of assets assigned to specific Labs, Offices, or Research Units.
-* **🛠️ Service Management:** Log maintenance history, repairs, and scheduled servicing for high-value hardware.
-* **♻️ E-Waste Management:** Dedicated workflow for decommissioning obsolete equipment in compliance with disposal policies.
-* **🔐 Role-Based Access Control (RBAC):**
-    * **SuperAdmin:** Manage multiple institutions, system configurations, and user auditing.
-    * **Admin:** Manage inventory, track dispatches, and generate departmental reports.
+CECSMS is a web-based inventory and asset management system built for institutions. It helps manage the full lifecycle of assets—from procurement and allocation to maintenance and disposal—while keeping everything organized and easy to track.
 
 ---
 
-## 🛠️ Tech Stack
+## 🚀 Key Features  
 
-| Layer          | Technology                                   |
-| :------------- | :------------------------------------------- |
-| **Backend** | PHP 8.x (Procedural/OOP Hybrid)              |
-| **Database** | MySQL / MariaDB                              |
-| **Frontend** | Bootstrap 5, jQuery, SweetAlert2             |
-| **Analytics** | Chart.js (Inventory Visualizations)          |
-| **Icons** | Bootstrap Icons                              |
+- 📦 **Asset & Stock Management**  
+  Track IT hardware and consumables (toners, peripherals, etc.) with real-time visibility.  
+
+- 🪑 **Furniture Inventory**  
+  Manage non-IT assets like office furniture with tagging support.  
+
+- 🤝 **Vendor Management**  
+  Maintain a centralized list of suppliers and service providers with service history.  
+
+- 🚚 **Dispatch Tracking**  
+  Monitor movement of items from central stock to divisions or departments.  
+
+- 📍 **Unit Asset Assignment**  
+  Assign assets to labs, offices, or units with clear ownership tracking.  
+
+- 🛠️ **Service Management**  
+  Log repairs, maintenance history, and servicing schedules.  
+
+- 🎨 **Modern UI**  
+  Clean, responsive interface inspired by modern SaaS dashboards.  
+
+- 🔐 **Role-Based Access Control (RBAC)**  
+  - **SuperAdmin:** Full system access across institutions  
+  - **Admin:** Manage institution-level operations  
+  - **Staff:** View assigned assets and raise service requests  
 
 ---
 
-## 🏗️ System Architecture
+## 🛠️ Tech Stack  
 
-The system uses a hierarchical data model to reflect institutional structures:
-`Institution` ➡️ `Division` ➡️ `Unit (Lab/Office/Store)`
+| Layer     | Technology |
+|----------|-----------|
+| Backend  | PHP 8.x |
+| Database | MySQL / MariaDB |
+| Frontend | Bootstrap 5, jQuery, SweetAlert2 |
+| Security | CSRF Protection, Password Hashing (bcrypt) |
+| Icons    | Bootstrap Icons |
 
+---
 
-
+## 📂 Project Structure  
+├── admin/ # Authentication, dashboards, layouts
+├── config/ # Database and environment config
+├── divisions/ # Division-level asset handling
+├── furniture_stock/ # Furniture inventory module
+├── includes/ # Core functions, sessions, security
+├── master/ # Master data (institutions, items, units)
+├── services/ # Maintenance and service logs
+├── stock/ # Central inventory and dispatch
+├── users/ # User management (RBAC)
+└── vendors/ # Vendor management
 
 ---
 
 ## ⚙️ Installation & Setup
 
 ### Prerequisites
-* Web Server (Apache/Nginx)
-* PHP 7.4 or higher
-* MySQL Server
+* **Web Server:** Apache or Nginx
+* **PHP:** Version 7.4 or higher
+* **Database:** MySQL Server 5.7+ or MariaDB
 
 ### Steps
-1.  **Clone the Repository**
-    ```bash
-    git clone https://github.com/dinesh-suvarna/cecsms.git
-    ```
+1. **Clone the Repository**
+   ```bash
+   git clone [https://github.com/dinesh-suvarna/cecsms.git](https://github.com/dinesh-suvarna/cecsms.git)
+
 2.  **Database Configuration**
-    * Create a database named `cecsms_db`.
-    * Import the provided SQL schema (located in `/database/schema.sql`).
-    * Update `config/db.php` with your database credentials:
+    * Create a database named `cecsms_db` using phpMyAdmin or MySQL CLI.
+    * Import the provided SQL schema located in `database/schema.sql`.
+    * Update `config/db.php` with your local credentials:
     ```php
+    <?php
+    // config/db.php
     $host = "localhost";
     $user = "root";
     $pass = "your_password";
     $dbname = "cecsms_db";
+
+    $conn = mysqli_connect($host, $user, $pass, $dbname);
+    ?>
     ```
-3.  **Directory Permissions**
-    * Ensure the `uploads/` directory (if applicable) is writable by the server.
+
+3.  **Environment Check**
+    * Ensure the `includes/session.php` is properly configured for your specific domain or local path.
+    * Verify that `mod_rewrite` is enabled if you plan to use custom routing.
+
 4.  **Access the System**
-    * Navigate to `http://localhost/cecsms` in your browser.
+    * Open your browser and navigate to: `http://localhost/cecsms/admin/login.php`
+    * Use your assigned SuperAdmin or Admin credentials to log in.
 
 ---
 
 ## 📊 Roadmap
-- [ ] QR Code/Barcode generation for physical asset tagging.
-- [ ] Automated low-stock email notifications for consumables.
-- [ ] PDF Export functionality for audit reports.
-- [ ] Mobile-responsive scanning interface.
+- [x] **Modern Emerald SaaS UI:** Refactored entire interface for better UX.
+- [x] **Vendor Management:** Dedicated module for third-party service providers.
+- [ ] **Asset Tagging:** QR Code/Barcode generation for physical hardware.
+- [ ] **Stock Alerts:** Automated low-stock email notifications for consumables.
+- [ ] **Reporting:** Advanced PDF/Excel export functionality for audits.
 
 ---
 
@@ -81,4 +112,4 @@ The system uses a hierarchical data model to reflect institutional structures:
 Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
-**Developed for institutional asset tracking and efficiency.**
+**Developed for institutional asset tracking and operational efficiency.**

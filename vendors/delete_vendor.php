@@ -42,7 +42,9 @@ if (isset($_GET['id'])) {
     $stmt->bind_param("i", $id);
     
     if ($stmt->execute()) {
-        header("Location: vendor_manager.php?success=deleted");
+        $type = $_GET['type'] ?? 'Computer';
+        header("Location: vendor_manager.php?success=1&type=" . urlencode($type));
+        
     } else {
         header("Location: vendor_manager.php?error=failed");
     }

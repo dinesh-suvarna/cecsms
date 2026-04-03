@@ -47,17 +47,19 @@ CECSMS is a web-based inventory and asset management system built for institutio
 
 ---
 
-## 📂 Project Structure  
-├── admin/ # Authentication, dashboards, layouts
-├── config/ # Database and environment config
-├── divisions/ # Division-level asset handling
-├── furniture_stock/ # Furniture inventory module
-├── includes/ # Core functions, sessions, security
-├── master/ # Master data (institutions, items, units)
-├── services/ # Maintenance and service logs
-├── stock/ # Central inventory and dispatch
-├── users/ # User management (RBAC)
-└── vendors/ # Vendor management
+## 📂 Project Structure
+
+```text
+├── admin/            # Auth, Dashboard, and Global Layouts
+├── config/           # Database Connection & Environment settings
+├── divisions/        # Division-level asset assignment & notifications
+├── furniture_stock/  # Management of non-IT institutional assets
+├── includes/         # Core functions, Security headers, & Session logic
+├── master/           # Master Data (Institutions, Units, Items Master)
+├── services/         # Maintenance logs & Service tracking
+├── stock/            # Central store inventory & Dispatch logic
+├── users/            # RBAC User Management
+└── vendors/          # Supplier & Service Provider directory
 
 ---
 

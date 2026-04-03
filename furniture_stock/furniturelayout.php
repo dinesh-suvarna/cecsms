@@ -242,7 +242,7 @@ if (isset($conn)) {
             <a href="manage_furniture_types.php" class="nav-link <?= ($current_page == 'manage_furniture_types.php') ? 'active' : '' ?>">
                 <i class="bi-journal-text"></i> Furniture Registry
             </a>
-            <a href="../services/vendor_manager.php?type=Furniture" 
+            <a href="../vendors/vendor_manager.php?type=Furniture" 
             class="nav-link <?= ($_GET['type'] ?? '') == 'Furniture' ? 'active' : '' ?>">
                 <i class="bi bi-person-vcard-fill"></i> Manage Vendors
             </a>

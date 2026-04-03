@@ -220,7 +220,7 @@ h5 {
         <div class="bg-success text-white rounded-3 px-2 py-1 shadow-sm">
             <i class="bi bi-box-seam"></i>
         </div>
-        <span>Comp<span class="text-dark">Stock</span></span>
+        <span>Master<span class="text-dark">Stock</span></span>
     </a>
 
     <div class="overflow-y-auto flex-grow-1">

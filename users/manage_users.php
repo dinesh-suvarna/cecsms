@@ -150,8 +150,8 @@ ob_start();
 <div class="container-fluid py-2">
     <div class="row align-items-center mb-4 g-3">
         <div class="col-md-6">
-            <h3 class="fw-bold text-dark mb-1">Team Members</h3>
-            <p class="text-muted small mb-0">Control system permissions and institutional access</p>
+            <h3 class="fw-bold text-dark mb-1">User Management</h3>
+            <p class="text-muted small mb-0">Manage system access levels and institutional access</p>
         </div>
         <div class="col-md-6 text-md-end">
             <button class="btn btn-emerald px-4 py-2 rounded-3 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#userModal" onclick="resetForm()">

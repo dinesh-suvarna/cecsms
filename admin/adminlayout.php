@@ -21,6 +21,8 @@ header("Pragma: no-cache");
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <style>
         :root {
@@ -287,14 +289,14 @@ header("Pragma: no-cache");
 
                  <a href="<?= ($role === ROLE_SUPERADMIN) ? '/cecsms/furniture_stock/furniture_dashboard.php' : '/cecsms/furniture_stock/furniture_dashboard.php' ?>" 
                 class="nav-link d-flex justify-content-between align-items-center <?= ($current_page == 'furniture_dashboard.php' || $current_page == 'furniture_dashboard.php') ? 'active' : '' ?>">
-                    <span><i class="bi-boxes"></i> Furniture Stock</span>
+                    <span><i class="bi-boxes me-2"></i> Furniture Stock</span>
                 </a>
 
                 <?php if($role === ROLE_SUPERADMIN): ?>
                 <li class="nav-item">
                     <a class="nav-link <?= ($page_title == 'Lifecycle Approvals') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">
-                        <i class="bi bi-arrow-down-left-square me-2"></i>
-                        <span>Stock Transitions</span>
+                        <span> <i class="bi bi-arrow-down-left-square me-2"></i> Stock Transitions</span>
+                        
                         <?php 
                         if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN])) {
                             $count_query = "SELECT COUNT(*) as total FROM division_assets WHERE status IN ('return_requested', 'repair_requested', 'dispose_requested')";

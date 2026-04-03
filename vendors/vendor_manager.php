@@ -188,87 +188,73 @@ ob_start();
         </div>
     </div>
 </div>
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     let editModalInstance;
 
     function openEditModal(id, name) {
-        // Set values
         document.getElementById('edit_vendor_id').value = id;
         document.getElementById('edit_vendor_name').value = name;
         
         const modalEl = document.getElementById('editModal');
-        
-        // CRITICAL FIX: Move modal to body to prevent grey-out / stacking context issues
         document.body.appendChild(modalEl);
         
-        // Initialize or get modal instance
         if (!editModalInstance) {
             editModalInstance = new bootstrap.Modal(modalEl);
         }
         editModalInstance.show();
     }
 
-    // Fix for lingering backdrops when using layouts
     document.addEventListener('DOMContentLoaded', function() {
+        // --- 1. MODAL BACKDROP FIX ---
         const modalEl = document.getElementById('editModal');
         modalEl.addEventListener('hidden.bs.modal', function () {
-            const backdrops = document.querySelectorAll('.modal-backdrop');
-            backdrops.forEach(b => b.remove());
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
             document.body.style.overflow = 'auto';
-            document.body.style.paddingRight = '0';
         });
 
-        // AUTO-HIDE ALERTS
+        // --- 2. AUTO-HIDE ALERTS ---
         setTimeout(function() {
             document.querySelectorAll('.alert').forEach(a => {
                 const bsAlert = new bootstrap.Alert(a);
                 bsAlert.close();
             });
         }, 3000);
-    });
 
-    document.addEventListener('DOMContentLoaded', function() {
-    // Handle Delete Confirmation
-    document.querySelectorAll('.delete-vendor-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const vendorId = this.getAttribute('data-id');
-            const vendorName = this.getAttribute('data-name');
+        // --- 3. DELETE CONFIRMATION ---
+        document.querySelectorAll('.delete-vendor-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const vendorId = this.getAttribute('data-id');
+                const vendorName = this.getAttribute('data-name');
+                const currentType = "<?= $category_type ?>"; // Injects Computer, Furniture, etc.
 
-            Swal.fire({
-                title: 'Are you sure?',
-                text: `Removing "${vendorName}" will delete them from the registry.`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#64748b',
-                confirmButtonText: 'Yes, delete it!',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const currentType = "<?= $category_type ?>";
-                    window.location.href = `delete_vendor.php?id=${vendorId}&type=${currentType}`;
-                }
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: `Removing "${vendorName}" will delete them from the registry.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Yes, delete it!',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = `delete_vendor.php?id=${vendorId}&type=${currentType}`;
+                    }
+                });
             });
         });
-    });
 
-    // Handle Feedback from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    let errorText = "";
-
-    if (urlParams.has('error')) {
-        const errorType = urlParams.get('error');
+        // --- 4. HANDLE FEEDBACK & SMART URL CLEANUP ---
+        const urlParams = new URLSearchParams(window.location.search);
         
-        if (errorType === 'used_in_services') {
-            errorText = "This vendor is linked to existing service/bill records.";
-        } else if (errorType === 'used_in_stock') {
-            errorText = "This vendor is linked to items currently in your stock/inventory.";
-        } else if (errorType === 'failed') {
-            errorText = "System error: Could not complete deletion.";
-        }
+        // Handle Errors
+        if (urlParams.has('error')) {
+            const errorType = urlParams.get('error');
+            let errorText = "System error: Could not complete deletion.";
+            if (errorType === 'used_in_services') errorText = "This vendor is linked to existing service/bill records.";
+            if (errorType === 'used_in_stock') errorText = "This vendor is linked to items currently in your stock/inventory.";
 
-        if (errorText) {
             Swal.fire({
                 title: 'Action Denied',
                 text: errorText + " Please reassign or remove those records first.",
@@ -276,23 +262,29 @@ ob_start();
                 confirmButtonColor: '#10b981'
             });
         }
-    }
 
-    if (urlParams.has('success')) {
-        Swal.fire({
-            title: 'Deleted!',
-            text: 'Vendor has been removed.',
-            icon: 'success',
-            timer: 2000,
-            showConfirmButton: false
-        });
-    }
+        // Handle Success
+        if (urlParams.has('success')) {
+            Swal.fire({
+                title: 'Deleted!',
+                text: 'Vendor has been removed.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
 
-    // Clean URL
-    if (urlParams.has('error') || urlParams.has('success')) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }
-});
+        // --- THE FIX: SMART URL CLEANUP ---
+        if (urlParams.has('error') || urlParams.has('success')) {
+            const cleanParams = new URLSearchParams(window.location.search);
+            cleanParams.delete('success');
+            cleanParams.delete('error');
+            
+            // Rebuild the URL string (this keeps ?type=Furniture if it exists)
+            const newRelativePathQuery = window.location.pathname + (cleanParams.toString() ? '?' + cleanParams.toString() : '');
+            window.history.replaceState({}, document.title, newRelativePathQuery);
+        }
+    });
 </script>
 
 <style>

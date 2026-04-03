@@ -259,7 +259,12 @@ header("Pragma: no-cache");
                     <a href="/cecsms/users/manage_users.php" class="nav-link <?= ($current_page=='manage_users.php')?'active':'' ?>">
                         <i class="bi bi-people"></i> User Management
                     </a>
-                    
+            <?php endif; ?>
+                    <?php if($role === ROLE_SUPERADMIN): ?>
+                    <a href="/cecsms/vendors/vendor_manager.php" class="nav-link <?= ($current_page=='vendor_manager.php')?'active':'' ?>">
+                        <i class="bi bi-person-vcard-fill"></i> Add Vendor
+                    </a>
+
                     <?php if($role === ROLE_SUPERADMIN): ?>
                     <a href="/cecsms/master/master_dashboard.php" class="nav-link <?= ($current_page=='master_dashboard.php')?'active':'' ?>">
                         <i class="bi bi-database-gear"></i> Master Data
@@ -282,7 +287,7 @@ header("Pragma: no-cache");
 
                  <a href="<?= ($role === ROLE_SUPERADMIN) ? '/cecsms/furniture_stock/furniture_dashboard.php' : '/cecsms/furniture_stock/furniture_dashboard.php' ?>" 
                 class="nav-link d-flex justify-content-between align-items-center <?= ($current_page == 'furniture_dashboard.php' || $current_page == 'furniture_dashboard.php') ? 'active' : '' ?>">
-                    <span><i class="bi bi-fill box"></i> Furniture Stock</span>
+                    <span><i class="bi-boxes"></i> Furniture Stock</span>
                 </a>
 
                 <?php if($role === ROLE_SUPERADMIN): ?>

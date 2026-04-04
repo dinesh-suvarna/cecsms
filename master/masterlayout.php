@@ -247,7 +247,7 @@ h5 {
                 <i class="bi bi-building"></i> Institutions
             </a>
             <a href="divisions.php" class="nav-link <?= ($current_page == 'divisions.php') ? 'active' : '' ?>">
-                <i class="bi bi-diagram-3 me-2"></i> Departments
+                <i class="bi bi-diagram-3 "></i> Departments
             </a>
             <a href="units.php" class="nav-link <?= ($current_page == 'units.php') ? 'active' : '' ?>">
                 <i class="bi bi-collection"></i> Labs & Facilities

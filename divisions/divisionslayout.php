@@ -191,7 +191,7 @@ $notif_count = $notifications->num_rows;
 <nav id="sidebar">
     <a href="division_dashboard.php" class="sidebar-brand">
         <div class="bg-success text-white rounded-3 px-2 py-1 shadow-sm">
-            <i class="bi bi-building"></i>
+            <i class="bi bi-box-seam"></i>
         </div>
         <span>Stock<span class="text-dark">Flow</span></span>
     </a>
@@ -199,30 +199,38 @@ $notif_count = $notifications->num_rows;
     <div class="overflow-y-auto flex-grow-1">
         <div class="nav-group-label p-3 small fw-bold text-uppercase opacity-50">Overview</div>
         <div class="nav flex-column">
-            <a href="division_dashboard.php" class="nav-link <?= ($current_page == 'division_dashboard.php') ? 'active' : '' ?>">
+            <a href="/cecsms/divisions/division_dashboard.php" class="nav-link <?= ($current_page == 'division_dashboard.php') ? 'active' : '' ?>">
                 <i class="bi bi-grid-1x2"></i> Dashboard
+            </a>
+        </div>
+        <div class="nav-group-label">Master Data</div>
+        <div class="nav flex-column">
+            <a href="../vendors/vendor_manager.php?type=Computer" 
+            class="nav-link <?= ($_GET['type'] ?? '') == 'Computer' ? 'active' : '' ?>">
+                <i class="bi bi-person-vcard-fill"></i> Manage Vendors
+            </a>
+            <a href="/cecsms/divisions/add_components.php" class="nav-link <?= ($current_page == 'add_components.php') ? 'active' : '' ?>">
+                <i class="bi bi-plugin"></i> Components & ICs
+            </a>
+            <a href="/cecsms/divisions/view_components.php" class="nav-link <?= ($current_page == 'view_components.php') ? 'active' : '' ?>">
+                <i class="bi bi-layers-half"></i> Component Stock
             </a>
         </div>
 
         <div class="nav-group-label p-3 small fw-bold text-uppercase opacity-50">Asset Management</div>
         <div class="nav flex-column">
-            <a href="assign_asset.php" class="nav-link <?= ($current_page == 'assign_asset.php') ? 'active' : '' ?>">
+            <a href="/cecsms/divisions/assign_asset.php" class="nav-link <?= ($current_page == 'assign_asset.php') ? 'active' : '' ?>">
                 <i class="bi bi-tag"></i> Assign Asset ID
             </a>
-            <a href="assigned_assets.php" class="nav-link <?= ($current_page == 'assigned_assets.php') ? 'active' : '' ?>">
+            <a href="/cecsms/divisions/assigned_assets.php" class="nav-link <?= ($current_page == 'assigned_assets.php') ? 'active' : '' ?>">
                 <i class="bi bi-check-circle"></i> View My Assets
             </a>
-            <a href="add_components.php" class="nav-link <?= ($current_page == 'add_components.php') ? 'active' : '' ?>">
-                <i class="bi bi-plugin"></i> Components & ICs
-            </a>
-            <a href="view_components.php" class="nav-link <?= ($current_page == 'view_components.php') ? 'active' : '' ?>">
-                <i class="bi bi-layers-half"></i> Component Stock
-            </a>
+            
         </div>
 
         <div class="nav-group-label p-3 small fw-bold text-uppercase opacity-50">Maintenance</div>
         <div class="nav flex-column">
-            <a href="asset_logs.php" class="nav-link <?= ($current_page == 'asset_logs.php') ? 'active' : '' ?>">
+            <a href="/cecsms/divisions/asset_logs.php" class="nav-link <?= ($current_page == 'asset_logs.php') ? 'active' : '' ?>">
                 <i class="bi bi-arrow-return-left"></i> Asset Audit Logs 
             </a>
         </div>
@@ -367,6 +375,18 @@ $notif_count = $notifications->num_rows;
         <?php if (!isset($main_content) && isset($content)) echo $content; ?>
     </div>
 </main>
+
+<style>
+    .nav-group-label {
+            padding: 1.5rem 1.5rem 0.5rem;
+            font-size: 0.78rem;
+            opacity: 0.85;
+            text-transform: uppercase;
+            letter-spacing: 0.08rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+</style>
 
 <?php if (isset($modal_html)) echo $modal_html; ?>
 

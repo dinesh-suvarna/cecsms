@@ -334,17 +334,30 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<?php 
+<?php
+
 $content = ob_get_clean();
 
 
+
+
+
 if (strtolower($category_type) === 'furniture') {
-    include "../furniture_stock/furniturelayout.php"; 
+
+    include "../furniture_stock/furniturelayout.php";
+
 } else {
+
     if (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin') {
-        include "../admin/adminlayout.php"; 
+
+        include "../admin/adminlayout.php";
+
     } else {
-        include "../divisions/divisionslayout.php"; 
+
+        include "../divisions/divisionslayout.php";
+
     }
+
 }
+
 ?>

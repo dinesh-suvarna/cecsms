@@ -37,6 +37,7 @@ ob_start();
 ?>
 
 <div class="container-fluid py-4">
+    <div class="row align-items-center mb-4 px-2">
     <div class="row justify-content-center">
         <div class="col-md-11">
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">

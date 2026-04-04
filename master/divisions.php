@@ -128,6 +128,7 @@ $stmt->bind_param($types, ...$params);
 $stmt->execute();
 $result = $stmt->get_result();
 
+$page_title = "Departments";
 ob_start();
 ?>
 

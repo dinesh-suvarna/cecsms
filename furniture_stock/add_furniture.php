@@ -184,7 +184,7 @@ ob_start();
                         </div>
                     </div>
 
-                    <hr class="my-5 opacity-25">
+                    <!-- <hr class="my-5 opacity-25"> -->
 
                     <div class="d-flex justify-content-center gap-3 action-area">
                         <button type="submit" name="save_stock" class="btn btn-pill btn-update">

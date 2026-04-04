@@ -242,7 +242,7 @@ $pending_count = $notif_res->num_rows;
 
         <div class="nav-group-label">Service Operations</div>
         <div class="nav flex-column">
-            <a href="vendor_manager.php" class="nav-link <?= ($current_page=='vendor_manager.php')?'active':'' ?>">
+            <a href="/cecsms/vendors/vendor_manager.php" class="nav-link <?= ($current_page=='vendor_manager.php')?'active':'' ?>">
                 <i class="bi bi-person-vcard-fill"></i> Vendor Manager
             </a>
             <a href="add_service.php" class="nav-link <?= ($current_page=='add_service.php')?'active':'' ?>">

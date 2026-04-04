@@ -134,7 +134,7 @@ ob_start();
                             </div>
                             <h4 class="fw-bold text-dark">Queue Cleared</h4>
                             <p class="text-muted mb-4">All furniture stocks have been assigned unique Asset IDs.</p>
-                            <a href="view_furniture.php" class="btn btn-outline-dark rounded-pill px-4">Go to Registry</a>
+                            <a href="view_assets.php" class="btn btn-outline-dark rounded-pill px-4">Go to Registry</a>
                         </div>
                     <?php else: ?>
                         <div class="d-flex align-items-center mb-4">

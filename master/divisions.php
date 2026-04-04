@@ -228,7 +228,7 @@ Save Division
                     <input type="text" id="liveSearch" name="search" 
                     value="<?= htmlspecialchars($search) ?>" 
                     class="form-control border-0 bg-light" 
-                    placeholder="Start typing to search...">
+                    placeholder="search">
                 </div>
 
                 <div class="col-md-3 d-flex gap-2">

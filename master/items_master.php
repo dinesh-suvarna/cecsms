@@ -11,7 +11,7 @@ if (!function_exists('notify')) {
     }
 }
 
-$page_title = "Item Master";
+$page_title = "Asset Registry";
 $page_icon  = "bi-boxes";
 
 /* ---------- UPDATE ---------- */
@@ -108,7 +108,7 @@ ob_start();
     <div class="col-lg-4">
         <div class="card shadow-sm border-0 rounded-4 sticky-top" style="top: 20px;">
             <div class="card-body p-4">
-                <h5 class="fw-bold mb-4"><i class="bi bi-plus-circle text-success me-2"></i>New Item Category</h5>
+                <h5 class="fw-bold mb-4"><i class="bi bi-plus-circle text-success me-2"></i>Add Asset Category</h5>
                 <form method="POST">
                     <div class="mb-3">
                         <label class="small fw-bold text-muted">Stock Tracking Type</label>
@@ -124,7 +124,6 @@ ob_start();
                             <option>Accessory</option>
                             <option>Component</option>
                             <option>Networking</option>
-                            <option>Furniture</option>
                         </select>
                     </div>
                     <div class="mb-4">
@@ -140,7 +139,7 @@ ob_start();
     <div class="col-lg-8">
         <div class="card shadow-sm border-0 rounded-4 p-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5 class="fw-bold m-0">Master Item Registry</h5>
+                <h5 class="fw-bold m-0">Master Asset Registry</h5>
                 <div class="input-group w-50">
                     <span class="input-group-text bg-transparent border-end-0 rounded-start-pill"><i class="bi bi-search"></i></span>
                     <input type="text" id="search" class="form-control border-start-0 rounded-end-pill" placeholder="Filter items...">
@@ -224,7 +223,6 @@ $modal_html='
                             <option>Accessory</option>
                             <option>Component</option>
                             <option>Networking</option>
-                            <option>Furniture</option>
                         </select>
                     </div>
                     <div class="mb-3">

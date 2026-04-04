@@ -5,6 +5,8 @@ require_once "../includes/session.php";
 $role = $_SESSION['role'];
 $user_institution_id = $_SESSION['institution_id'] ?? null;
 
+$page_title = "Labs & Facilities";
+
 $error = "";
 $success = "";
 $unit_name = "";

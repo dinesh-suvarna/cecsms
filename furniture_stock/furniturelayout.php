@@ -239,24 +239,24 @@ if (isset($conn)) {
         </div>
         <div class="nav-group-label">Master Data</div>
         <div class="nav flex-column">
-            <a href="manage_furniture_types.php" class="nav-link <?= ($current_page == 'manage_furniture_types.php') ? 'active' : '' ?>">
-                <i class="bi-journal-text"></i> Furniture Registry
-            </a>
             <a href="../vendors/vendor_manager.php?type=Furniture" 
             class="nav-link <?= ($_GET['type'] ?? '') == 'Furniture' ? 'active' : '' ?>">
                 <i class="bi bi-person-vcard-fill"></i> Manage Vendors
+            </a>
+            <a href="/cecsms/furniture_stock/manage_furniture_types.php" class="nav-link <?= ($current_page == 'manage_furniture_types.php') ? 'active' : '' ?>">
+                <i class="bi-journal-text"></i> Furniture Registry
             </a>
         </div>
 
         <div class="nav-group-label">Inventory Management</div>
         <div class="nav flex-column">
-            <a href="add_furniture.php" class="nav-link <?= ($current_page == 'add_furniture.php') ? 'active' : '' ?>">
+            <a href="/cecsms/furniture_stock/add_furniture.php" class="nav-link <?= ($current_page == 'add_furniture.php') ? 'active' : '' ?>">
                 <i class="bi-box-seam"></i> Add Furniture Stock
             </a>
-            <a href="view_furniture.php" class="nav-link <?= ($current_page == 'view_furniture.php') ? 'active' : '' ?>">
+            <a href="/cecsms/furniture_stock/view_furniture.php" class="nav-link <?= ($current_page == 'view_furniture.php') ? 'active' : '' ?>">
                 <i class="bi-boxes"></i> Furniture Inventory
             </a>
-            <a href="tag_assets.php" class="nav-link <?= ($current_page == 'tag_assets.php') ? 'active' : '' ?>">
+            <a href="/cecsms/furniture_stock/tag_assets.php" class="nav-link <?= ($current_page == 'tag_assets.php') ? 'active' : '' ?>">
                 <i class="bi-upc-scan"></i> 
                 <span class="flex-grow-1">Add Asset ID</span>
                 <?php if ($pending_count > 0): ?>
@@ -265,24 +265,24 @@ if (isset($conn)) {
                     </span>
                 <?php endif; ?>
             </a>
-            <a href="view_Assets.php" class="nav-link <?= ($current_page == 'view_assets.php') ? 'active' : '' ?>">
-                <i class="bi-list-ul"></i> View Assets
+            <a href="/cecsms/furniture_stock/view_assets.php" class="nav-link <?= ($current_page == 'view_assets.php') ? 'active' : '' ?>">
+                <i class="bi-boxes"></i> View Assets
             </a>
         </div>
 
         <div class="nav-group-label">Logistics</div>
         <div class="nav flex-column">
-            <a href="dispatch_furniture.php" class="nav-link <?= ($current_page == 'dispatch_furniture.php') ? 'active' : '' ?>">
+            <a href="/cecsms/furniture_stock/dispatch_furniture.php" class="nav-link <?= ($current_page == 'dispatch_furniture.php') ? 'active' : '' ?>">
                 <i class="bi bi-truck"></i> Dispatch Furniture
             </a>
-            <a href="furniture_reports.php" class="nav-link <?= ($current_page == 'furniture_reports.php') ? 'active' : '' ?>">
+            <a href="/cecsms/furniture_stock/furniture_reports.php" class="nav-link <?= ($current_page == 'furniture_reports.php') ? 'active' : '' ?>">
                 <i class="bi bi-file-earmark-bar-graph"></i> Asset Reports
             </a>
         </div>
     </div>
 
     <div class="p-3 border-top mt-auto">
-        <a href="../logout.php" class="btn btn-outline-danger w-100 rounded-pill btn-sm fw-bold">
+        <a href="..admin//logout.php" class="btn btn-outline-danger w-100 rounded-pill btn-sm fw-bold">
             <i class="bi bi-power me-2"></i> Logout
         </a>
     </div>
@@ -326,7 +326,7 @@ if (isset($conn)) {
                     </div>
                 </div>
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
-                    <li><a class="dropdown-item py-2 text-danger fw-bold" href="../logout.php"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
+                    <li><a class="dropdown-item py-2 text-danger fw-bold" href="../admin/logout.php"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
                 </ul>
             </div>
         </div>

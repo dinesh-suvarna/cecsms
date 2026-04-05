@@ -193,7 +193,7 @@ $role = $_SESSION['role'] ?? '';
                     <div class="icon-box"><i class="bi bi-plug-fill"></i></div>
                     <h5>Electronics</h5>
                     <p>Manage specialized electronic components and peripheral devices.</p>
-                    <a href="/cecsms/electronics/index.php" class="saas-btn">Inventory</a>
+                    <a href="/cecsms/electronics_stock/manage_electronics_type.php" class="saas-btn">Inventory</a>
                 </div>
             </div>
 

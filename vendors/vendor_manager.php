@@ -335,29 +335,21 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <?php
-
 $content = ob_get_clean();
+$type = strtolower($category_type);
 
-
-
-
-
-if (strtolower($category_type) === 'furniture') {
-
+if ($type === 'furniture') {
     include "../furniture_stock/furniturelayout.php";
-
-} else {
-
+} 
+elseif ($type === 'electronics') {
+    include "../electronics_stock/electronicslayout.php";
+} 
+else {
+    // Default layouts based on role
     if (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin') {
-
         include "../admin/adminlayout.php";
-
     } else {
-
         include "../divisions/divisionslayout.php";
-
     }
-
 }
-
 ?>

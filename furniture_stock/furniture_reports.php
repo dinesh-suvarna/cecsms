@@ -6,7 +6,10 @@ include "../includes/session.php";
 date_default_timezone_set('Asia/Kolkata'); 
 
 $page_title = "Furniture Inventory Reports";
-if ($_SESSION['role'] !== 'SuperAdmin') { header("Location: ../index.php"); exit(); }
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
+    header("Location: ../index.php");
+    exit();
+}
 
 // 1. Get Filters
 $f_inst = $_GET['inst'] ?? '';

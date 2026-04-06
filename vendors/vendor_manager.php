@@ -133,7 +133,7 @@ ob_start();
                                 <select name="category" id="categorySelect" class="form-select p-3 shadow-none" required>
                                     <option value="Computer" <?= $category_type == 'Computer' ? 'selected' : '' ?>>Computer Stock</option>
                                     <option value="Furniture" <?= $category_type == 'Furniture' ? 'selected' : '' ?>>Furniture Stock</option>
-                                    <option value="Electronics">Electronics Stock</option>
+                                    <option value="Electricals" <?= $category_type == 'Electricals' ? 'selected' : '' ?>>Electrical Stock</option>
                                 </select>
                             </div>
                             <?php endif; ?>
@@ -193,7 +193,7 @@ ob_start();
                                         $cat_styles = [
                                             'Computer'    => ['bg' => '#eef2ff', 'text' => '#4f46e5', 'icon' => 'bi-pc-display'],
                                             'Furniture'   => ['bg' => '#fff7ed', 'text' => '#c2410c', 'icon' => 'bi-lamp'],
-                                            'Electronics' => ['bg' => '#f0fdf4', 'text' => '#15803d', 'icon' => 'bi-lightning-charge'],
+                                            'Electricals' => ['bg' => '#f0fdf4', 'text' => '#15803d', 'icon' => 'bi-lightning-charge'],
                                             'Default'     => ['bg' => '#f8fafc', 'text' => '#64748b', 'icon' => 'bi-tag']
                                         ];
                                         $style = $cat_styles[$row['category']] ?? $cat_styles['Default'];
@@ -341,8 +341,8 @@ $type = strtolower($category_type);
 if ($type === 'furniture') {
     include "../furniture_stock/furniturelayout.php";
 } 
-elseif ($type === 'electronics') {
-    include "../electronics_stock/electronicslayout.php";
+elseif ($type === 'electrical') {
+    include "../electrical_stock/electricalslayout.php";
 } 
 else {
     // Default layouts based on role

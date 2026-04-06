@@ -184,16 +184,16 @@ $role = $_SESSION['role'] ?? '';
                     <div class="icon-box"><i class="bi bi-grid-1x2"></i></div>
                     <h5>Furniture Stock</h5>
                     <p>Asset management for office equipment and laboratory furniture.</p>
-                    <a href="/cecsms/furniture_stock/manage_furniture_types.php" class="saas-btn">Inventory</a>
+                    <a href="/cecsms/furniture_stock/furniture_dashboard.php" class="saas-btn">Inventory</a>
                 </div>
             </div>
 
             <div class="col-lg-4 col-md-6">
                 <div class="saas-card accent-rose">
                     <div class="icon-box"><i class="bi bi-plug-fill"></i></div>
-                    <h5>Electronics</h5>
-                    <p>Manage specialized electronic components and peripheral devices.</p>
-                    <a href="/cecsms/electronics_stock/manage_electronics_type.php" class="saas-btn">Inventory</a>
+                    <h5>Electricals</h5>
+                    <p>Asset management for electrical equipment including lights, fans, and related fixtures.</p>
+                    <a href="/cecsms/electrical_stock/electricals_dashboard.php" class="saas-btn">Inventory</a>
                 </div>
             </div>
 

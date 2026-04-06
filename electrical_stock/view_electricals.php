@@ -17,12 +17,12 @@ if (isset($_GET['delete_id'])) {
 
     // Check if assets exist
     $check_assets = $conn->query("
-        SELECT id FROM electronics_assets 
+        SELECT id FROM electrical_assets 
         WHERE stock_id = $delete_id LIMIT 1
     ");
 
     if ($check_assets->num_rows == 0) {
-        $conn->query("DELETE FROM electronics_stock WHERE id = $delete_id");
+        $conn->query("DELETE FROM electrical_stock WHERE id = $delete_id");
 
         $_SESSION['swal_msg'] = "Stock deleted successfully.";
         $_SESSION['swal_type'] = "success";
@@ -31,7 +31,7 @@ if (isset($_GET['delete_id'])) {
         $_SESSION['swal_type'] = "error";
     }
 
-    header("Location: view_electronics.php");
+    header("Location: view_electricals.php");
     exit();
 }
 
@@ -45,8 +45,8 @@ $sql = "SELECT
             u.unit_code,
             GROUP_CONCAT(DISTINCT s.bill_no SEPARATOR ', ') as combined_bills,
             MAX(s.bill_date) as latest_bill_date
-        FROM electronics_stock s
-        JOIN electronics_items i ON s.electronics_item_id = i.id
+        FROM electrical_stock s
+        JOIN electrical_items i ON s.electrical_item_id = i.id
         JOIN vendors v ON s.vendor_id = v.id
         JOIN units u ON s.unit_id = u.id";
 
@@ -66,17 +66,17 @@ while ($row = $result->fetch_assoc()) {
     $grouped_inventory[$display_label][] = $row;
 }
 
-$page_title = "Electronics Inventory";
+$page_title = "Electricals Inventory";
 ob_start();
 ?>
 
 <div class="container-fluid py-4 px-4 mt-n3">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold mb-0">Electronics Inventory</h4>
+            <h4 class="fw-bold mb-0">Electricals Inventory</h4>
             <p class="text-muted small mb-0">Summarized stock distribution per unit</p>
         </div>
-        <a href="add_electronics.php" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+        <a href="add_electricals.php" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
             <i class="bi bi-plus-lg me-2"></i> Add New Stock
         </a>
     </div>
@@ -186,12 +186,28 @@ ob_start();
     display:flex;align-items:center;justify-content:center;
 }
 </style>
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+// 1. DISPLAY AND CLEAR SESSION MESSAGES
+<?php if(isset($_SESSION['swal_msg'])): ?>
+    Swal.fire({
+        icon: '<?= $_SESSION['swal_type'] ?>',
+        title: '<?= $_SESSION['swal_msg'] ?>',
+        timer: 3000,
+        showConfirmButton: true
+    });
+    <?php 
+        // THIS IS THE FIX: Clear the message after it is rendered
+        unset($_SESSION['swal_msg']); 
+        unset($_SESSION['swal_type']); 
+    ?>
+<?php endif; ?>
+
+// 2. EDIT FUNCTION
 function editStock(data){
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = 'add_electronics.php';
+    form.action = 'add_electricals.php';
 
     const input = document.createElement('input');
     input.type = 'hidden';
@@ -203,16 +219,18 @@ function editStock(data){
     form.submit();
 }
 
+// 3. DELETE FUNCTION
 function deleteStock(id){
     Swal.fire({
-        title:'Delete latest entry?',
-        text:'This batch will be removed.',
-        icon:'warning',
-        showCancelButton:true,
-        confirmButtonColor:'#d33'
-    }).then((r)=>{
-        if(r.isConfirmed){
-            window.location.href = `view_electronics.php?delete_id=${id}`;
+        title: 'Delete this entry?',
+        text: 'This action cannot be undone if no assets are linked.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+        if(result.isConfirmed){
+            window.location.href = `view_electricals.php?delete_id=${id}`;
         }
     });
 }
@@ -220,5 +238,5 @@ function deleteStock(id){
 
 <?php 
 $content = ob_get_clean(); 
-include "electronicslayout.php"; 
+include "electricalslayout.php"; 
 ?>

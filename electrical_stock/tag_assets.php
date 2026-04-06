@@ -13,9 +13,9 @@ $user_division = $_SESSION['division_id'] ?? 0;
 /* ================= FETCH PENDING ================= */
 $query = "
 SELECT s.id, s.total_qty, s.bill_no, i.item_name, u.division_id,
-(SELECT COUNT(ea.id) FROM electronics_assets ea WHERE ea.stock_id = s.id) as assigned_count
-FROM electronics_stock s
-JOIN electronics_items i ON s.electronics_item_id = i.id
+(SELECT COUNT(ea.id) FROM electrical_assets ea WHERE ea.stock_id = s.id) as assigned_count
+FROM electrical_stock s
+JOIN electrical_items i ON s.electrical_item_id = i.id
 JOIN units u ON s.unit_id = u.id
 WHERE 1=1";
 
@@ -43,13 +43,13 @@ $stock = null;
 $current_assets = 0;
 
 if ($stock_id>0) {
-    $q = $conn->query("SELECT s.*, i.item_name FROM electronics_stock s 
-                       JOIN electronics_items i ON s.electronics_item_id=i.id 
+    $q = $conn->query("SELECT s.*, i.item_name FROM electrical_stock s 
+                       JOIN electrical_items i ON s.electrical_item_id=i.id 
                        WHERE s.id=$stock_id");
 
     $stock = $q->fetch_assoc();
 
-    $c = $conn->query("SELECT COUNT(id) as cnt FROM electronics_assets WHERE stock_id=$stock_id");
+    $c = $conn->query("SELECT COUNT(id) as cnt FROM electrical_assets WHERE stock_id=$stock_id");
     $current_assets = $c->fetch_assoc()['cnt'];
 }
 
@@ -73,12 +73,12 @@ if ($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['generate_tags']) && $sto
             $num = str_pad($start_no+$i,2,'0',STR_PAD_LEFT);
             $tag = $prefix.$num;
 
-            $check = $conn->query("SELECT id FROM electronics_assets WHERE asset_tag='$tag'");
+            $check = $conn->query("SELECT id FROM electrical_assets WHERE asset_tag='$tag'");
 
             if ($check->num_rows>0) {
                 $duplicates[]=$tag;
             } else {
-                $conn->query("INSERT INTO electronics_assets (stock_id,asset_tag) VALUES ($stock_id,'$tag')");
+                $conn->query("INSERT INTO electrical_assets (stock_id,asset_tag) VALUES ($stock_id,'$tag')");
             }
         }
 
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['generate_tags']) && $sto
     }
 }
 
-$page_title="Electronics Asset Tagging";
+$page_title="Electrical Asset Tagging";
 ob_start();
 ?>
 
@@ -114,7 +114,7 @@ ob_start();
 <?php if(empty($pending_list)): ?>
 <div class="p-4 text-center text-muted small">
 <i class="bi bi-check2-all d-block fs-2 mb-2"></i>
-No pending electronics.
+No pending electricals.
 </div>
 <?php else: ?>
 
@@ -160,9 +160,9 @@ class="list-group-item list-group-item-action p-3 border-0 <?= ($stock_id==$p['i
 </div>
 
 <h4 class="fw-bold">Queue Cleared</h4>
-<p class="text-muted">All electronics tagged.</p>
+<p class="text-muted">All electricals tagged.</p>
 
-<a href="view_electronics_assets.php" class="btn btn-outline-dark rounded-pill px-4">
+<a href="view_electricals_assets.php" class="btn btn-outline-dark rounded-pill px-4">
 Go to Registry
 </a>
 </div>
@@ -280,5 +280,5 @@ Swal.fire({icon:'error',title:'Duplicate',text:'<?= addslashes($error_message) ?
 
 <?php
 $content = ob_get_clean();
-include "electronicslayout.php";
+include "electricalslayout.php";
 ?>

@@ -23,8 +23,8 @@ if (!$id) {
 if ($user_role !== 'SuperAdmin') {
     $auth_check = $conn->prepare("
         SELECT ea.id 
-        FROM electronics_assets ea
-        JOIN electronics_stock s ON ea.stock_id = s.id
+        FROM electrical_assets ea
+        JOIN electrical_stock s ON ea.stock_id = s.id
         JOIN units u ON s.unit_id = u.id
         WHERE ea.id = ? AND u.division_id = ?
     ");
@@ -45,7 +45,7 @@ if ($action === 'verify') {
     $today = date('Y-m-d');
 
     $stmt = $conn->prepare("
-        UPDATE electronics_assets 
+        UPDATE electrical_assets 
         SET last_verified_date = ? 
         WHERE id = ?
     ");
@@ -79,7 +79,7 @@ elseif ($action === 'edit_tag') {
 
     // Duplicate check
     $check = $conn->prepare("
-        SELECT id FROM electronics_assets 
+        SELECT id FROM electrical_assets 
         WHERE asset_tag = ? AND id != ?
     ");
     $check->bind_param("si", $new_tag, $id);
@@ -94,7 +94,7 @@ elseif ($action === 'edit_tag') {
     }
 
     $stmt = $conn->prepare("
-        UPDATE electronics_assets 
+        UPDATE electrical_assets 
         SET asset_tag = ? 
         WHERE id = ?
     ");

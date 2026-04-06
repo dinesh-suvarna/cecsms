@@ -18,7 +18,7 @@ $is_edit = false;
 
 if (isset($_POST['trigger_edit'])) {
     $id = (int)$_POST['trigger_edit'];
-    $res = $conn->query("SELECT * FROM electronics_stock WHERE id=$id");
+    $res = $conn->query("SELECT * FROM electrical_stock WHERE id=$id");
     $edit_data = $res->fetch_assoc();
     if ($edit_data) $is_edit = true;
 }
@@ -26,7 +26,7 @@ if (isset($_POST['trigger_edit'])) {
 /* ================= INSERT / UPDATE ================= */
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_stock'])) {
 
-    $item_id = (int)$_POST['electronics_item_id'];
+    $item_id = (int)$_POST['electrical_item_id'];
     $qty = (int)$_POST['quantity'];
     $bill_no = mysqli_real_escape_string($conn, $_POST['bill_no']);
     $bill_date = $_POST['bill_date'];
@@ -41,35 +41,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_stock'])) {
         if (!empty($_POST['edit_id'])) {
             $edit_id = (int)$_POST['edit_id'];
 
-            $sql = "UPDATE electronics_stock SET
-                electronics_item_id='$item_id',
+            $sql = "UPDATE electrical_stock SET
+                electrical_item_id='$item_id',
                 total_qty='$qty',
                 available_qty='$qty',
                 bill_no='$bill_no',
                 bill_date='$bill_date',
                 vendor_id='$vendor_id',
                 unit_id='$unit_id',
-                unit_price='$price',
+                unit_price='$price'
                 WHERE id=$edit_id";
 
             if ($conn->query($sql)) {
                 $_SESSION['swal_msg'] = "Stock updated successfully!";
                 $_SESSION['swal_type'] = "success";
-                header("Location: view_electronics.php");
+                header("Location: view_electricals.php");
                 exit();
             } else $message="error";
 
         } else {
 
-            $sql = "INSERT INTO electronics_stock
-            (electronics_item_id,total_qty,available_qty,bill_no,bill_date,vendor_id,unit_id,unit_price)
+            $sql = "INSERT INTO electrical_stock
+            (electrical_item_id,total_qty,available_qty,bill_no,bill_date,vendor_id,unit_id,unit_price)
             VALUES
             ('$item_id','$qty','$qty','$bill_no','$bill_date','$vendor_id','$unit_id','$price')";
 
             if ($conn->query($sql)) {
                 $_SESSION['swal_msg']="Stock added successfully!";
                 $_SESSION['swal_type']="success";
-                header("Location: add_electronics.php");
+                header("Location: add_electricals.php");
                 exit();
             } else $message="error";
         }
@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_stock'])) {
 }
 
 /* ================= FETCH DATA ================= */
-$items = $conn->query("SELECT * FROM electronics_items ORDER BY item_name");
+$items = $conn->query("SELECT * FROM electrical_items ORDER BY item_name");
 $vendors = $conn->query("SELECT * FROM vendors ORDER BY vendor_name");
 
 if ($user_role === 'SuperAdmin') {
@@ -86,7 +86,7 @@ if ($user_role === 'SuperAdmin') {
     $units = $conn->query("SELECT id, unit_name FROM units WHERE division_id='$user_division'");
 }
 
-$page_title = $is_edit ? "Edit Electronics Stock" : "Add Electronics Stock";
+$page_title = $is_edit ? "Edit electricals Stock" : "Add electricals Stock";
 ob_start();
 ?>
 
@@ -106,7 +106,7 @@ ob_start();
 <div>
 <h4 class="fw-bold mb-0"><?= $is_edit ? "Modify Device" : "Stock Entry" ?></h4>
 <p class="text-muted mb-0 small">
-<?= $is_edit ? "Modify existing device details." : "Record new electronic inventory." ?>
+<?= $is_edit ? "Modify existing device details." : "Record new electricals inventory." ?>
 </p>
 </div>
 </div>
@@ -124,11 +124,11 @@ ob_start();
 <!-- ITEM -->
 <div class="col-md-6">
 <label class="form-label">Device Type</label>
-<select name="electronics_item_id" class="form-select" required>
+<select name="electrical_item_id" class="form-select" required>
 <option disabled <?= !$is_edit?'selected':'' ?>>Select device...</option>
 <?php while($row=$items->fetch_assoc()): ?>
 <option value="<?= $row['id'] ?>"
-<?= ($is_edit && $edit_data['electronics_item_id']==$row['id'])?'selected':'' ?>>
+<?= ($is_edit && $edit_data['electrical_item_id']==$row['id'])?'selected':'' ?>>
 <?= htmlspecialchars($row['item_name']) ?>
 </option>
 <?php endwhile; ?>
@@ -207,7 +207,7 @@ max="<?= date('Y-m-d') ?>" required>
 <?= $is_edit?"Update Device":"Save Stock" ?>
 </button>
 
-<a href="view_electronics.php" class="btn btn-pill btn-discard text-decoration-none">
+<a href="view_electricals.php" class="btn btn-pill btn-discard text-decoration-none">
 <?= $is_edit?"Discard Changes":"Cancel" ?>
 </a>
 </div>
@@ -318,5 +318,5 @@ if(res.isConfirmed) window.location=url;
 
 <?php
 $content = ob_get_clean();
-include "electronicslayout.php";
+include "electricalslayout.php";
 ?>

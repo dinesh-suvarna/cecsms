@@ -17,15 +17,15 @@ $message = "";
 if (isset($_GET['delete_id'])) {
     $delete_id = (int)$_GET['delete_id'];
     
-    // Check if any stock is currently linked to this electronics item category
+    // Check if any stock is currently linked to this electricals item category
     // This prevents deleting an item type (e.g., "Laptop") if you still have "Laptops" in your stock table
-    $check_stock = $conn->query("SELECT id FROM electronics_stock WHERE electronics_item_id = $delete_id LIMIT 1");
+    $check_stock = $conn->query("SELECT id FROM electrical_stock WHERE electrical_item_id = $delete_id LIMIT 1");
     
     if ($check_stock->num_rows > 0) {
         $message = "usage_error"; 
     } else {
-        // Delete from the electronics items registry
-        if ($conn->query("DELETE FROM electronics_items WHERE id = $delete_id")) {
+        // Delete from the electricals items registry
+        if ($conn->query("DELETE FROM electrical_items WHERE id = $delete_id")) {
             $message = "deleted";
         }
     }
@@ -38,20 +38,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_type'])) {
     $name = ucwords(strtolower(trim($raw_name)));
     
     if (!empty($_POST['edit_id'])) {
-        // Update existing electronics item
+        // Update existing electricals item
         $edit_id = (int)$_POST['edit_id'];
-        $conn->query("UPDATE electronics_items SET item_name = '$name' WHERE id = $edit_id");
+        $conn->query("UPDATE electrical_items SET item_name = '$name' WHERE id = $edit_id");
         $message = "updated";
     } else {
-        // Insert new electronics item
-        $conn->query("INSERT INTO electronics_items (item_name) VALUES ('$name')");
+        // Insert new electricals item
+        $conn->query("INSERT INTO electrical_items (item_name) VALUES ('$name')");
         $message = "success";
     }
 }
 
-// Fetch all electronics items for the list/table
-$items = $conn->query("SELECT * FROM electronics_items ORDER BY item_name ASC");
-$page_title = "Electronics Registry";
+// Fetch all electricals items for the list/table
+$items = $conn->query("SELECT * FROM electrical_items ORDER BY item_name ASC");
+$page_title = "Electricals Registry";
 
 ob_start(); 
 ?>
@@ -217,7 +217,7 @@ function resetForm() {
 
 <?php 
 $content = ob_get_clean(); 
-include "electronicslayout.php"; 
+include "electricalslayout.php"; 
 ?>
 
 

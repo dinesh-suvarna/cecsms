@@ -10,7 +10,7 @@ $role = $_SESSION["role"] ?? 'User';
 $user_division = $_SESSION['division_id'] ?? 0;
 $current_page = basename($_SERVER['PHP_SELF']);
 
-if (!isset($page_title)) $page_title = "Electronics Dashboard";
+if (!isset($page_title)) $page_title = "Electricals Dashboard";
 
 /* ================= PENDING COUNT ================= */
 $pending_count = 0;
@@ -18,9 +18,9 @@ if (isset($conn)) {
     $count_sql = "
         SELECT COUNT(*) as total FROM (
             SELECT s.id
-            FROM electronics_stock s
+            FROM electrical_stock s
             JOIN units u ON s.unit_id = u.id
-            LEFT JOIN electronics_assets ea ON s.id = ea.stock_id
+            LEFT JOIN electrical_assets ea ON s.id = ea.stock_id
             WHERE 1=1";
 
     if ($role !== 'SuperAdmin') {
@@ -213,37 +213,37 @@ body {
 
 <div class="nav-group-label">General</div>
 <div class="nav flex-column">
-    <a href="electronics_dashboard.php" class="nav-link <?= ($current_page=='electronics_dashboard.php')?'active':'' ?>">
+    <a href="/cecsms/electrical_stock/electricals_dashboard.php" class="nav-link <?= ($current_page=='electricals_dashboard.php')?'active':'' ?>">
         <i class="bi bi-grid-1x2"></i> Dashboard
     </a>
 </div>
 
 <div class="nav-group-label">Master Data</div>
 <div class="nav flex-column">
-    <a href="../vendors/vendor_manager.php?type=Electronics" class="nav-link">
+    <a href="../vendors/vendor_manager.php?type=Electrical" class="nav-link">
         <i class="bi bi-person-vcard-fill"></i> Manage Vendors
     </a>
-    <a href="/cecsms/electronics_stock/manage_electronics_type.php" class="nav-link <?= ($current_page=='manage_electronics_type.php')?'active':'' ?>">
+    <a href="/cecsms/electrical_stock/manage_electricals_type.php" class="nav-link <?= ($current_page=='manage_electricals_type.php')?'active':'' ?>">
         <i class="bi bi-journal-text"></i> Device Registry
     </a>
 </div>
 
 <div class="nav-group-label">Inventory Management</div>
 <div class="nav flex-column">
-    <a href="add_electronics.php" class="nav-link <?= ($current_page=='add_electronics.php')?'active':'' ?>">
+    <a href="/cecsms/electrical_stock/add_electricals.php" class="nav-link <?= ($current_page=='add_electricals.php')?'active':'' ?>">
         <i class="bi bi-box-seam"></i> Add Stock
     </a>
-    <a href="view_electronics.php" class="nav-link <?= ($current_page=='view_electronics.php')?'active':'' ?>">
+    <a href="/cecsms/electrical_stock/view_electricals.php" class="nav-link <?= ($current_page=='view_electricals.php')?'active':'' ?>">
         <i class="bi bi-boxes"></i> Inventory
     </a>
-    <a href="tag_assets.php" class="nav-link <?= ($current_page=='tag_assets.php')?'active':'' ?>">
+    <a href="/cecsms/electrical_stock/tag_assets.php" class="nav-link <?= ($current_page=='tag_assets.php')?'active':'' ?>">
         <i class="bi bi-upc-scan"></i>
         <span class="flex-grow-1">Add Asset ID</span>
         <?php if($pending_count>0): ?>
         <span class="badge rounded-pill bg-danger pulse-badge"><?= $pending_count ?></span>
         <?php endif; ?>
     </a>
-    <a href="view_electronics_assets.php" class="nav-link <?= ($current_page=='view_electronics_assets.php')?'active':'' ?>">
+    <a href="/cecsms/electrical_stock/view_electricals_assets.php" class="nav-link <?= ($current_page=='view_electricals_assets.php')?'active':'' ?>">
         <i class="bi bi-boxes"></i> View Assets
     </a>
 </div>
@@ -253,7 +253,7 @@ body {
     <a href="dispatch_electronics.php" class="nav-link <?= ($current_page=='dispatch_electronics.php')?'active':'' ?>">
         <i class="bi bi-truck"></i> Dispatch
     </a>
-    <a href="electronics_reports.php" class="nav-link <?= ($current_page=='electronics_reports.php')?'active':'' ?>">
+    <a href="/cecsms/electronics_stock/electronics_reports.php" class="nav-link <?= ($current_page=='electronics_reports.php')?'active':'' ?>">
         <i class="bi bi-file-earmark-bar-graph"></i> Reports
     </a>
 </div>

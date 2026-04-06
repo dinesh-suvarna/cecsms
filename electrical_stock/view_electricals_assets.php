@@ -24,9 +24,9 @@ SELECT
     v.vendor_name,
     u.unit_name,
     u.unit_code
-FROM electronics_assets ea
-JOIN electronics_stock s ON ea.stock_id = s.id
-JOIN electronics_items i ON s.electronics_item_id = i.id
+FROM electrical_assets ea
+JOIN electrical_stock s ON ea.stock_id = s.id
+JOIN electrical_items i ON s.electrical_item_id = i.id
 JOIN vendors v ON s.vendor_id = v.id
 JOIN units u ON s.unit_id = u.id";
 
@@ -49,7 +49,7 @@ while($row=$res->fetch_assoc()){
     $registry[$unit_key][$item_key][$bill_key][] = $row;
 }
 
-$page_title="Electronics Asset Registry";
+$page_title="Electricals Asset Registry";
 ob_start();
 ?>
 
@@ -59,7 +59,7 @@ ob_start();
 <div class="d-flex justify-content-between align-items-center mb-4">
 <div>
 <h3 class="fw-bold mb-0">Asset ID Registry</h3>
-<p class="text-muted mb-0">Electronic asset tracking by Unit</p>
+<p class="text-muted mb-0">Electrical asset tracking by Unit</p>
 </div>
 
 <a href="tag_assets.php" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
@@ -187,8 +187,7 @@ value="<?= $a['asset_tag'] ?>">
 
 <td class="text-end">
 
-<button class="btn btn-outline-primary btn-sm"
-onclick="editTag(<?= $a['asset_db_id'] ?>)">Edit</button>
+<button class="btn btn-outline-primary btn-sm" onclick="editTag(event, <?= $a['asset_db_id'] ?>)">Edit</button>
 
 <button class="btn btn-success btn-sm"
 onclick="verify(<?= $a['asset_db_id'] ?>)">Verify</button>
@@ -245,6 +244,74 @@ function bulkVerify(ids){
 ids.forEach(id=>verify(id));
 }
 
+function editTag(event, id) {
+    const textSpan = document.getElementById('tag-text-' + id);
+    const editDiv = document.getElementById('edit-' + id);
+    const input = document.getElementById('input-' + id);
+    const btn = event.currentTarget; // Safely gets the button even if an icon is clicked
+
+    if (editDiv.classList.contains('d-none')) {
+        // --- SWITCH TO EDIT MODE ---
+        textSpan.classList.add('d-none');
+        editDiv.classList.remove('d-none');
+        
+        // Visual feedback on button
+        btn.innerText = "Save";
+        btn.classList.replace('btn-outline-primary', 'btn-primary');
+        btn.classList.add('shadow-sm');
+
+        // Auto-focus the input for better UX
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 50);
+
+    } else {
+        // --- SAVE LOGIC ---
+        const newTag = input.value.trim();
+        
+        if(newTag === "") {
+            Swal.fire({ icon: 'warning', title: 'Empty Tag', text: 'Please enter a valid Asset ID' });
+            return;
+        }
+
+        fetch('update_asset.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `action=edit_tag&id=${id}&tag=${encodeURIComponent(newTag)}`
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                textSpan.innerText = newTag.toUpperCase();
+                
+                // Switch back to VIEW MODE
+                textSpan.classList.remove('d-none');
+                editDiv.classList.add('d-none');
+                
+                btn.innerText = "Edit";
+                btn.classList.replace('btn-primary', 'btn-outline-primary');
+                btn.classList.remove('shadow-sm');
+                
+                Swal.fire({ 
+                    icon: 'success', 
+                    title: 'Asset Updated', 
+                    toast: true, 
+                    position: 'top-end', 
+                    timer: 2000, 
+                    showConfirmButton: false 
+                });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Update Failed', text: d.message || 'Tag might already exist.' });
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            Swal.fire({ icon: 'error', title: 'Connection Error' });
+        });
+    }
+}
+
 </script>
 
 <style>
@@ -255,9 +322,36 @@ color:#2563eb;
 }
 .cursor-pointer{cursor:pointer;}
 .table-secondary-subtle{background:#f1f5f9;}
+
+/* Modern Editable Input Styling */
+.form-control-sm {
+    border-radius: 6px;
+    border: 2px solid #e2e8f0;
+    transition: all 0.2s ease-in-out;
+    font-family: monospace;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.form-control-sm:focus {
+    border-color: #2563eb; /* SaaS Blue */
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15); /* Soft Blue Glow */
+    outline: none;
+    background-color: #fff;
+}
+
+/* Subtle animation when toggling */
+#edit-container input {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-2px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 </style>
 
 <?php
 $content=ob_get_clean();
-include "electronicslayout.php";
+include "electricalslayout.php";
 ?>

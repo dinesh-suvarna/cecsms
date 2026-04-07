@@ -2,10 +2,9 @@
 include "../config/db.php";
 include "../includes/session.php";
 
-// Set correct Timezone at the top
 date_default_timezone_set('Asia/Kolkata'); 
 
-$page_title = "Furniture Inventory Reports";
+$page_title = "Furniture Inventory Master Report";
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
     header("Location: ../index.php");
     exit();
@@ -16,16 +15,33 @@ $f_inst = $_GET['inst'] ?? '';
 $f_dept = $_GET['dept'] ?? '';
 $f_unit = $_GET['unit'] ?? '';
 
-// 2. Build Query - Corrected Unique Aliases
+// --- DYNAMIC HEADER LOGIC ---
+$filter_parts = [];
+if ($f_inst) {
+    $res = $conn->query("SELECT institution_name FROM institutions WHERE id = '$f_inst'");
+    if($row = $res->fetch_assoc()) $filter_parts[] = $row['institution_name'];
+}
+if ($f_dept) {
+    $res = $conn->query("SELECT division_name FROM divisions WHERE id = '$f_dept'");
+    if($row = $res->fetch_assoc()) $filter_parts[] = $row['division_name'];
+}
+if ($f_unit) {
+    $res = $conn->query("SELECT unit_code, unit_name FROM units WHERE id = '$f_unit'");
+    if($row = $res->fetch_assoc()) $filter_parts[] = $row['unit_code'] . " - " . $row['unit_name'];
+}
+$filter_display = !empty($filter_parts) ? implode(" | ", $filter_parts) : "All Institutions";
+
+// 2. Fetch Data Grouped
 $sql = "SELECT 
-            fa.asset_tag, 
-            fi.item_name,
-            fs.bill_no,
-            fs.bill_date,
+            inst.institution_name,
+            d.division_name,
             u.unit_name,
             u.unit_code,
-            d.division_name as department,
-            inst.institution_name as institution
+            fi.item_name,
+            'Furniture' as item_type,
+            fa.asset_tag,
+            fs.bill_no,
+            fs.bill_date
         FROM furniture_assets fa
         JOIN furniture_stock fs ON fa.stock_id = fs.id
         JOIN furniture_items fi ON fs.furniture_item_id = fi.id
@@ -34,78 +50,58 @@ $sql = "SELECT
         JOIN institutions inst ON d.institution_id = inst.id
         WHERE 1=1";
 
-if($f_inst) $sql .= " AND inst.id = '$f_inst'";
-if($f_dept) $sql .= " AND d.id = '$f_dept'";
-if($f_unit) $sql .= " AND u.id = '$f_unit'";
+if($f_inst) $sql .= " AND inst.id = '" . $conn->real_escape_string($f_inst) . "'";
+if($f_dept) $sql .= " AND d.id = '" . $conn->real_escape_string($f_dept) . "'";
+if($f_unit) $sql .= " AND u.id = '" . $conn->real_escape_string($f_unit) . "'";
 
-$sql .= " ORDER BY fi.item_name ASC";
-
+$sql .= " ORDER BY inst.institution_name, d.division_name, u.unit_name, fi.item_name ASC";
 $result = $conn->query($sql);
 
-// 3. Header Display Labels
-$unit_data = ($f_unit) ? $conn->query("SELECT unit_name, unit_code FROM units WHERE id='$f_unit'")->fetch_assoc() : null;
-$unit_display_header = ($unit_data) ? $unit_data['unit_code'] . " - " . $unit_data['unit_name'] : "All Units";
-
-$display_inst = "All Institutions";
-if ($f_inst) {
-    $res = $conn->query("SELECT institution_name FROM institutions WHERE id='$f_inst'");
-    if ($row = $res->fetch_assoc()) { $display_inst = $row['institution_name']; }
+if (!$result) {
+    die("Database Error: " . $conn->error);
 }
 
-$display_dept = "All Departments";
-if ($f_dept) {
-    $res = $conn->query("SELECT division_name FROM divisions WHERE id='$f_dept'");
-    if ($row = $res->fetch_assoc()) { $display_dept = $row['division_name']; }
+$report_data = [];
+while($row = $result->fetch_assoc()){
+    $inst = $row['institution_name'];
+    $div  = $row['division_name'];
+    $unit = ($row['unit_code']) ? $row['unit_code'] . " - " . $row['unit_name'] : $row['unit_name'];
+    $type = $row['item_name']; // Grouping by the specific item name as the "Type"
+    $report_data[$inst][$div][$unit][$type][] = $row;
 }
 
 ob_start();
 ?>
 
 <style>
-    :root {
-        --emerald-600: #059669;
-        --emerald-700: #047857;
-        --slate-900: #0f172a;
-    }
-
-    .report-card { border-radius: 12px; border: 1px solid #e2e8f0 !important; background: #fff; }
-    .table thead { background-color: var(--slate-900); color: white; text-transform: uppercase; font-size: 0.75rem; }
-    .table th { padding: 15px 12px !important; }
-    .table td { padding: 12px !important; border-color: #f1f5f9 !important; }
-
-    .header-info-bar {
-        background: linear-gradient(to right, var(--emerald-600), var(--emerald-700));
-        color: white;
-        border-radius: 8px;
-    }
+    .report-card { border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; }
     
-    .btn-emerald {
-        background-color: var(--emerald-600);
-        border-color: var(--emerald-600);
-        color: #fff !important;
-    }
+    /* Nesting Styles */
+    .inst-header { background: #0f172a !important; color: white !important; font-weight: 700; }
+    .div-header { background: #f1f5f9 !important; color: #1e293b !important; font-weight: 700; padding-left: 2.5rem !important; }
+    .unit-header { background: #f8fafc !important; color: #0284c7 !important; font-weight: 600; padding-left: 4rem !important; }
+    .type-header { background: #ffffff !important; color: #475569 !important; font-weight: 600; padding-left: 5.5rem !important; font-size: 0.9rem; }
 
-    .font-monospace { font-family: 'Monaco', 'Consolas', monospace; font-weight: bold; }
+    .accordion-button:not(.collapsed) { box-shadow: none; }
+    .accordion-button:focus { box-shadow: none; border: none; }
+    
+    /* Clean up borders for nested items */
+    .accordion-item { border: 1px solid #e2e8f0 !important; margin-bottom: 2px; }
 
     @media print {
-        .no-print, .sidebar, .navbar { display: none !important; }
-        body { background: #fff !important; }
-        .header-info-bar { 
-            background: #f8fafc !important; 
-            color: black !important; 
-            border: 1px solid #e2e8f0 !important; 
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
+        header, footer, nav, .sidebar, .navbar, .no-print, .btn, .topbar { display: none !important; }
+        .accordion-collapse { display: block !important; }
+        .accordion-button::after { display: none !important; }
+        .accordion-button { background: none !important; color: black !important; padding: 5px 0 !important; }
+        .report-card { border: none !important; }
     }
 </style>
 
 <div class="container-fluid mt-4">
     <div class="card mb-4 no-print shadow-sm border-0">
         <div class="card-body">
-            <form method="GET" class="row g-3 align-items-end">
+            <form method="GET" class="row g-3">
                 <div class="col-md-3">
-                    <label class="small fw-bold text-muted mb-1">Institution</label>
                     <select name="inst" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">All Institutions</option>
                         <?php 
@@ -115,9 +111,8 @@ ob_start();
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="small fw-bold text-muted mb-1">Department</label>
                     <select name="dept" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="">All Departments</option>
+                        <option value="">All Divisions</option>
                         <?php 
                         $d_where = $f_inst ? "WHERE institution_id = '$f_inst'" : "";
                         $depts = $conn->query("SELECT id, division_name FROM divisions $d_where");
@@ -126,86 +121,125 @@ ob_start();
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="small fw-bold text-muted mb-1">Unit / Lab</label>
                     <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">All Units</option>
                         <?php 
                         $u_where = $f_dept ? "WHERE division_id = '$f_dept'" : "";
-                        $units = $conn->query("SELECT id, unit_name FROM units $u_where");
-                        while($u = $units->fetch_assoc()) echo "<option value='{$u['id']}' ".($f_unit==$u['id']?'selected':'').">{$u['unit_name']}</option>";
+                        $units = $conn->query("SELECT id, unit_name, unit_code FROM units $u_where");
+                        while($u = $units->fetch_assoc()) {
+                            $label = ($u['unit_code']) ? $u['unit_code']." - ".$u['unit_name'] : $u['unit_name'];
+                            echo "<option value='{$u['id']}' ".($f_unit==$u['id']?'selected':'').">{$label}</option>";
+                        }
                         ?>
                     </select>
                 </div>
                 <div class="col-md-3 text-end">
-                    <button type="button" onclick="window.print()" class="btn btn-emerald btn-sm px-4">
-                        <i class="bi bi-printer-fill me-2"></i>Print Report
+                    <button type="button" onclick="window.print()" class="btn btn-dark btn-sm px-4">
+                        <i class="bi bi-printer me-2"></i>Print Master Report
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div class="card report-card border-0">
-        <div class="card-header bg-white border-0 pt-4 pb-0 text-center">
+    <div class="report-card p-4">
+        <div class="text-center mb-4">
             <img src="../admin/assets/header.PNG" alt="Header" style="width:100%; max-width:850px;" class="mb-3">
-            <h3 class="fw-bold text-dark mb-1 text-uppercase">Furniture Inventory Master Report</h3>
-            <p class="text-muted small mb-4">Generated: <?= date('d M, Y • h:i A') ?></p>
-            
-            <div class="row m-0 py-3 header-info-bar shadow-sm">
-                <div class="col-4 small border-end border-white border-opacity-25">
-                    <span class="opacity-75 text-uppercase" style="font-size: 0.65rem;">Institution</span><br>
-                    <strong><?= $display_inst ?></strong>
-                </div>
-                <div class="col-4 small border-end border-white border-opacity-25">
-                    <span class="opacity-75 text-uppercase" style="font-size: 0.65rem;">Department</span><br>
-                    <strong><?= $display_dept ?></strong>
-                </div>
-                <div class="col-4 small">
-                    <span class="opacity-75 text-uppercase" style="font-size: 0.65rem;">Unit / Lab</span><br>
-                    <strong><?= $unit_display_header ?></strong>
-                </div>
-            </div>
+            <h4 class="fw-bold text-uppercase mb-1">Furniture Inventory Master Report</h4>
+            <h6 class="text-dark fw-bold mb-1"><?= $filter_display ?></h6>
+            <p class="text-muted small">Report Generated: <?= date('d-m-Y h:i A') ?></p>
         </div>
 
-        <div class="card-body px-0 pt-4">
-            <table class="table mb-0">
-                <thead>
-                    <tr>
-                        <th class="text-center" width="80">SL.No</th>
-                        <th>Furniture Description</th>
-                        <th>Bill No.</th>
-                        <th class="text-center">Asset Tag</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    $sl = 1;
-                    if($result && $result->num_rows > 0):
-                        while($row = $result->fetch_assoc()): ?>
-                        <tr class="align-middle">
-                            <td class="text-center text-muted fw-bold"><?= $sl++ ?></td>
+        <div class="accordion" id="masterAccordion">
+            <?php $i_idx = 0; foreach($report_data as $inst_name => $divisions): $i_idx++; ?>
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button inst-header collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#inst-<?= $i_idx ?>">
+                            <i class="bi bi-bank me-2"></i> <?= htmlspecialchars($inst_name) ?>
+                        </button>
+                    </h2>
+                    <div id="inst-<?= $i_idx ?>" class="accordion-collapse collapse" data-bs-parent="#masterAccordion">
+                        <div class="accordion-body p-0">
                             
-                            <td>
-                                <div class="fw-bold text-dark"><?= htmlspecialchars($row['item_name']) ?></div>
-                            </td>
-                            
-                            <td>
-                                <div class="fw-medium"><?= htmlspecialchars($row['bill_no']) ?></div>
-                                <div class="text-muted" style="font-size: 0.7rem;">
-                                    Date: <?= ($row['bill_date'] != '0000-00-00') ? date('d-m-Y', strtotime($row['bill_date'])) : 'N/A' ?>
-                                </div>
-                            </td>
-                            
-                            <td class="text-center">
-                                <span class="font-monospace text-primary fw-bold"><?= htmlspecialchars($row['asset_tag']) ?></span>
-                            </td>
-                        </tr>
-                    <?php endwhile; 
-                    else: ?>
-                        <tr><td colspan="4" class="text-center py-5 text-muted">No records found matching your criteria.</td></tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                            <div class="accordion accordion-flush" id="divAccordion-<?= $i_idx ?>">
+                                <?php $d_idx = 0; foreach($divisions as $div_name => $units): $d_idx++; ?>
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button div-header collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#div-<?= $i_idx ?>-<?= $d_idx ?>">
+                                                 <?= htmlspecialchars($div_name) ?>
+                                            </button>
+                                        </h2>
+                                        <div id="div-<?= $i_idx ?>-<?= $d_idx ?>" class="accordion-collapse collapse" data-bs-parent="#divAccordion-<?= $i_idx ?>">
+                                            <div class="accordion-body p-0">
+
+                                                <div class="accordion accordion-flush" id="unitAccordion-<?= $i_idx ?>-<?= $d_idx ?>">
+                                                    <?php $u_idx = 0; foreach($units as $unit_name => $types): $u_idx++; ?>
+                                                        <div class="accordion-item">
+                                                            <h2 class="accordion-header">
+                                                                <button class="accordion-button unit-header collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#unit-<?= $i_idx ?>-<?= $d_idx ?>-<?= $u_idx ?>">
+                                                                     <?= htmlspecialchars($unit_name) ?>
+                                                                </button>
+                                                            </h2>
+                                                            <div id="unit-<?= $i_idx ?>-<?= $d_idx ?>-<?= $u_idx ?>" class="accordion-collapse collapse" data-bs-parent="#unitAccordion-<?= $i_idx ?>-<?= $d_idx ?>">
+                                                                <div class="accordion-body p-0">
+
+                                                                    <div class="accordion accordion-flush" id="typeAccordion-<?= $i_idx ?>-<?= $d_idx ?>-<?= $u_idx ?>">
+                                                                        <?php $t_idx = 0; foreach($types as $type_name => $items): $t_idx++; ?>
+                                                                            <div class="accordion-item">
+                                                                                <h2 class="accordion-header">
+                                                                                    <button class="accordion-button type-header collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#type-<?= $i_idx ?>-<?= $d_idx ?>-<?= $u_idx ?>-<?= $t_idx ?>">
+                                                                                        <i class="bi bi-box-seam me-2"></i> <?= htmlspecialchars($type_name) ?> (<?= count($items) ?>)
+                                                                                    </button>
+                                                                                </h2>
+                                                                                <div id="type-<?= $i_idx ?>-<?= $d_idx ?>-<?= $u_idx ?>-<?= $t_idx ?>" class="accordion-collapse collapse" data-bs-parent="#typeAccordion-<?= $i_idx ?>-<?= $d_idx ?>-<?= $u_idx ?>">
+                                                                                    <div class="p-3">
+                                                                                        <div class="table-responsive">
+                                                                                            <table class="table table-bordered table-sm mb-0">
+                                                                                                <thead>
+                                                                                                    <tr>
+                                                                                                        <th class="text-center" width="50">Sl</th>
+                                                                                                        <th>Bill No & Date</th>
+                                                                                                        <th class="text-center">Asset Tag</th>
+                                                                                                    </tr>
+                                                                                                </thead>
+                                                                                                <tbody>
+                                                                                                    <?php foreach($items as $idx => $row): ?>
+                                                                                                        <tr>
+                                                                                                            <td class="text-center small"><?= $idx + 1 ?></td>
+                                                                                                            <td class="small">
+                                                                                                                <b><?= htmlspecialchars($row['bill_no']) ?></b><br>
+                                                                                                                <span class="text-muted"><?= ($row['bill_date'] != '0000-00-00') ? date('d-m-Y', strtotime($row['bill_date'])) : 'N/A' ?></span>
+                                                                                                            </td>
+                                                                                                            <td class="text-center font-monospace small fw-bold text-primary">
+                                                                                                                <?= htmlspecialchars($row['asset_tag']) ?>
+                                                                                                            </td>
+                                                                                                        </tr>
+                                                                                                    <?php endforeach; ?>
+                                                                                                </tbody>
+                                                                                            </table>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        <?php endforeach; ?>
+                                                                    </div>
+
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
         </div>
     </div>
 </div>

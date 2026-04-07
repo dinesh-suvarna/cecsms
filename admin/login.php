@@ -114,329 +114,295 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <title>Institutional Resource Manager | Secure Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<meta charset="UTF-8">
-<title>Stock Management System | Login</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --brand-primary: #6366f1; /* Indigo */
+            --brand-dark: #0f172a;    /* Slate 900 */
+            --bg-subtle: #f8fafc;     /* Slate 50 */
+            --text-main: #1e293b;     /* Slate 800 */
+            --text-muted: #64748b;    /* Slate 500 */
+        }
 
-<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-subtle);
+            color: var(--text-main);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-:root{
---primary:#0f172a;
---accent:#38bdf8;
---glass:rgba(255,255,255,.92);
-}
+        .login-container {
+            display: flex;
+            width: 100%;
+            max-width: 1100px;
+            height: 680px;
+            background: #fff;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.12);
+        }
 
-body{
-margin:0;
-font-family:'Inter',sans-serif;
-height:100vh;
-overflow:hidden;
-background:linear-gradient(-45deg,#0f172a,#1e293b,#020617,#0f172a);
-background-size:400% 400%;
-animation:gradientMove 12s ease infinite;
-}
+        /* --- LEFT SIDE: INSTITUTIONAL BRANDING --- */
+        .login-sidebar {
+            flex: 1.1;
+            background: linear-gradient(135deg, var(--brand-dark) 0%, #1e293b 100%);
+            padding: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            color: white;
+            position: relative;
+        }
 
-@keyframes gradientMove{
-0%{background-position:0% 50%;}
-50%{background-position:100% 50%;}
-100%{background-position:0% 50%;}
-}
+        .login-sidebar::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: url('https://www.transparenttextures.com/patterns/cubes.png');
+            opacity: 0.05;
+        }
 
-/* LEFT SIDE */
+        .sidebar-content { position: relative; z-index: 1; }
+        
+        .brand-icon {
+            width: 80px;
+            height: 80px;
+            background: white; 
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 28px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+            overflow: hidden; 
+            padding: 0;      
+        }
 
-.left-side{
-background:radial-gradient(circle at top left,#1e293b,#020617);
-color:white;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-padding:60px;
-}
+        .custom-logo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; 
+        }
 
-.left-side i{
-font-size:80px;
-background:linear-gradient(45deg,#38bdf8,#818cf8);
-background-clip:text;
--webkit-background-clip:text;
--webkit-text-fill-color:transparent;
-margin-bottom:20px;
-}
+        .asset-icon-box {
+            background-color: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
 
-.left-side h2{
-font-weight:700;
-font-size:2.2rem;
-}
+        .asset-icon-box i { font-size: 1.3rem; color: var(--brand-primary); }
 
-/* RIGHT SIDE */
+        .login-form-area {
+            flex: 1;
+            padding: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: white;
+        }
 
-.right-side{
-display:flex;
-align-items:center;
-justify-content:center;
-}
+        .form-header h2 { font-weight: 700; letter-spacing: -0.03em; }
+        
+        .form-label {
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            color: var(--text-muted);
+        }
 
-/* LOGIN CARD */
+        .input-group {
+            background: var(--bg-subtle);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
 
-.login-card{
-width:100%;
-max-width:420px;
-padding:2px;
-border-radius:24px;
-background:linear-gradient(120deg,#38bdf8,#818cf8,#22c55e,#38bdf8);
-background-size:300% 300%;
-animation:borderGlow 6s linear infinite;
-}
+        .input-group:focus-within {
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+            background: #fff;
+        }
 
-.login-inner{
-background:var(--glass);
-border-radius:22px;
-padding:48px;
-box-shadow:0 20px 40px rgba(0,0,0,.15);
-animation:cardFade .7s ease;
-}
+        .form-control { background: transparent; border: none; padding: 14px; font-size: 0.95rem; }
+        .form-control:focus { box-shadow: none; background: transparent; }
+        .input-group-text { background: transparent; border: none; color: var(--text-muted); padding-left: 18px; }
 
-@keyframes borderGlow{
-0%{background-position:0% 50%;}
-50%{background-position:100% 50%;}
-100%{background-position:0% 50%;}
-}
+        .btn-login {
+            background: var(--brand-dark);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: all 0.2s;
+        }
 
-@keyframes cardFade{
-from{opacity:0;transform:translateY(30px);}
-to{opacity:1;transform:translateY(0);}
-}
+        .btn-login:hover { background: #000; transform: translateY(-1px); box-shadow: 0 10px 20px -5px rgba(0,0,0,0.2); }
 
-.system-title{
-font-weight:700;
-color:var(--primary);
-}
+        #loginLoader {
+            position: fixed; inset: 0; background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; z-index: 1000;
+        }
 
-/* INPUTS */
-
-.form-label{
-font-weight:600;
-font-size:.85rem;
-text-transform:uppercase;
-letter-spacing:.5px;
-}
-
-.input-group-text{
-background:transparent;
-border-right:none;
-color:#94a3b8;
-}
-
-.form-control{
-border-left:none;
-border-radius:12px;
-padding:12px;
-background:#f1f5f9;
-}
-
-.form-control:focus{
-box-shadow:0 0 0 4px rgba(56,189,248,.15);
-}
-
-/* BUTTON */
-
-.btn-custom{
-background:linear-gradient(135deg,#0f172a,#1e293b);
-border:none;
-border-radius:12px;
-padding:14px;
-font-weight:600;
-color:white;
-transition:.25s;
-}
-
-.btn-custom:hover{
-background:linear-gradient(135deg,#1e293b,#020617);
-transform:translateY(-2px);
-box-shadow:0 12px 25px rgba(0,0,0,.25);
-color:white;
-}
-
-/* LOADER */
-
-.login-loader{
-position:fixed;
-inset:0;
-background:rgba(0,0,0,.5);
-display:flex;
-align-items:center;
-justify-content:center;
-backdrop-filter:blur(6px);
-opacity:0;
-visibility:hidden;
-transition:.3s;
-z-index:9999;
-}
-
-.login-loader.show{
-opacity:1;
-visibility:visible;
-}
-
-.loader-box{
-background:white;
-padding:40px;
-border-radius:16px;
-text-align:center;
-}
-
-/* RESPONSIVE */
-
-@media(max-width:768px){
-.left-side{display:none;}
-.login-inner{padding:30px;}
-}
-
-</style>
+        @media (max-width: 992px) {
+            .login-container { max-width: 450px; height: auto; margin: 20px; flex-direction: column; }
+            .login-sidebar { display: none; }
+            .login-form-area { padding: 40px; }
+        }
+    </style>
 </head>
-
 <body>
 
-<div class="container-fluid">
-<div class="row vh-100">
-
-<!-- LEFT SIDE -->
-
-<div class="col-md-6 left-side d-none d-md-flex">
-
-<i class="bi bi-pc-display-horizontal"></i>
-
-<h2 class="text-center">
-Stock <br>
-<span style="color:var(--accent)">Management System</span>
-</h2>
-
-<p class="text-center text-secondary">
-Manage inventory, dispatch assets and track service records.
-</p>
-
+<div id="loginLoader">
+    <div class="text-center">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+        <p class="mt-3 fw-semibold text-dark">Accessing Institutional Portal...</p>
+    </div>
 </div>
 
-<!-- RIGHT SIDE -->
-
-<div class="col-md-6 right-side">
-
-<div class="login-card">
-<div class="login-inner">
-
-<div class="text-center mb-4">
-
-<img src="../admin/assets/logo.png" height="50" class="mb-3">
-
-<h3 class="system-title">Admin Login</h3>
-
-<p class="text-muted">Enter your credentials</p>
-
+<div class="login-container">
+    <div class="login-sidebar">
+        <div class="sidebar-content">
+            <div class="brand-icon">
+    <img src="../admin/assets/logo.png" alt="Institution Logo" class="custom-logo">
 </div>
+            
+            <h2 class="display-6 fw-bold">
+                Institutional <br>
+                <span style="color:var(--brand-primary)">Resource Manager.</span>
+            </h2>
+            
+            <p class="mt-3 opacity-75 lh-lg">
+                The centralized framework for tracking high-value assets across campus departments—from computing labs to electrical infrastructure.
+            </p>
+            
+            <div class="mt-5">
+                <div class="d-flex align-items-start mb-4">
+                    <div class="asset-icon-box me-3">
+                        <i class="bi bi-pc-display"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold text-white">IT Infrastructure</h6>
+                        <small class="text-white-50">Computer labs, servers, and faculty workstations.</small>
+                    </div>
+                </div>
 
-<?php if($error): ?>
+                <div class="d-flex align-items-start mb-4">
+                    <div class="asset-icon-box me-3">
+                        <i class="bi bi-layout-text-window-reverse"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold text-white">Furniture & Fixtures</h6>
+                        <small class="text-white-50">Classroom seating, office desks, and auditorium assets.</small>
+                    </div>
+                </div>
 
-<div class="alert alert-danger">
-<i class="bi bi-exclamation-triangle me-2"></i>
-<?= htmlspecialchars($error) ?>
-</div>
+                <div class="d-flex align-items-start mb-4">
+                    <div class="asset-icon-box me-3">
+                        <i class="bi bi-plugin"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold text-white">Electrical Systems</h6>
+                        <small class="text-white-50">Campus power units, safety gear, and industrial fittings.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<?php endif; ?>
+    <div class="login-form-area">
+        <div class="form-header mb-4">
+            <h2>Portal Login</h2>
+            <p>Secure access for authorized administrative staff.</p>
+        </div>
 
-<form method="POST">
+        <?php if($error): ?>
+        <div class="alert alert-danger d-flex align-items-center mb-4 py-3" style="border-radius: 12px; border: none; background: #fee2e2; color: #b91c1c;">
+            <i class="bi bi-shield-lock-fill me-2"></i>
+            <div class="fw-medium"><?= htmlspecialchars($error) ?></div>
+        </div>
+        <?php endif; ?>
 
-<input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+        <form method="POST" id="loginForm">
+            <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
 
-<div class="mb-3">
-<label class="form-label">Username</label>
-<div class="input-group">
-<span class="input-group-text"><i class="bi bi-person"></i></span>
-<input type="text" name="username" class="form-control" required>
-</div>
-</div>
+            <div class="mb-3">
+                <label class="form-label">Admin Username</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-person-circle"></i></span>
+                    <input type="text" name="username" class="form-control" placeholder="Institutional ID" required autofocus>
+                </div>
+            </div>
 
-<div class="mb-4">
-<label class="form-label">Password</label>
-<div class="input-group">
-<span class="input-group-text"><i class="bi bi-lock"></i></span>
-<input type="password" name="password" id="password" class="form-control" required>
-<span class="input-group-text" id="togglePassword" style="cursor:pointer">
-<i class="bi bi-eye"></i>
-</span>
-</div>
-</div>
+            <div class="mb-4">
+                <div class="d-flex justify-content-between">
+                    <label class="form-label">Password</label>
+                    <a href="#" class="text-decoration-none fw-semibold" style="font-size: 0.75rem; color: var(--brand-primary);">Reset Credentials</a>
+                </div>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-key-fill"></i></span>
+                    <input type="password" name="password" id="password" class="form-control" placeholder="••••••••" required>
+                    <span class="input-group-text" id="togglePassword" style="cursor:pointer">
+                        <i class="bi bi-eye"></i>
+                    </span>
+                </div>
+            </div>
 
-<button id="loginBtn" class="btn btn-custom w-100">
+            <button type="submit" id="loginBtn" class="btn btn-login w-100">
+                <span id="btnText">Log In to Dashboard</span>
+            </button>
+        </form>
 
-<span class="btn-text">
-<i class="bi bi-box-arrow-in-right me-2"></i>Login
-</span>
-
-<span class="btn-loader d-none">
-<span class="spinner-border spinner-border-sm me-2"></span>
-Authenticating...
-</span>
-
-</button>
-
-</form>
-
-<div class="text-center mt-5 text-muted" style="font-size:12px">
-© <?= date("Y") ?> Stock Management System
-</div>
-
-</div>
-</div>
-
-</div>
-</div>
-</div>
-
-<!-- PAGE LOADER -->
-
-<div id="loginLoader" class="login-loader">
-<div class="loader-box">
-<div class="spinner-border text-info" style="width:3rem;height:3rem;"></div>
-<p class="mt-3 mb-0">Signing you in...</p>
-</div>
+        <footer class="mt-auto pt-5 text-center">
+            <p class="text-muted mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+                &copy; <?= date("Y") ?> CECSMS - INSTITUTIONAL ASSET MGMT
+            </p>
+        </footer>
+    </div>
 </div>
 
 <script>
+    const form = document.getElementById("loginForm");
+    const loader = document.getElementById("loginLoader");
+    const btnText = document.getElementById("btnText");
+    const loginBtn = document.getElementById("loginBtn");
 
-const form=document.querySelector("form");
-const loader=document.getElementById("loginLoader");
-const btn=document.getElementById("loginBtn");
+    form.addEventListener("submit", function() {
+        loader.style.display = "flex";
+        loginBtn.disabled = true;
+        btnText.innerHTML = "Validating...";
+    });
 
-form.addEventListener("submit",function(){
+    const toggle = document.getElementById("togglePassword");
+    const password = document.getElementById("password");
 
-loader.classList.add("show");
-
-btn.disabled=true;
-
-btn.querySelector(".btn-text").classList.add("d-none");
-btn.querySelector(".btn-loader").classList.remove("d-none");
-
-});
-
-const toggle=document.getElementById("togglePassword");
-const password=document.getElementById("password");
-
-toggle.addEventListener("click",function(){
-
-const type=password.type==="password"?"text":"password";
-password.type=type;
-
-this.innerHTML=type==="password"
-?'<i class="bi bi-eye"></i>'
-:'<i class="bi bi-eye-slash"></i>';
-
-});
-
+    toggle.addEventListener("click", function() {
+        const type = password.type === "password" ? "text" : "password";
+        password.type = type;
+        this.innerHTML = type === "password" 
+            ? '<i class="bi bi-eye"></i>' 
+            : '<i class="bi bi-eye-slash"></i>';
+    });
 </script>
 
 </body>

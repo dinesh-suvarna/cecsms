@@ -275,6 +275,10 @@ if (isset($conn)) {
             <a href="/cecsms/furniture_stock/dispatch_furniture.php" class="nav-link <?= ($current_page == 'dispatch_furniture.php') ? 'active' : '' ?>">
                 <i class="bi bi-truck"></i> Dispatch Furniture
             </a>
+        <div class="nav-group-label">Reports</div>
+            <a href="/cecsms/furniture_stock/furniture_stockreports.php" class="nav-link <?= ($current_page == 'furniture_stockreports.php') ? 'active' : '' ?>">
+                <i class="bi bi-file-earmark-bar-graph"></i> Stock Reports
+            </a>
             <a href="/cecsms/furniture_stock/furniture_reports.php" class="nav-link <?= ($current_page == 'furniture_reports.php') ? 'active' : '' ?>">
                 <i class="bi bi-file-earmark-bar-graph"></i> Asset Reports
             </a>

@@ -68,14 +68,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_stock'])) {
         }
     }
 }
-
 // --- 3. DATA FETCHING FOR SELECTS ---
 $items = $conn->query("SELECT * FROM furniture_items ORDER BY item_name");
 $vendors = $conn->query("SELECT * FROM vendors ORDER BY vendor_name");
+
 if ($user_role === 'SuperAdmin') {
-    $units = $conn->query("SELECT id, unit_name FROM units ORDER BY unit_name");
+    $units = $conn->query("SELECT id, unit_name, unit_code FROM units ORDER BY unit_code ASC, unit_name ASC");
 } else {
-    $units = $conn->query("SELECT id, unit_name FROM units WHERE division_id = '$user_division' ORDER BY unit_name");
+    $units = $conn->query("SELECT id, unit_name, unit_code FROM units WHERE division_id = '$user_division' ORDER BY unit_code ASC, unit_name ASC");
 }
 
 $page_title = $is_edit ? "Edit Furniture Stock" : "Add Furniture Stock"; 
@@ -175,9 +175,14 @@ ob_start();
                             <label class="form-label">Receiving Unit</label>
                             <select name="unit_id" class="form-select" required>
                                 <option value="" disabled <?= !$is_edit ? 'selected' : '' ?>>Select unit...</option>
-                                <?php while($u = $units->fetch_assoc()): ?>
+                                <?php while($u = $units->fetch_assoc()): 
+                                    // Create the label: Code - Name (or just Name if Code is empty)
+                                    $unit_label = (!empty($u['unit_code'])) 
+                                                ? strtoupper($u['unit_code']) . " - " . $u['unit_name'] 
+                                                : $u['unit_name'];
+                                ?>
                                     <option value="<?= $u['id'] ?>" <?= ($is_edit && $edit_data['unit_id'] == $u['id']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($u['unit_name']) ?>
+                                        <?= htmlspecialchars($unit_label) ?>
                                     </option>
                                 <?php endwhile; ?>
                             </select>

@@ -303,7 +303,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     </div>
                     <div>
                         <h6 class="mb-0 fw-bold text-white">IT Infrastructure</h6>
-                        <small class="text-white-50">Computer labs, servers, and faculty workstations.</small>
+                        <small class="text-white-50">
+                            Computer labs, workstations, networking devices, and servers under inventory.
+                        </small>
                     </div>
                 </div>
 
@@ -313,7 +315,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     </div>
                     <div>
                         <h6 class="mb-0 fw-bold text-white">Furniture & Fixtures</h6>
-                        <small class="text-white-50">Classroom seating, office desks, and auditorium assets.</small>
+                        <small class="text-white-50">
+                            Furniture assets in computer labs, classrooms, and office spaces.
+                        </small>
                     </div>
                 </div>
 
@@ -323,7 +327,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     </div>
                     <div>
                         <h6 class="mb-0 fw-bold text-white">Electrical Systems</h6>
-                        <small class="text-white-50">Campus power units, safety gear, and industrial fittings.</small>
+                        <small class="text-white-50">
+                            Fans and lighting equipment recorded as electrical assets.
+                        </small>
                     </div>
                 </div>
             </div>

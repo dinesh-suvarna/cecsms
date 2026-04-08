@@ -27,10 +27,9 @@ if (isset($_GET['delete_id'])) {
     exit();
 }
 
-// 1. UPDATED SQL: Using SUM and GROUP BY to combine identical items per unit
 $sql = "SELECT 
             SUM(s.total_qty) as total_qty, 
-            MAX(s.id) as id, -- Used for the Edit/Delete reference
+            MAX(s.id) as id, 
             i.item_name, 
             v.vendor_name, 
             u.unit_name, 
@@ -46,8 +45,7 @@ if ($user_role !== 'SuperAdmin') {
     $sql .= " WHERE u.division_id = '$user_division'";
 }
 
-// Grouping by item and unit ensures "Metal Chair" in "Unit A" is summed separately from "Metal Chair" in "Unit B"
-$sql .= " GROUP BY i.item_name, u.id 
+$sql .= " GROUP BY i.item_name, u.id, v.vendor_name 
           ORDER BY u.unit_code ASC, i.item_name ASC";
 
 $result = $conn->query($sql);

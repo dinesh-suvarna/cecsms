@@ -6,18 +6,25 @@ $role = $_SESSION["role"] ?? 'User';
 $user_division = $_SESSION['division_id'] ?? 0;
 $page_title = "Furniture Analytics";
 
-// --- DATA LOGIC (Condensed for brevity, same as your working queries) ---
-$total_assets = $conn->query("SELECT COUNT(fa.id) as total FROM furniture_assets fa JOIN furniture_stock s ON fa.stock_id = s.id JOIN units u ON s.unit_id = u.id" . ($role !== 'SuperAdmin' ? " WHERE u.division_id = '$user_division'" : ""))->fetch_assoc()['total'];
+// 1. Get Total Quantity from Stock (Sum of total_qty)
+$total_qty_sql = "SELECT SUM(s.total_qty) as total 
+                  FROM furniture_stock s 
+                  JOIN units u ON s.unit_id = u.id";
+if ($role !== 'SuperAdmin') {
+    $total_qty_sql .= " WHERE u.division_id = '$user_division'";
+}
+$total_assets = $conn->query($total_qty_sql)->fetch_assoc()['total'] ?? 0;
 
-$cat_query = "SELECT i.item_name, COUNT(fa.id) as count 
-              FROM furniture_assets fa
-              JOIN furniture_stock s ON fa.stock_id = s.id
+// 2. Get Distribution based on Stock Quantities
+$cat_query = "SELECT i.item_name, SUM(s.total_qty) as count 
+              FROM furniture_stock s
               JOIN furniture_items i ON s.furniture_item_id = i.id
               JOIN units u ON s.unit_id = u.id";
-if ($role !== 'SuperAdmin') $cat_query .= " WHERE u.division_id = '$user_division'";
+if ($role !== 'SuperAdmin') {
+    $cat_query .= " WHERE u.division_id = '$user_division'";
+}
 $cat_query .= " GROUP BY i.item_name ORDER BY count DESC";
 $categories = $conn->query($cat_query);
-
 $recent_activities = $conn->query("SELECT fa.asset_tag, i.item_name, fa.created_at FROM furniture_assets fa JOIN furniture_stock s ON fa.stock_id = s.id JOIN furniture_items i ON s.furniture_item_id = i.id JOIN units u ON s.unit_id = u.id " . ($role !== 'SuperAdmin' ? " WHERE u.division_id = '$user_division'" : "") . " ORDER BY fa.id DESC LIMIT 5");
 
 ob_start();

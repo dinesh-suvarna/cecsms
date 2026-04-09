@@ -1,27 +1,51 @@
-# --- Database & Security ---
-config/db.php
-# Keep the schema, but ignore actual data exports
-*.sql
-!database/schema.sql  # Exception: allow the structure, ignore the data
+# =================================================================
+# Optimized .gitignore for StockFlow / PHP ERP
+# Target: Rocky Linux / Apache / MariaDB
+# =================================================================
 
-# --- Logs & Temp ---
+# --- Database & Security ---
+# Ignore actual database config (contains your DB_ROOT_PASS)
+config/db.php
+.env
+.env.local
+.env.sample.php
+
+# Keep the schema structure, but ignore actual data exports
+*.sql
+!database/schema.sql
+
+# --- Logs & Temp (Essential for Rocky Linux/Apache) ---
 *.log
 *.tmp
 *.bak
 *.swp
+error_log
+access_log
 
 # --- Dependencies ---
+# These should be managed via Composer/NPM, not Git
 /vendor/
 /node_modules/
 
 # --- IDE & OS Files ---
+# Specific to Windows (your dev machine) and VS Code (your editor)
 .vscode/
 .idea/
 .project
 .settings/
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# --- Environment ---
-.env
-.env.local
+# --- Build & Assets ---
+# Ignore CSS/JS source maps to keep repo clean
+*.css.map
+*.js.map
+/dist/
+/.sass-cache/
+
+# --- Project Specifics ---
+# If your system handles file uploads (e.g., product images)
+/uploads/images/*
+!/uploads/images/.gitkeep

@@ -125,6 +125,18 @@ $query .= " ORDER BY FIELD(role, 'SuperAdmin', 'Admin', 'Staff') ASC, users.id D
 
 $result = $conn->query($query);
 
+$institutionsArr = [];
+$instResult = $conn->query("SELECT id, institution_name FROM institutions ORDER BY institution_name ASC");
+while($row = $instResult->fetch_assoc()) {
+    $institutionsArr[] = $row;
+}
+
+$divisionsArr = [];
+$divResult = $conn->query("SELECT id, institution_id, division_name FROM divisions ORDER BY division_name ASC");
+while($row = $divResult->fetch_assoc()) {
+    $divisionsArr[] = $row;
+}
+
 ob_start();
 ?>
 

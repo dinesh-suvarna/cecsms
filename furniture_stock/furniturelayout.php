@@ -282,6 +282,12 @@ if (isset($conn)) {
             <a href="/cecsms/furniture_stock/furniture_reports.php" class="nav-link <?= ($current_page == 'furniture_reports.php') ? 'active' : '' ?>">
                 <i class="bi bi-file-earmark-bar-graph"></i> Asset Reports
             </a>
+            <a href="/cecsms/furniture_stock/purchase_ledger.php" class="nav-link <?= ($current_page == 'purchase_ledger.php') ? 'active' : '' ?>">
+                <i class="bi bi-file-earmark-bar-graph"></i> Purchase Ledger
+            </a>
+             <a href="/cecsms/furniture_stock/view_purchase_ledger.php" class="nav-link <?= ($current_page == 'view_purchase_ledger.php') ? 'active' : '' ?>">
+                <i class="bi bi-file-earmark-bar-graph"></i> View Purchase Ledger
+            </a>
         </div>
     </div>
 

@@ -44,6 +44,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION["user_id"] = $user["id"];
             $_SESSION["username"] = $user["username"];
             $_SESSION["role"] = $user["role"];
+            $_SESSION['division_id'] = $user['division_id'];
             $_SESSION["institution_id"] = $user["institution_id"];
             $_SESSION["last_activity"] = time();
 

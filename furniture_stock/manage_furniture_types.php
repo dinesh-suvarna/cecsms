@@ -28,21 +28,22 @@ if (isset($_GET['delete_id'])) {
 
 // --- ADD / UPDATE LOGIC ---
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_type'])) {
-    // Sanitize and Format to Title Case
     $raw_name = mysqli_real_escape_string($conn, $_POST['item_name']);
     $name = ucwords(strtolower(trim($raw_name)));
+    // Get Item Code
+    $item_code = mysqli_real_escape_string($conn, strtoupper(trim($_POST['item_code'])));
     
     if (!empty($_POST['edit_id'])) {
         $edit_id = (int)$_POST['edit_id'];
-        if ($conn->query("UPDATE furniture_items SET item_name = '$name' WHERE id = $edit_id")) {
+        if ($conn->query("UPDATE furniture_items SET item_name = '$name', item_code = '$item_code' WHERE id = $edit_id")) {
             $message = "updated";
         }
     } else {
-        $check = $conn->query("SELECT id FROM furniture_items WHERE item_name = '$name'");
+        $check = $conn->query("SELECT id FROM furniture_items WHERE item_name = '$name' OR (item_code = '$item_code' AND item_code != '')");
         if ($check->num_rows > 0) {
             $message = "exists";
         } else {
-            if ($conn->query("INSERT INTO furniture_items (item_name) VALUES ('$name')")) {
+            if ($conn->query("INSERT INTO furniture_items (item_name, item_code) VALUES ('$name', '$item_code')")) {
                 $message = "success";
             }
         }
@@ -61,16 +62,11 @@ ob_start();
         transform: scale(1.01);
         transition: all 0.3s ease;
     }
-    #item_name {
-        text-transform: capitalize;
-    }
+    #item_name { text-transform: capitalize; }
+    #item_code { text-transform: uppercase; }
     .edit-badge { display: none; }
     .edit-mode-active .edit-badge { display: inline-block; }
-    
-    /* Prevents layout jumping on table changes */
-    .table-responsive {
-        min-height: 400px; 
-    }
+    .table-responsive { min-height: 400px; }
 </style>
 
 <div class="container-fluid py-4 mt-n3">
@@ -87,12 +83,19 @@ ob_start();
 
                     <form method="POST" id="registryForm">
                         <input type="hidden" name="edit_id" id="edit_id">
+
                         <div class="mb-3">
                             <label class="small fw-bold text-muted text-uppercase">Item Name</label>
                             <input type="text" name="item_name" id="item_name" 
                                    class="form-control rounded-3 border-light-subtle" 
-                                   placeholder="e.g. Office Chair" 
-                                   style="text-transform: capitalize;" required>
+                                   placeholder="e.g. Office Chair" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="small fw-bold text-muted text-uppercase">Item Code</label>
+                            <input type="text" name="item_code" id="item_code" 
+                                   class="form-control rounded-3 border-light-subtle" 
+                                   placeholder="e.g. CHR-01" required>
                         </div>
                         
                         <button type="submit" name="save_type" id="submitBtn" class="btn text-white w-100 rounded-pill py-2 fw-bold" style="background-color: #10b981;">
@@ -116,14 +119,22 @@ ob_start();
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th class="ps-4 py-3 small fw-bold text-muted">ITEM NAME</th>
+                                <th class="ps-4 py-3 small fw-bold text-muted" style="width: 80px;">SL.NO</th>
+                                <th class="py-3 small fw-bold text-muted">CODE</th>
+                                <th class="py-3 small fw-bold text-muted">ITEM NAME</th>
                                 <th class="pe-4 py-3 small fw-bold text-muted text-end">ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if($items->num_rows > 0): while($row = $items->fetch_assoc()): ?>
+                            <?php 
+                            if($items->num_rows > 0): 
+                                $sl = 1;
+                                while($row = $items->fetch_assoc()): 
+                            ?>
                             <tr>
-                                <td class="ps-4 fw-bold text-dark"><?= htmlspecialchars($row['item_name']) ?></td>
+                                <td class="ps-4 text-muted small"><?= $sl++ ?></td>
+                                <td class="fw-bold text-dark"><?= htmlspecialchars($row['item_name']) ?></td>
+                                <td><span class="fw-bold text-dark"><?= htmlspecialchars($row['item_code']) ?></span></td>
                                 <td class="pe-4 text-end">
                                     <button class="btn btn-sm btn-light border rounded-pill px-3 shadow-sm" 
                                             onclick='editRegistry(<?= json_encode($row) ?>)'>
@@ -136,7 +147,7 @@ ob_start();
                                 </td>
                             </tr>
                             <?php endwhile; else: ?>
-                            <tr><td colspan="2" class="text-center py-4 text-muted">No records found.</td></tr>
+                            <tr><td colspan="4" class="text-center py-4 text-muted">No records found.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -148,7 +159,6 @@ ob_start();
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// CLEAN URL: Removes ?delete_id=XX from the browser bar so it doesn't re-trigger on refresh
 if (window.history.replaceState) {
     const url = new URL(window.location.href);
     url.searchParams.delete('delete_id');
@@ -162,9 +172,7 @@ function confirmDelete(id, name) {
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#6b7280',
-        confirmButtonText: 'Yes, delete it!',
-        cancelButtonText: 'Cancel'
+        confirmButtonText: 'Yes, delete it!'
     }).then((result) => {
         if (result.isConfirmed) {
             window.location.href = `?delete_id=${id}`;
@@ -175,6 +183,7 @@ function confirmDelete(id, name) {
 function editRegistry(data) {
     document.getElementById('edit_id').value = data.id;
     document.getElementById('item_name').value = data.item_name;
+    document.getElementById('item_code').value = data.item_code; // Populate Item Code
     
     const card = document.getElementById('registryCard');
     const submitBtn = document.getElementById('submitBtn');
@@ -210,6 +219,8 @@ function resetForm() {
     Swal.fire({ icon: 'success', title: 'Deleted', text: 'Item removed.', timer: 1500, showConfirmButton: false });
 <?php elseif($message == "usage_error"): ?>
     Swal.fire({ icon: 'error', title: 'Blocked', text: 'This item is linked to stock records and cannot be deleted.' });
+<?php elseif($message == "exists"): ?>
+    Swal.fire({ icon: 'warning', title: 'Duplicate', text: 'Item Name or Code already exists.' });
 <?php endif; ?>
 </script>
 

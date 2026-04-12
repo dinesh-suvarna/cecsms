@@ -76,15 +76,42 @@ ob_start();
 ?>
 
 <style>
-    /* Inline Edit Styling from furniture types */
+    :root {
+        --primary-gradient: linear-gradient(135deg, #0d6efd, #0a58ca);
+    }
     .edit-mode-active {
         border: 2px solid #0d6efd !important;
         box-shadow: 0 0 15px rgba(13, 110, 253, 0.15) !important;
         transform: scale(1.01);
         transition: all 0.3s ease;
+        animation: pulse-blue 2s infinite;
     }
-    .edit-badge { display: none; }
-    .edit-mode-active .edit-badge { display: inline-block; }
+    @keyframes pulse-blue {
+        0% { border-color: #0d6efd; }
+        50% { border-color: #70b0ff; }
+        100% { border-color: #0d6efd; }
+    }
+    
+    /* Tabs Styling */
+    .nav-pills .nav-link {
+        border-radius: 10px;
+        color: #64748b;
+        font-weight: 600;
+        transition: all 0.3s;
+        border: 1px solid transparent;
+    }
+    .nav-pills .nav-link.active {
+        background: var(--primary-gradient);
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
+    }
+    
+    /* DataTables Layout Fix */
+    .dataTables_wrapper .row { margin: 0; padding: 1rem 0.5rem; }
+    .dataTables_filter input { border-radius: 20px; padding: 0.4rem 1rem; border: 1px solid #e2e8f0; }
+    
+    .table-responsive { max-height: 600px; overflow-y: auto; }
+    thead th { position: sticky; top: 0; background: #f8fafc !important; z-index: 10; }
+    
     .bg-emerald-soft { background: rgba(16, 185, 129, 0.1); }
     .fw-800 { font-weight: 800 !important; letter-spacing: -0.5px; }
 </style>
@@ -112,7 +139,7 @@ ob_start();
                                 <i class="bi bi-people-fill fs-4" id="formIcon"></i>
                             </div>
                             <div>
-                                <h5 class="fw-800 text-dark mb-0" id="formTitle"><?= $category_type ?> Registry</h5>
+                                <h5 class="fw-800 text-dark mb-0" id="formTitle"><?= $category_type ?> Vendor Registry</h5>
                                 <p class="text-muted small mb-0" id="formSubtitle">Add a new verified provider</p>
                             </div>
                         </div>
@@ -154,76 +181,79 @@ ob_start();
         <div class="col-lg-7">
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
                 <div class="card-header bg-white border-0 pt-4 px-4">
-                    <h6 class="fw-800 text-dark mb-0">Service Partners</h6>
-                    <p class="text-muted small mb-0">Authorized vendor directory</p>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light">
-                            <tr class="text-muted small text-uppercase fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
-                                <th class="ps-4 py-3">REF</th>
-                                <th class="py-3">Provider Name</th>
-                                <?php if ($_SESSION['role'] === 'SuperAdmin'): ?>
-                                    <th class="py-3">Category</th>
-                                <?php endif; ?>
-                                <th class="text-end pe-4 py-3">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if ($result && $result->num_rows > 0): 
-                                $i = 1;
-                                while($row = $result->fetch_assoc()): ?>
-                                <tr>
-                                    <td class="ps-4">
-                                        <span class="text-muted small">#<?= str_pad($i++, 2, '0', STR_PAD_LEFT); ?></span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center gap-3">
-                                            <div class="bg-emerald-soft text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                                                <i class="bi bi-building"></i>
-                                            </div>
-                                            <span class="fw-bold text-dark small text-uppercase"><?= htmlspecialchars($row['vendor_name']); ?></span>
-                                        </div>
-                                    </td>
-                                    
-                                    <?php if ($_SESSION['role'] === 'SuperAdmin'): ?>
-                                    <td>
-                                        <?php 
-                                        // Define the style mapping for each category
-                                        $cat_styles = [
-                                            'Computer'    => ['bg' => '#eef2ff', 'text' => '#4f46e5', 'icon' => 'bi-pc-display'],
-                                            'Furniture'   => ['bg' => '#fff7ed', 'text' => '#c2410c', 'icon' => 'bi-lamp'],
-                                            'Electricals' => ['bg' => '#f0fdf4', 'text' => '#15803d', 'icon' => 'bi-lightning-charge'],
-                                            'Default'     => ['bg' => '#f8fafc', 'text' => '#64748b', 'icon' => 'bi-tag']
-                                        ];
-                                        $style = $cat_styles[$row['category']] ?? $cat_styles['Default'];
-                                        ?>
-                                        <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill border" 
-                                            style="background-color: <?= $style['bg'] ?>; border-color: rgba(0,0,0,0.05) !important;">
-                                            <i class="<?= $style['icon'] ?>" style="color: <?= $style['text'] ?>; font-size: 12px;"></i>
-                                            <span style="color: <?= $style['text'] ?>; font-size: 11px; font-weight: 700; text-transform: uppercase;">
-                                                <?= htmlspecialchars($row['category']); ?>
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <?php endif; ?>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="fw-800 text-dark mb-0">Service Partners</h6>
+                            <p class="text-muted small mb-0">Authorized vendor directory</p>
+                        </div>
+                    </div>
 
-                                    <td class="text-end pe-4">
-                                        <button class="btn btn-sm btn-light border rounded-pill px-3 shadow-sm" 
-                                                onclick='prepareEditVendor(<?= json_encode($row) ?>)'>
-                                            <i class="bi bi-pencil-square text-primary"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-light border rounded-pill px-3 ms-1 shadow-sm delete-vendor-btn" 
-                                                data-id="<?= $row['id']; ?>" data-name="<?= htmlspecialchars($row['vendor_name']); ?>">
-                                            <i class="bi bi-trash3 text-danger"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endwhile; else: ?>
-                                <tr><td colspan="<?= ($_SESSION['role'] === 'SuperAdmin') ? '5' : '4' ?>" class="text-center py-5 text-muted small">No partners found.</td></tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                    <ul class="nav nav-pills gap-2 mb-3" id="vendorTabs" role="tablist">
+                        <?php 
+                        $tabs = (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin') 
+                                ? ['Computer', 'Furniture', 'Electricals'] 
+                                : [$category_type];
+                        
+                        foreach($tabs as $index => $tab): 
+                        ?>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link <?= ($index === 0) ? 'active' : '' ?> px-4" 
+                                    id="<?= $tab ?>-tab" data-bs-toggle="pill" 
+                                    data-bs-target="#tab-<?= $tab ?>" type="button">
+                                <?= $tab ?>
+                            </button>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+
+                <div class="tab-content" id="vendorTabContent">
+                    <?php foreach($tabs as $index => $tab): ?>
+                    <div class="tab-pane fade <?= ($index === 0) ? 'show active' : '' ?>" id="tab-<?= $tab ?>">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 vendorDataTable" style="width:100%">
+                                <thead class="bg-light">
+                                    <tr class="text-muted small text-uppercase fw-bold" style="font-size: 10px;">
+                                        <th class="ps-4 py-3">REF</th>
+                                        <th class="py-3">Provider Name</th>
+                                        <th class="text-end pe-4 py-3">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                    // Reset pointer and filter results for this tab
+                                    $result->data_seek(0);
+                                    $count = 1;
+                                    while($row = $result->fetch_assoc()): 
+                                        if($row['category'] !== $tab) continue;
+                                    ?>
+                                    <tr>
+                                        <td class="ps-4 text-muted small">#<?= str_pad($count++, 2, '0', STR_PAD_LEFT); ?></td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="bg-emerald-soft text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
+                                                    <i class="bi bi-person-vcard"></i>
+                                                </div>
+                                                <span class="fw-bold text-dark small"><?= htmlspecialchars($row['vendor_name']); ?></span>
+                                            </div>
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <button class="btn btn-sm btn-light border rounded-pill px-3 shadow-sm" 
+                                                    onclick='prepareEditVendor(<?= json_encode($row) ?>)'>
+                                                <i class="bi bi-pencil-square text-primary"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-light border rounded-pill px-3 ms-1 shadow-sm delete-vendor-btn" 
+                                                    data-id="<?= $row['id']; ?>" data-name="<?= htmlspecialchars($row['vendor_name']); ?>">
+                                                <i class="bi bi-trash3 text-danger"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <?php endwhile; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>
@@ -269,7 +299,7 @@ function resetVendorForm() {
     submitBtn.classList.replace('btn-primary', 'btn-success');
     submitBtn.innerHTML = '<i class="bi bi-plus-lg me-1"></i> Register Vendor';
     
-    document.getElementById('formTitle').innerText = "<?= $category_type ?> Registry";
+    document.getElementById('formTitle').innerText = "<?= $category_type ?> Vendor Registry";
     document.getElementById('formSubtitle').innerText = "Add a new verified provider";
     
     cancelBtn.classList.add('d-none');

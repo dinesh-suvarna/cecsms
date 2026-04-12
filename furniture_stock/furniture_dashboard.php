@@ -79,7 +79,7 @@ ob_start();
 <div class="container-fluid py-4">
     <div class="row align-items-center mb-5">
         <div class="col-md-8">
-            <h2 class="fw-bold text-slate-900">Inventory Pulse</h2>
+            <h2 class="fw-bold text-slate-900">Furniture Analytics Dashboard</h2>
             <p class="text-muted">Managing assets across <?= $role === 'SuperAdmin' ? 'all organizational units' : 'your division' ?>.</p>
         </div>
         <div class="col-md-4 text-md-end">
@@ -163,7 +163,7 @@ ob_start();
     <div class="row g-4">
         <div class="col-lg-7">
             <div class="glass-card p-4 bg-white shadow-sm h-100">
-                <h5 class="fw-bold text-slate-900 mb-4">Verification Ledger</h5>
+                <h5 class="fw-bold text-slate-900 mb-4">Recent Asset Activity</h5>
                 <div class="table-responsive">
                     <table class="table table-borderless align-middle">
                         <thead class="text-muted small border-bottom">

@@ -41,6 +41,7 @@ if ($user_role !== 'SuperAdmin') {
     }
 }
 
+// --- VERIFY ACTION ---
 if ($action === 'verify') {
     $today = date('Y-m-d');
     $stmt = $conn->prepare("UPDATE furniture_assets SET last_verified_date = ? WHERE id = ?");
@@ -52,7 +53,19 @@ if ($action === 'verify') {
         echo json_encode(['success' => false, 'message' => 'Failed to update verification date']);
     }
 } 
-
+// --- DELETE ACTION ---
+elseif ($action === 'delete') {
+    $stmt = $conn->prepare("DELETE FROM furniture_assets WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true]);
+    } else {
+        // Check for foreign key constraints (e.g., if the asset is linked to other records)
+        echo json_encode(['success' => false, 'message' => 'Database error: Could not delete asset.']);
+    }
+}
+// --- EDIT TAG ACTION ---
 elseif ($action === 'edit_tag') {
     $new_tag = strtoupper(trim($_POST['tag'] ?? ''));
 
@@ -78,7 +91,37 @@ elseif ($action === 'edit_tag') {
     } else {
         echo json_encode(['success' => false, 'message' => 'Failed to update Asset Tag']);
     }
-} else {
+} 
+
+// --- NEW: LIFECYCLE ACTION (Return, Repair, Decommission) ---
+elseif ($action === 'lifecycle') {
+    $type = $_POST['type'] ?? ''; // 'return', 'repair', or 'dispose'
+    
+    // Map the JavaScript "type" to your Database "status"
+    $status_map = [
+        'return'  => 'Available',
+        'repair'  => 'Damaged',
+        'dispose' => 'Disposed'
+    ];
+
+    if (!isset($status_map[$type])) {
+        echo json_encode(['success' => false, 'message' => 'Invalid lifecycle action type']);
+        exit();
+    }
+
+    $new_status = $status_map[$type];
+
+    $stmt = $conn->prepare("UPDATE furniture_assets SET status = ? WHERE id = ?");
+    $stmt->bind_param("si", $new_status, $id);
+    
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to update asset status']);
+    }
+}
+
+else {
     echo json_encode(['success' => false, 'message' => 'Unknown action']);
 }
 ?>

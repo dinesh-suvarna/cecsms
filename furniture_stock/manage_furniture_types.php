@@ -51,10 +51,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_type'])) {
 }
 
 $items = $conn->query("SELECT * FROM furniture_items ORDER BY item_name ASC");
-$page_title = "Furniture Registry";
+$page_title = "Furniture Item Registry";
 ob_start(); 
 ?>
 
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <style>
     .edit-mode-active {
         border: 2px solid #0d6efd !important;
@@ -67,6 +68,94 @@ ob_start();
     .edit-badge { display: none; }
     .edit-mode-active .edit-badge { display: inline-block; }
     .table-responsive { min-height: 400px; }
+
+
+    /* Container for controls */
+    .dataTables_wrapper .row:first-child {
+        padding: 0 1.5rem 1rem 1.5rem;
+        background: #fff;
+    }
+
+    /* Style the 'Show entries' dropdown */
+    .dataTables_length label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .dataTables_length select {
+        border: 1px solid #f1f5f9;
+        background-color: #f8fafc;
+        border-radius: 10px;
+        padding: 0.4rem 0.75rem;
+        color: #1e293b;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    /* Style the Search Box to match your 'Verification Ledger' feel */
+    .dataTables_filter {
+        position: relative;
+    }
+
+    .dataTables_filter input {
+        border: 1px solid #f1f5f9;
+        background-color: #f8fafc;
+        border-radius: 12px;
+        padding: 0.6rem 1rem 0.6rem 2.5rem !important; /* Space for icon */
+        width: 280px !important;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+
+    .dataTables_filter input:focus {
+        background-color: #fff;
+        border-color: #10b981; /* Matching your emerald theme */
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.05);
+        outline: none;
+    }
+
+    /* Add a search icon inside the input */
+    .dataTables_filter::before {
+        content: "\f52a"; /* Bootstrap search icon */
+        font-family: "bootstrap-icons";
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        z-index: 10;
+    }
+
+    /* Remove the "Search:" label text but keep the input */
+    .dataTables_filter label {
+        color: transparent;
+        font-size: 0;
+    }
+
+
+
+#itemsTable {
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+.table-responsive {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa !important;
+    z-index: 10;
+    box-shadow: inset 0 -1px 0 #dee2e6;
+}
 </style>
 
 <div class="container-fluid py-4 mt-n3">
@@ -76,7 +165,7 @@ ob_start();
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="fw-bold mb-0" id="formTitle">
-                            <i class="bi bi-tag me-2 text-success"></i>Define Type
+                            <i class="bi bi-plus-circle me-2 text-success"></i>Add Furniture Item
                         </h5>
                         <span class="badge bg-primary edit-badge animate__animated animate__fadeIn">EDIT MODE</span>
                     </div>
@@ -113,15 +202,23 @@ ob_start();
         <div class="col-md-8">
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
                 <div class="card-header bg-white border-0 pt-4 px-4">
-                    <h5 class="fw-bold mb-0">Furniture Registry</h5>
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                        <div>
+                            <h5 class="fw-800 text-dark mb-0">Furniture Item Registry</h5>
+                            <p class="text-muted small mb-0">Manage and verified furniture classifications</p>
+                        </div>
+                        
+                        <div class="d-flex align-items-center gap-3" id="tableCustomControls">
+                            </div>
+                    </div>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table id="itemsTable" class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
                                 <th class="ps-4 py-3 small fw-bold text-muted" style="width: 80px;">SL.NO</th>
-                                <th class="py-3 small fw-bold text-muted">CODE</th>
                                 <th class="py-3 small fw-bold text-muted">ITEM NAME</th>
+                                <th class="py-3 small fw-bold text-muted">ITEM CODE</th>
                                 <th class="pe-4 py-3 small fw-bold text-muted text-end">ACTIONS</th>
                             </tr>
                         </thead>
@@ -156,6 +253,33 @@ ob_start();
         </div>
     </div>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<!-- DataTables -->
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script>
+$(document).ready(function () {
+    $('#itemsTable').DataTable({
+        pageLength: 10,
+        lengthMenu: [10, 25, 50],
+        // Updated dom to remove extra padding rows if they conflict with your manual header
+        dom: "<'row px-4 pt-2'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6 d-flex justify-content-end'f>>" +
+             "<'row'<'col-sm-12'tr>>" +
+             "<'row p-4'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-end'p>>",
+        language: {
+            search: "_INPUT_", 
+            searchPlaceholder: "Search furniture...",
+            lengthMenu: "Show _MENU_",
+            paginate: {
+                previous: '<i class="bi bi-chevron-left"></i>',
+                next: '<i class="bi bi-chevron-right"></i>'
+            }
+        }
+    });
+});
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -192,7 +316,7 @@ function editRegistry(data) {
     card.classList.add('edit-mode-active');
     submitBtn.style.backgroundColor = '#0d6efd';
     submitBtn.innerHTML = '<i class="bi bi-arrow-repeat me-2"></i> Update Item';
-    document.getElementById('formTitle').innerHTML = '<i class="bi bi-pencil-square me-2 text-primary"></i>Modify Item';
+    document.getElementById('formTitle').innerHTML = '<i class="bi bi-pencil-square me-2 text-primary"></i>Edit Furniture Item';
     cancelBtn.classList.remove('d-none');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -207,7 +331,7 @@ function resetForm() {
     card.classList.remove('edit-mode-active');
     submitBtn.style.backgroundColor = '#10b981';
     submitBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i> Save to Registry';
-    document.getElementById('formTitle').innerHTML = '<i class="bi bi-tag me-2 text-success"></i>Define Type';
+    document.getElementById('formTitle').innerHTML = '<i class="bi bi-plus-circle me-2 text-success"></i> Add Furniture Item';
     cancelBtn.classList.add('d-none');
 }
 

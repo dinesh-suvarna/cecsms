@@ -11,14 +11,30 @@ if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Ad
 $user_role = $_SESSION['role'];
 $user_division = $_SESSION['division_id'] ?? 0;
 
+// --- 1. FLASH MESSAGE LOGIC (Fixes the missing/repeating alerts) ---
+$display_swal = false;
+if (isset($_SESSION['swal_msg'])) {
+    $display_swal = true;
+    $swal_text = $_SESSION['swal_msg'];
+    $swal_type = $_SESSION['swal_type'] ?? 'success';
+    unset($_SESSION['swal_msg']);
+    unset($_SESSION['swal_type']);
+}
+
 // HANDLE DELETION 
 if (isset($_GET['delete_id'])) {
     $delete_id = (int)$_GET['delete_id'];
+    // Check if assets are linked before deleting
     $check_assets = $conn->query("SELECT id FROM furniture_assets WHERE stock_id = $delete_id LIMIT 1");
+    
     if ($check_assets->num_rows == 0) {
-        $conn->query("DELETE FROM furniture_stock WHERE id = $delete_id");
-        $_SESSION['swal_msg'] = "Stock record deleted successfully.";
-        $_SESSION['swal_type'] = "success";
+        if ($conn->query("DELETE FROM furniture_stock WHERE id = $delete_id")) {
+            $_SESSION['swal_msg'] = "Stock record deleted successfully.";
+            $_SESSION['swal_type'] = "success";
+        } else {
+            $_SESSION['swal_msg'] = "Database error: Could not delete record.";
+            $_SESSION['swal_type'] = "error";
+        }
     } else {
         $_SESSION['swal_msg'] = "Cannot delete: Asset IDs already generated for this batch.";
         $_SESSION['swal_type'] = "error";
@@ -113,9 +129,7 @@ ob_start();
                                         <?php foreach ($items as $index => $row): ?>
                                             <tr>
                                                 <td class="ps-4 text-muted small"><?= $index + 1 ?></td>
-                                                <td>
-                                                    <div class="fw-bold text-dark"><?= htmlspecialchars($row['item_name']) ?></div>
-                                                </td>
+                                                <td><div class="fw-bold text-dark"><?= htmlspecialchars($row['item_name']) ?></div></td>
                                                 <td class="text-center">
                                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-bold">
                                                         <?= $row['total_qty'] ?>
@@ -128,7 +142,7 @@ ob_start();
                                                 </td>
                                                 <td class="text-end pe-4">
                                                     <div class="btn-group">
-                                                        <button onclick="editStock(<?= htmlspecialchars(json_encode(['id' => $row['id']])) ?>)" class="btn btn-sm btn-light border rounded-circle me-1" title="Edit Latest Entry">
+                                                        <button onclick="editStock(<?= $row['id'] ?>)" class="btn btn-sm btn-light border rounded-circle me-1" title="Edit Latest Entry">
                                                             <i class="bi bi-pencil-square text-primary"></i>
                                                         </button>
                                                         <button onclick="deleteStock(<?= $row['id'] ?>)" class="btn btn-sm btn-light border rounded-circle" title="Delete Latest Entry">
@@ -150,27 +164,35 @@ ob_start();
 </div>
 
 <style>
-    .accordion-button:not(.collapsed) { 
-        background-color: #f8f9fa; 
-        color: #0d6efd; 
-        box-shadow: inset 0 -1px 0 rgba(0,0,0,.125); 
-    }
+    .accordion-button:not(.collapsed) { background-color: #f8f9fa; color: #0d6efd; box-shadow: inset 0 -1px 0 rgba(0,0,0,.125); }
     .accordion-button:focus { box-shadow: none; border-color: rgba(0,0,0,.125); }
     .x-small { font-size: 0.75rem; }
     .bg-primary-subtle { background-color: #eef2ff !important; }
     .btn-group .btn { width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
-// JavaScript remains the same...
-function editStock(data) {
+// 1. Display Flash Messages (Success or Error)
+<?php if ($display_swal): ?>
+    Swal.fire({
+        icon: '<?= $swal_type ?>',
+        title: '<?= $swal_type == "success" ? "Done!" : "Hold on..." ?>',
+        text: '<?= $swal_text ?>',
+        timer: <?= $swal_type == "success" ? "2500" : "5000" ?>,
+        showConfirmButton: <?= $swal_type == "success" ? "false" : "true" ?>
+    });
+<?php endif; ?>
+
+function editStock(id) {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = 'add_furniture.php';
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = 'trigger_edit';
-    input.value = data.id;
+    input.value = id;
     form.appendChild(input);
     document.body.appendChild(form);
     form.submit();
@@ -178,11 +200,12 @@ function editStock(data) {
 
 function deleteStock(id) {
     Swal.fire({
-        title: 'Delete latest entry?',
-        text: "This batch will be removed. Total quantity will be updated.",
+        title: 'Are you sure?',
+        text: "This batch will be removed permanently!",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#d33',
+        confirmButtonColor: '#e33e4d',
+        cancelButtonColor: '#6c757d',
         confirmButtonText: 'Yes, delete it!'
     }).then((result) => {
         if (result.isConfirmed) {

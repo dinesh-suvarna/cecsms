@@ -139,9 +139,38 @@ ob_start();
                                                                                                         <?= $asset['last_verified_date'] ? '<span class="text-success fw-medium"><i class="bi bi-check-circle-fill me-1"></i>'.date('d/m/y', strtotime($asset['last_verified_date'])).'</span>' : '<span class="text-muted fst-italic">Never</span>' ?>
                                                                                                     </td>
                                                                                                     <td class="text-end pe-4">
-                                                                                                        <button class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-semibold" onclick="toggleInlineEdit(<?= $asset['asset_db_id'] ?>, true)">Edit</button>
-                                                                                                        <button class="btn btn-success btn-sm rounded-pill px-3 fw-semibold" onclick="verifyAsset(<?= $asset['asset_db_id'] ?>)">Verify</button>
-                                                                                                    </td>
+                                                                                                        <div class="d-flex align-items-center justify-content-end gap-1">
+                                                                                                            <button class="btn btn-sm btn-action btn-verify" 
+                                                                                                                    onclick="verifyAsset(<?= $asset['asset_db_id'] ?>)" 
+                                                                                                                    title="Verify Asset">
+                                                                                                                <i class="bi bi-shield-check"></i>
+                                                                                                            </button>
+
+                                                                                                            <button class="btn btn-sm btn-action btn-edit" 
+                                                                                                                    onclick="toggleInlineEdit(<?= $asset['asset_db_id'] ?>, true)" 
+                                                                                                                    title="Edit Tag">
+                                                                                                                <i class="bi bi-pencil-square"></i>
+                                                                                                            </button>
+
+                                                                                                            <button class="btn btn-sm btn-action btn-manage" 
+                                                                                                                    onclick="openManageModal(
+                                                                                                                        <?= $asset['asset_db_id'] ?>, 
+                                                                                                                        '<?= addslashes($asset['asset_tag']) ?>', 
+                                                                                                                        '<?= addslashes($asset['item_name']) ?>', 
+                                                                                                                        '<?= addslashes($parts[1]) ?>', 
+                                                                                                                        '<?= addslashes($parts[0]) ?>'
+                                                                                                                    )" 
+                                                                                                                    title="Manage Lifecycle">
+                                                                                                                <i class="bi bi-gear"></i>
+                                                                                                            </button>
+
+                                                                                                            <button class="btn btn-sm btn-action btn-delete" 
+                                                                                                                    onclick="deleteAsset(<?= $asset['asset_db_id'] ?>, '<?= addslashes($asset['asset_tag']) ?>')" 
+                                                                                                                    title="Delete">
+                                                                                                                <i class="bi bi-trash3"></i>
+                                                                                                            </button>
+                                                                                                        </div>
+                                                                                                    </td>    
                                                                                                 </tr>
                                                                                             <?php endforeach; ?>
                                                                                             <tr style="height: 10px;"><td colspan="4"></td></tr>
@@ -171,17 +200,181 @@ ob_start();
         <?php endforeach; ?>
     </div>
 </div>
-
 <style>
     .asset-tag-text { font-family: 'Monaco', 'Consolas', monospace; font-weight: 700; font-size: 1.05rem; color: #0d6efd; }
     .table-secondary-subtle { background-color: #f8fafc; font-size: 0.95rem; border-left: 4px solid #64748b; }
     .accordion-button:not(.collapsed) { background-color: #f8fafc; color: #0d6efd; box-shadow: none; }
     .cursor-pointer { cursor: pointer; }
     .fs-7 { font-size: 0.85rem; }
+    
+    .btn-action {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: none;
+        transition: all 0.2s ease;
+        background-color: #f8fafc; /* Light gray base */
+    }
+
+    /* Icon Specific Colors & Hovers */
+    .btn-edit { color: #0d6efd; }
+    .btn-edit:hover { background-color: #e7f1ff; color: #0a58ca; }
+
+    .btn-verify { color: #198754; }
+    .btn-verify:hover { background-color: #e8f5e9; color: #146c43; }
+
+    .btn-manage { color: #0dcaf0; }
+    .btn-manage:hover { background-color: #e0f7fa; color: #0891b2; }
+
+    .btn-delete { color: #dc3545; }
+    .btn-delete:hover { background-color: #f8d7da; color: #b02a37; }
+
+    /* Ensure icons are a consistent size */
+    .btn-action i { font-size: 1.1rem; }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// JS logic remains the same as your working version
+let manageModal;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Modal Instance safely after DOM loads
+    manageModal = new bootstrap.Modal(document.getElementById('manageModal'));
+});
+
+function openManageModal(id, tag, name, vendor, invoice) {
+    const hiddenInput = document.getElementById('hidden_asset_id');
+    if(!hiddenInput) return; // Prevent "null" errors
+
+    hiddenInput.value = id;
+    document.getElementById('disp_asset_id').innerText = tag;
+    document.getElementById('disp_item_name').innerText = name;
+    document.getElementById('disp_vendor_name').innerText = vendor;
+    document.getElementById('disp_invoice_no').innerText = invoice;
+    document.getElementById('action_remarks').value = '';
+    
+    manageModal.show();
+}
+
+
+
+
+// Use this to ensure the function is globally available
+window.prepareAction = function(type) {
+    const assetId = document.getElementById('hidden_asset_id').value;
+    const assetTag = document.getElementById('disp_asset_id').innerText;
+    const remarks = document.getElementById('action_remarks').value;
+
+    if (!remarks && type !== 'return') {
+        Swal.fire('Required', 'Please provide remarks for this action.', 'info');
+        return;
+    }
+
+    handleAssetAction(type, assetId, assetTag, remarks);
+};
+
+window.handleAssetAction = function(actionType, assetId, assetTag, remarks) {
+    const manageModalEl = document.getElementById('manageModal');
+    const modalInstance = bootstrap.Modal.getInstance(manageModalEl);
+    if (modalInstance) modalInstance.hide();
+
+    const config = {
+        return:  { title: 'Return Asset?', color: '#f59e0b' },
+        repair:  { title: 'Request Repair?', color: '#0dcaf0' },
+        dispose: { title: 'Dispose Asset?', color: '#ef4444' }
+    };
+    
+    const selected = config[actionType];
+
+    Swal.fire({
+        title: selected.title,
+        text: `Asset: ${assetTag}. Proceed with this request?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: selected.color,
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Yes, Submit'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'Processing...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            
+            // Send via AJAX to update_asset.php
+            fetch('update_asset.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `action=lifecycle&id=${assetId}&type=${actionType}&remarks=${encodeURIComponent(remarks)}`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    Swal.fire('Success', 'Asset status updated.', 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Error', data.message || 'Update failed', 'error');
+                }
+            });
+        } else {
+            if (modalInstance) modalInstance.show();
+        }
+    });
+};
+
+function processAction(type) {
+    const id = document.getElementById('hidden_asset_id').value;
+    const remarks = document.getElementById('action_remarks').value;
+    
+    if(!remarks && type !== 'return') {
+        alert("Please provide remarks for this action.");
+        return;
+    }
+
+    if(confirm(`Are you sure you want to ${type} this asset?`)) {
+        fetch('update_asset.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `action=lifecycle&id=${id}&type=${type}&remarks=${encodeURIComponent(remarks)}`
+        }).then(res => res.json()).then(data => {
+            if(data.success) location.reload();
+        });
+    }
+}
+
+function deleteAsset(id, tag) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: `CRITICAL: You are about to DELETE asset ${tag}. This cannot be undone!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'Deleting...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+            fetch('update_asset.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `action=delete&id=${id}`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    Swal.fire('Deleted!', 'Asset has been removed.', 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Error', data.message || 'Deletion failed', 'error');
+                }
+            })
+            .catch(err => {
+                Swal.fire('Error', 'Network error or server down', 'error');
+            });
+        }
+    });
+}
+
 function toggleInlineEdit(id, isEditing) {
     const textSpan = document.getElementById('tag-text-' + id);
     const editDiv = document.getElementById('edit-container-' + id);
@@ -196,7 +389,10 @@ function saveInlineEdit(id) {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `action=edit_tag&id=${id}&tag=${encodeURIComponent(newTag)}`
     }).then(res => res.json()).then(data => {
-        if(data.success) { document.getElementById('tag-text-' + id).innerText = newTag; toggleInlineEdit(id, false); }
+        if(data.success) { 
+            document.getElementById('tag-text-' + id).innerText = newTag; 
+            toggleInlineEdit(id, false); 
+        }
     });
 }
 
@@ -206,17 +402,91 @@ function verifyAsset(id) {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `action=verify&id=${id}`
     }).then(res => res.json()).then(data => {
-        if(data.success) document.getElementById('verify-cell-' + id).innerHTML = `<span class="text-success fw-medium"><i class="bi bi-check-circle-fill me-1"></i>${data.new_date}</span>`;
+        if(data.success) {
+            document.getElementById('verify-cell-' + id).innerHTML = `<span class="text-success fw-medium"><i class="bi bi-check-circle-fill me-1"></i>${data.new_date}</span>`;
+        }
     });
 }
 
 async function bulkVerify(idArray) {
     if(!confirm(`Verify all ${idArray.length} items?`)) return;
     for (const id of idArray) {
-        await fetch('update_asset.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `action=verify&id=${id}` });
+        await fetch('update_asset.php', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
+            body: `action=verify&id=${id}` 
+        });
     }
     location.reload();
 }
 </script>
 
-<?php $content = ob_get_clean(); include "furniturelayout.php"; ?>
+<?php $content = ob_get_clean(); 
+$modal_html = '
+<div class="modal fade" id="manageModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 p-4 pb-0">
+                <h5 class="fw-bold mb-0 text-primary">Asset Lifecycle Management</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="bg-light rounded-4 p-3 mb-3 border shadow-sm">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="bg-white p-2 rounded-3 shadow-sm me-3 border">
+                            <i class="bi bi-box-seam fs-4 text-primary"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark" id="disp_item_name"></h6>
+                            <small class="text-muted" id="disp_vendor_name"></small>
+                        </div>
+                    </div>
+                    <div class="row g-0 pt-2 border-top">
+                        <div class="col-6">
+                            <small class="text-uppercase fw-bold text-muted d-block" style="font-size: 0.6rem;">Invoice #</small>
+                            <div class="fw-semibold small text-dark" id="disp_invoice_no"></div>
+                        </div>
+                        <div class="col-6 border-start ps-3">
+                            <small class="text-uppercase fw-bold text-muted d-block" style="font-size: 0.6rem;">Asset Tag ID</small>
+                            <div class="fw-bold text-primary small" id="disp_asset_id"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-floating mb-4">
+                    <textarea class="form-control border-2" placeholder="Reason for action" id="action_remarks" style="height: 100px; resize: none;"></textarea>
+                    <label for="action_remarks" class="text-muted small fw-bold">ACTION REMARKS / REASON</label>
+                </div>
+
+                <input type="hidden" id="hidden_asset_id">
+                
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-warning p-3 rounded-3 text-start text-dark fw-bold shadow-sm border-2" 
+                            onclick="prepareAction(\'return\')">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-arrow-left-right fs-4 me-3"></i>
+                            <div>Return Asset<br><small class="fw-normal opacity-75">Release back to main store</small></div>
+                        </div>
+                    </button>
+                    
+                    <button type="button" class="btn btn-outline-info p-3 rounded-3 text-start text-dark fw-bold shadow-sm border-2" 
+                            onclick="prepareAction(\'repair\')">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-tools fs-4 me-3"></i>
+                            <div>Request Repair<br><small class="fw-normal opacity-75">Submit for technical service</small></div>
+                        </div>
+                    </button>
+                    
+                    <button type="button" class="btn btn-outline-danger p-3 rounded-3 text-start text-dark fw-bold shadow-sm border-2" 
+                            onclick="prepareAction(\'dispose\')">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-trash3 fs-4 me-3"></i>
+                            <div>Decommission Asset<br><small class="fw-normal opacity-75">Mark for disposal/scrapping</small></div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>';
+include "furniturelayout.php"; ?>

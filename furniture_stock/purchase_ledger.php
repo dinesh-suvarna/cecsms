@@ -111,13 +111,21 @@ ob_start();
                             <div class="col-md-4">
                                 <div class="p-4 rounded-4 bg-light shadow-sm border">
                                     <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted small">Taxable Value (Total Net):</span>
+                                        <span class="text-muted small">Total Taxable Value:</span>
                                         <span class="fw-bold" id="final_subtotal">₹0.00</span>
                                     </div>
                                     <div class="d-flex justify-content-between mb-2">
                                         <span class="text-muted small">Total GST Amount:</span>
                                         <span class="fw-bold text-danger" id="final_gst">+₹0.00</span>
                                     </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted small">Flat Discount (₹):</span>
+                                        <input type="number" name="global_discount" id="global_discount" 
+                                               class="form-control form-control-sm border-danger-subtle text-end fw-bold text-danger shadow-sm" 
+                                               style="width: 120px;" value="0" step="0.01" oninput="calculateAll()">
+                                    </div>
+
                                     <hr class="my-3">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span class="text-dark fw-bold">Invoice Total:</span>
@@ -180,14 +188,10 @@ ob_start();
             const unitPrice = parseFloat(row.querySelector('.price-input').value) || 0;
             const gstP = parseFloat(row.querySelector('.gst-input').value) || 0;
 
-            // Step 1: Net Total (Qty x Unit Price)
             const rowNet = qty * unitPrice;
-            // Step 2: GST on that Net
             const rowTax = (rowNet * gstP) / 100;
-            // Step 3: Grand Row Total
             const rowGrand = rowNet + rowTax;
 
-            // Update Row Display
             row.querySelector('.row-subtotal').textContent = '₹' + rowNet.toLocaleString('en-IN', { minimumFractionDigits: 2 });
             row.querySelector('.row-grand').textContent = '₹' + rowGrand.toLocaleString('en-IN', { minimumFractionDigits: 2 });
             
@@ -195,10 +199,12 @@ ob_start();
             totalTax += rowTax;
         });
 
-        // Update Bottom Summary
+        const globalDiscount = parseFloat(document.getElementById('global_discount').value) || 0;
+        const finalGrandTotal = Math.max(0, (totalNet + totalTax) - globalDiscount);
+
         document.getElementById('final_subtotal').textContent = '₹' + totalNet.toLocaleString('en-IN', { minimumFractionDigits: 2 });
         document.getElementById('final_gst').textContent = '+₹' + totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 });
-        document.getElementById('final_grand_total').textContent = '₹' + (totalNet + totalTax).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        document.getElementById('final_grand_total').textContent = '₹' + finalGrandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 });
     }
 
     function attachListeners(row) {
@@ -210,32 +216,25 @@ ob_start();
     document.querySelectorAll('.item-row').forEach(attachListeners);
 
     function validateDate(input) {
-    const selectedDate = new Date(input.value);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Clear time for comparison
+        const selectedDate = new Date(input.value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-    const errorDiv = document.getElementById('date-error');
+        const errorDiv = document.getElementById('date-error');
 
-    if (selectedDate > today) {
-        // Add red border and show error
-        input.classList.add('is-invalid');
-        input.classList.remove('border-light-subtle');
-        errorDiv.classList.remove('d-none');
-        
-        // Reset to today after 2 seconds (optional) or leave it for the user to fix
-        setTimeout(() => {
-            input.value = "<?= date('Y-m-d') ?>";
+        if (selectedDate > today) {
+            input.classList.add('is-invalid');
+            errorDiv.classList.remove('d-none');
+            setTimeout(() => {
+                input.value = "<?= date('Y-m-d') ?>";
+                input.classList.remove('is-invalid');
+                errorDiv.classList.add('d-none');
+            }, 2500);
+        } else {
             input.classList.remove('is-invalid');
-            input.classList.add('border-light-subtle');
             errorDiv.classList.add('d-none');
-        }, 2500);
-    } else {
-        // Clear error if date is valid
-        input.classList.remove('is-invalid');
-        input.classList.add('border-light-subtle');
-        errorDiv.classList.add('d-none');
+        }
     }
-}
 </script>
 
 <style>
@@ -244,6 +243,7 @@ ob_start();
     input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .btn-link { text-decoration: none; }
     .bg-light { background-color: #f8f9fa !important; }
+    .border-danger-subtle { border-color: #f5c2c7 !important; }
 </style>
 
 <?php 

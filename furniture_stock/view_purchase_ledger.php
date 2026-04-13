@@ -9,7 +9,7 @@ if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Ad
 
 $search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : '';
 
-// Query to get all ledger entries with their item counts
+// Updated Query to fetch discount_amount from ledger
 $query_str = "
     SELECT l.*, v.vendor_name, COUNT(i.id) as total_items
     FROM purchase_ledger l
@@ -25,7 +25,6 @@ if (!empty($search)) {
 $query_str .= " GROUP BY l.id ORDER BY v.vendor_name ASC, l.purchase_date DESC";
 $result = $conn->query($query_str);
 
-// --- GROUP DATA BY VENDOR ---
 $grouped_data = [];
 while ($row = $result->fetch_assoc()) {
     $grouped_data[$row['vendor_name']][] = $row;
@@ -39,13 +38,13 @@ ob_start();
     <div class="row align-items-center mb-4">
         <div class="col-md-6">
             <h4 class="fw-bold text-dark mb-1">Purchase Records</h4>
-            <p class="text-muted small">Grouped by Vendor. Click a vendor to see their bills.</p>
+            <p class="text-muted small">Grouped by Vendor. Items show individual tax, summary shows global discount.</p>
         </div>
         <div class="col-md-6">
             <form action="" method="GET" class="d-flex justify-content-md-end">
                 <div class="input-group shadow-sm border bg-white" style="max-width: 350px;">
                     <span class="input-group-text border-0 bg-white"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" name="search" class="form-control border-0 ps-0 text-dark" placeholder="Search Vendor, Bill or SL..." value="<?= htmlspecialchars($search) ?>">
+                    <input type="text" name="search" class="form-control border-0 ps-0 text-dark" placeholder="Search..." value="<?= htmlspecialchars($search) ?>">
                     <button class="btn btn-primary px-4" type="submit">Filter</button>
                 </div>
             </form>
@@ -53,7 +52,7 @@ ob_start();
     </div>
 
     <?php if (empty($grouped_data)): ?>
-        <div class="card p-5 text-center text-muted">No records found.</div>
+        <div class="card p-5 text-center text-muted border-0 shadow-sm">No records found.</div>
     <?php else: ?>
         <div class="accordion accordion-flush" id="vendorAccordion">
             <?php 
@@ -62,7 +61,7 @@ ob_start();
                 $v_index++;
                 $vendor_id_attr = "vendor_" . preg_replace('/[^A-Za-z0-9\-]/', '', $v_index);
             ?>
-                <div class="card border-0 shadow-sm mb-3">
+                <div class="card border-0 shadow-sm mb-3 rounded-3 overflow-hidden">
                     <div class="card-header bg-white p-0 border-0">
                         <button class="btn w-100 text-start p-3 d-flex justify-content-between align-items-center vendor-toggle collapsed" 
                                 type="button" data-bs-toggle="collapse" data-bs-target="#<?= $vendor_id_attr ?>">
@@ -93,7 +92,9 @@ ob_start();
                                         <?php foreach ($bills as $row): 
                                             $l_id = $row['id'];
                                             $items_res = $conn->query("SELECT * FROM purchase_items WHERE ledger_id = $l_id");
-                                            $total_taxable = 0; $bill_grand_total = 0;
+                                            $total_taxable = 0; 
+                                            $sum_item_grand_totals = 0;
+                                            $discount = $row['discount_amount']; // Fetching from ledger
                                         ?>
                                             <tr class="master-row border-bottom" data-bs-toggle="collapse" data-bs-target="#details_<?= $l_id ?>">
                                                 <td class="ps-4"><i class="bi bi-chevron-right chevron-icon"></i></td>
@@ -102,7 +103,7 @@ ob_start();
                                                 <td class="text-center text-dark"><?= htmlspecialchars($row['bill_no']) ?></td>
                                                 <td class="text-center text-dark"><?= $row['total_items'] ?></td>
                                                 <td class="text-end pe-4">
-                                                    <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold">Items Details</button>
+                                                    <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold">View Items</button>
                                                 </td>
                                             </tr>
 
@@ -127,7 +128,7 @@ ob_start();
                                                                         $item_taxable = $item['qty'] * $item['unit_price'];
                                                                         $item_gst_amt = ($item_taxable * $item['gst_percent']) / 100;
                                                                         $total_taxable += $item_taxable;
-                                                                        $bill_grand_total += $item['grand_total'];
+                                                                        $sum_item_grand_totals += $item['grand_total'];
                                                                     ?>
                                                                     <tr class="small">
                                                                         <td class="ps-3"><?= htmlspecialchars($item['item_name']) ?></td>
@@ -142,10 +143,16 @@ ob_start();
                                                                 </tbody>
                                                                 <tfoot class="bg-light text-dark fw-bold small">
                                                                     <tr>
-                                                                        <td colspan="3" class="text-end py-2">BILL SUMMARY:</td>
-                                                                        <td class="text-end">₹<?= number_format($total_taxable, 2) ?></td>
-                                                                        <td class="text-center">Tax: ₹<?= number_format($bill_grand_total - $total_taxable, 2) ?></td>
-                                                                        <td colspan="2" class="text-end pe-3 text-primary">GRAND TOTAL: ₹<?= number_format($bill_grand_total, 2) ?></td>
+                                                                        <td colspan="4" class="text-end py-2">Items Total (Inc. Tax):</td>
+                                                                        <td colspan="3" class="text-end pe-3">₹<?= number_format($sum_item_grand_totals, 2) ?></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td colspan="4" class="text-end py-2 text-danger">Applied Discount:</td>
+                                                                        <td colspan="3" class="text-end pe-3 text-danger">-₹<?= number_format($discount, 2) ?></td>
+                                                                    </tr>
+                                                                    <tr class="table-secondary">
+                                                                        <td colspan="4" class="text-end py-2 text-primary fs-6">FINAL INVOICE TOTAL:</td>
+                                                                        <td colspan="3" class="text-end pe-3 text-primary fs-6">₹<?= number_format($sum_item_grand_totals - $discount, 2) ?></td>
                                                                     </tr>
                                                                 </tfoot>
                                                             </table>
@@ -177,7 +184,8 @@ ob_start();
     .chevron-icon { transition: transform 0.2s ease; color: #adb5bd; font-size: 0.75rem; }
     
     .table thead th { font-size: 0.7rem; letter-spacing: 0.5px; }
-    .accordion-flush .card { border: 1px solid #eee !important; overflow: hidden; }
+    .accordion-flush .card { border: 1px solid #eee !important; }
+    .table-sm td, .table-sm th { padding: 0.5rem 0.3rem; }
 </style>
 
 <?php 

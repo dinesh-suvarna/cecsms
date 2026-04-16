@@ -12,7 +12,7 @@ $message = "";
 $user_role = $_SESSION['role'];
 $user_division = $_SESSION['division_id'] ?? 0;
 
-// --- 2. THE "FLASH" LOGIC (Fixes the repeating SweetAlert) ---
+// --- 2. THE "FLASH" LOGIC ---
 $display_swal = false;
 if (isset($_SESSION['swal_msg'])) {
     $display_swal = true;
@@ -95,83 +95,135 @@ ob_start();
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
 
 <style>
-    /* Main Layout */
-    .form-card-container { width: 100%; }
-    .card.main-card {
-        border-radius: 20px; border: none;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.03) !important;
-        transition: all 0.3s ease;
+    
+    .content-wrapper-full {
+        width: 100%;
+        padding: 0; 
     }
 
-    /* RED BORDER FOR EDIT MODE */
+    .main-card {
+        border-radius: 15px;
+        border: 1px solid #eef0f2;
+        background: #fff;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.02) !important;
+        margin-bottom: 2rem;
+    }
+
+    .form-section-header {
+        display: flex;
+        align-items: center;
+        margin: 25px 0 15px 0;
+    }
+    .form-section-header .line {
+        flex: 1;
+        height: 1px;
+        background: #f1f3f5;
+    }
+    .form-section-header .text {
+        padding: 0 15px;
+        font-weight: 800;
+        font-size: 0.85rem;
+        color: blue;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .field-wrapper {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 8px 12px;
+        transition: all 0.2s ease;
+    }
+    .field-wrapper:focus-within {
+        border-color: #4361ee;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.05);
+    }
+    .field-wrapper label {
+        display: block;
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #6c757d;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+    .field-wrapper .form-control, 
+    .field-wrapper .form-select {
+        border: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+        font-weight: 500;
+        font-size: 0.95rem;
+        color: #333;
+        min-height: auto;
+    }
+    .field-wrapper .form-control:focus { box-shadow: none !important; }
+
+    .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+    border-color: #198754 !important; 
+    box-shadow: none;
+}
+    .select2-container--bootstrap-5 .select2-selection {
+        border: none !important;
+        background: transparent !important;
+        font-weight: 500 !important;
+        padding: 0 !important;
+        height: auto !important;
+    }
+
+    .btn-save-stock {
+        background: #4361ee;
+        color: #fff;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    .btn-save-stock:hover {
+        background: #3751d5;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(67, 97, 238, 0.2);
+    }
+
+    
     <?php if($is_edit): ?>
-    .card.main-card {
-        border: 2px solid #e33e4d !important;
-        box-shadow: 0 10px 40px rgba(227, 62, 77, 0.15) !important;
-    }
+    .main-card { border-top: 4px solid #e33e4d; }
+    .edit-indicator { color: #e33e4d; font-weight: 800; font-size: 0.8rem; }
     <?php endif; ?>
-
-    .form-label {
-        font-size: 0.72rem; font-weight: 700; color: #6c757d;
-        text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.3px;
-    }
-
-    .form-control, .form-select, .select2-container--bootstrap-5 .select2-selection {
-        border-radius: 10px !important; border: 1px solid #eef0f2 !important;
-        padding: 10px 14px; font-size: 0.95rem; min-height: 45px;
-    }
-
-    /* Button Logic & Chrome Hover Fix */
-    .btn-pill {
-        padding: 12px 35px; border-radius: 50px; font-weight: 700;
-        min-width: 180px; display: inline-flex; align-items: center;
-        justify-content: center; border: none; transition: all 0.3s ease;
-        color: white !important;
-    }
-
-    .btn-update { background: #0d6efd !important; box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2); }
-    .btn-update:hover { 
-        background: #198754 !important; /* Forces Green on Chrome */
-        box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3); transform: translateY(-1px);
-    }
-
-    .btn-discard { background: #e33e4d !important; }
-    .btn-discard:hover { 
-        background: #b91d2b !important;
-        box-shadow: 0 4px 15px rgba(227, 62, 77, 0.3); transform: translateY(-1px);
-    }
-
-    .edit-badge {
-        background: #e33e4d; color: white; font-size: 13px; font-weight: 800;
-        padding: 8px 16px; border-radius: 8px; text-transform: uppercase;
-    }
-    .action-area { margin-top: 30px; }
 </style>
 
-<div class="container-fluid py-4">
-    <div class="form-card-container">
-        <div class="card main-card">
-            <div class="card-body p-4 p-md-5">
-                <div class="d-flex justify-content-between align-items-center mb-5">
-                    <div class="d-flex align-items-center">
-                        <div class="bg-primary bg-opacity-10 p-3 rounded-3 me-3 text-primary">
-                            <i class="bi <?= $is_edit ? 'bi-pencil-square' : 'bi-stack' ?> fs-4"></i>
-                        </div>
-                        <div>
-                            <h4 class="fw-bold mb-0"><?= $is_edit ? "Modify Item" : "Stock Entry" ?></h4>
-                            <p class="text-muted mb-0 small"><?= $is_edit ? "Currently editing an existing record." : "Enter details for new stock arrival." ?></p>
-                        </div>
-                    </div>
-                    <?php if($is_edit): ?> <span class="edit-badge"><i class="bi bi-exclamation-circle me-1"></i> Edit Mode</span> <?php endif; ?>
+<div class="container-fluid p-0 mt-3 content-wrapper-full">
+    <div class="card main-card">
+        <div class="card-body p-4 p-md-5">
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4 class="fw-bold mb-1">
+                        <i class="bi <?= $is_edit ? 'bi-pencil-square text-danger' : 'bi-plus-circle text-primary' ?> me-2"></i>
+                        <?= $is_edit ? "Modify Stock Record" : "Furniture Stock Entry" ?>
+                    </h4>
+                    <p class="text-muted small mb-0">Fill in the procurement and unit allocation details below.</p>
                 </div>
+                <?php if($is_edit): ?>
+                    <span class="edit-indicator"><i class="bi bi-shield-exclamation me-1"></i> EDITING RECORD #<?= $edit_data['id'] ?></span>
+                <?php endif; ?>
+            </div>
 
-                <form method="POST" id="furnitureForm">
-                    <input type="hidden" name="edit_id" value="<?= $edit_data['id'] ?? '' ?>">
-                    <div class="row g-4">
-                        <div class="col-md-6">
-                            <label class="form-label">Furniture Item Type</label>
+            <form method="POST" id="furnitureForm">
+                <input type="hidden" name="edit_id" value="<?= $edit_data['id'] ?? '' ?>">
+                
+                <div class="form-section-header">
+                    <span class="text">Item Identity & Logistics</span>
+                    <div class="line"></div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <div class="field-wrapper">
+                            <label>Furniture Item Type</label>
                             <select name="furniture_item_id" class="form-select searchable-select" required>
-                                <option value="" disabled <?= !$is_edit ? 'selected' : '' ?>>Select item...</option>
+                                <option value="" disabled <?= !$is_edit ? 'selected' : '' ?>>Search or select item...</option>
                                 <?php while($row = $items->fetch_assoc()): ?>
                                     <option value="<?= $row['id'] ?>" <?= ($is_edit && $edit_data['furniture_item_id'] == $row['id']) ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($row['item_name']) ?>
@@ -179,43 +231,64 @@ ob_start();
                                 <?php endwhile; ?>
                             </select>
                         </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Bill / Invoice Number</label>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="field-wrapper">
+                            <label>Invoice / Bill Number</label>
                             <input type="text" name="bill_no" class="form-control" value="<?= $edit_data['bill_no'] ?? '' ?>" required>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="col-md-3">
-                            <label class="form-label">Total Quantity</label>
+                <div class="form-section-header">
+                    <span class="text">Quantity & Pricing</span>
+                    <div class="line"></div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="field-wrapper">
+                            <label>Total Quantity</label>
                             <input type="number" name="quantity" class="form-control" value="<?= $edit_data['total_qty'] ?? '' ?>" min="1" required>
                         </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">Unit Price (₹)</label>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="field-wrapper">
+                            <label>Unit Price (₹)</label>
                             <input type="number" name="unit_price" class="form-control" value="<?= $edit_data['unit_price'] ?? '' ?>" step="0.01" min="0.01" required>
                         </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Purchase Date</label>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="field-wrapper">
+                            <label>Purchase Date</label>
                             <input type="date" name="bill_date" class="form-control" value="<?= $edit_data['bill_date'] ?? date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" required>
                         </div>
+                    </div>
+                </div>
 
-                        <?php if ($user_role === 'SuperAdmin'): ?>
-                            <div class="col-md-6">
-                                <label class="form-label">Filter by Division</label>
+                <div class="form-section-header">
+                    <span class="text">Unit & Vendor Attribution</span>
+                    <div class="line"></div>
+                </div>
+                <div class="row g-3">
+                    <?php if ($user_role === 'SuperAdmin'): ?>
+                        <div class="col-md-6">
+                            <div class="field-wrapper">
+                                <label>Filter by Division</label>
                                 <select id="division_filter" class="form-select searchable-select">
-                                    <option value="">Show All Units</option>
+                                    <option value="">All Divisions</option>
                                     <?php while($d = $divisions->fetch_assoc()): ?>
                                         <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['division_name']) ?></option>
                                     <?php endwhile; ?>
                                 </select>
                             </div>
-                        <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
 
-                        <div class="<?= ($user_role === 'SuperAdmin') ? 'col-md-6' : 'col-md-12' ?>">
-                            <label class="form-label">Receiving Unit</label>
+                    <div class="<?= ($user_role === 'SuperAdmin') ? 'col-md-6' : 'col-md-12' ?>">
+                        <div class="field-wrapper">
+                            <label>Receiving Unit</label>
                             <select name="unit_id" id="unit_select" class="form-select searchable-select" required>
-                                <option value="" disabled <?= !$is_edit ? 'selected' : '' ?>>Select unit...</option>
+                                <option value="" disabled <?= !$is_edit ? 'selected' : '' ?>>Assign to unit...</option>
                                 <?php while($u = $units_res->fetch_assoc()): 
                                     $unit_label = (!empty($u['unit_code'])) ? strtoupper($u['unit_code']) . " - " . $u['unit_name'] : $u['unit_name'];
                                 ?>
@@ -225,9 +298,11 @@ ob_start();
                                 <?php endwhile; ?>
                             </select>
                         </div>
+                    </div>
 
-                        <div class="col-md-12">
-                            <label class="form-label">Supplier / Vendor</label>
+                    <div class="col-md-12">
+                        <div class="field-wrapper">
+                            <label>Supplier / Vendor</label>
                             <select name="vendor_id" class="form-select searchable-select" required>
                                 <option value="" disabled <?= !$is_edit ? 'selected' : '' ?>>Select vendor...</option>
                                 <?php $vendors->data_seek(0); while($v = $vendors->fetch_assoc()): ?>
@@ -238,18 +313,17 @@ ob_start();
                             </select>
                         </div>
                     </div>
+                </div>
 
-                    <div class="d-flex justify-content-center gap-3 action-area">
-                        <button type="submit" name="save_stock" class="btn btn-pill btn-update">
-                            <i class="bi <?= $is_edit ? 'bi-arrow-repeat' : 'bi-check-lg' ?> me-2"></i> 
-                            <?= $is_edit ? "Update Item" : "Save Stock" ?>
-                        </button>
-                        <a href="view_furniture.php" class="btn btn-pill btn-discard text-decoration-none">
-                            <?= $is_edit ? "Discard Changes" : "Cancel" ?>
-                        </a>
-                    </div>
-                </form>
-            </div>
+                <div class="d-flex justify-content-end gap-3 mt-5 pt-3 border-top">
+                    <a href="view_furniture.php" class="btn btn-light px-4 text-muted discard-btn" style="border-radius:10px;">
+                        <i class="bi bi-arrow-left me-1"></i> Back
+                    </a>
+                    <button type="submit" name="save_stock" class="btn btn-save-stock">
+                        <i class="bi bi-check2-circle me-1"></i> <?= $is_edit ? "Update Changes" : "Save Stock Entry" ?>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -267,7 +341,7 @@ $(document).ready(function() {
     const allUnits = $('#unit_select option').clone();
     $('#division_filter').on('change', function() {
         const divId = $(this).val();
-        $('#unit_select').empty().append('<option value="">Select unit...</option>');
+        $('#unit_select').empty().append('<option value="">Assign to unit...</option>');
         allUnits.each(function() {
             if (divId === "" || $(this).data('division') == divId) {
                 $('#unit_select').append($(this).clone());
@@ -277,35 +351,35 @@ $(document).ready(function() {
     });
     <?php endif; ?>
 
-    // 2. Flash Message Logic (Only runs once)
+    // 2. Swal Alerts
     <?php if ($display_swal): ?>
         Swal.fire({
             icon: '<?= $swal_type ?>',
-            title: '<?= $swal_type == "success" ? "Great!" : "Notice" ?>',
+            title: 'Saved',
             text: '<?= $swal_text ?>',
-            timer: 2500,
+            timer: 2000,
             showConfirmButton: false
         });
     <?php endif; ?>
 
-    // 3. Error Logic
     <?php if($message == "error"): ?>
-        Swal.fire({ icon: 'error', title: 'Oops...', text: 'Validation failed. Check your data.' });
+        Swal.fire({ icon: 'error', title: 'Oops', text: 'Validation failed.' });
     <?php endif; ?>
 
-    // 4. Confirm Cancel Logic
-    $('.btn-discard').on('click', function(e) {
-        e.preventDefault();
-        const url = $(this).attr('href');
-        Swal.fire({
-            title: 'Discard Changes?',
-            text: "Unsaved modifications will be lost.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#e33e4d',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes, discard!'
-        }).then((result) => { if (result.isConfirmed) window.location.href = url; });
+    // 3. Confirm Back Logic
+    $('.discard-btn').on('click', function(e) {
+        if($('#furnitureForm').serialize().length > 50) { // Simple check if form was touched
+            e.preventDefault();
+            const url = $(this).attr('href');
+            Swal.fire({
+                title: 'Unsaved Changes',
+                text: "Discard current input?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#4361ee',
+                confirmButtonText: 'Yes, Back'
+            }).then((result) => { if (result.isConfirmed) window.location.href = url; });
+        }
     });
 });
 </script>

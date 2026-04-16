@@ -2,7 +2,6 @@
 include "../config/db.php";
 session_start();
 
-// Security check
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
     header("Location: ../index.php");
     exit();
@@ -11,22 +10,18 @@ if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Ad
 $user_role = $_SESSION['role'];
 $user_division = $_SESSION['division_id'] ?? 0;
 
-// --- 1. FLASH MESSAGE LOGIC (Fixes the missing/repeating alerts) ---
+// HANDLE DELETION & SWAL LOGIC (Kept exactly as per your code)
 $display_swal = false;
 if (isset($_SESSION['swal_msg'])) {
     $display_swal = true;
     $swal_text = $_SESSION['swal_msg'];
     $swal_type = $_SESSION['swal_type'] ?? 'success';
-    unset($_SESSION['swal_msg']);
-    unset($_SESSION['swal_type']);
+    unset($_SESSION['swal_msg'], $_SESSION['swal_type']);
 }
 
-// HANDLE DELETION 
 if (isset($_GET['delete_id'])) {
     $delete_id = (int)$_GET['delete_id'];
-    // Check if assets are linked before deleting
     $check_assets = $conn->query("SELECT id FROM furniture_assets WHERE stock_id = $delete_id LIMIT 1");
-    
     if ($check_assets->num_rows == 0) {
         if ($conn->query("DELETE FROM furniture_stock WHERE id = $delete_id")) {
             $_SESSION['swal_msg'] = "Stock record deleted successfully.";
@@ -43,6 +38,7 @@ if (isset($_GET['delete_id'])) {
     exit();
 }
 
+// UPDATED QUERY: Added division_name to handle grouping
 $sql = "SELECT 
             SUM(s.total_qty) as total_qty, 
             MAX(s.id) as id, 
@@ -50,26 +46,30 @@ $sql = "SELECT
             v.vendor_name, 
             u.unit_name, 
             u.unit_code,
+            d.division_name,
             GROUP_CONCAT(DISTINCT s.bill_no SEPARATOR ', ') as combined_bills,
             MAX(s.bill_date) as latest_bill_date
         FROM furniture_stock s
         JOIN furniture_items i ON s.furniture_item_id = i.id
         JOIN vendors v ON s.vendor_id = v.id
-        JOIN units u ON s.unit_id = u.id";
+        JOIN units u ON s.unit_id = u.id
+        JOIN divisions d ON u.division_id = d.id";
 
 if ($user_role !== 'SuperAdmin') {
     $sql .= " WHERE u.division_id = '$user_division'";
 }
 
 $sql .= " GROUP BY i.item_name, u.id, v.vendor_name 
-          ORDER BY u.unit_code ASC, i.item_name ASC";
+          ORDER BY d.division_name ASC, u.unit_code ASC, i.item_name ASC";
 
 $result = $conn->query($sql);
 
+// MULTI-LEVEL GROUPING LOGIC
 $grouped_inventory = [];
 while ($row = $result->fetch_assoc()) {
-    $display_label = strtoupper($row['unit_code']) . " - " . $row['unit_name'];
-    $grouped_inventory[$display_label][] = $row;
+    $div_name = $row['division_name'];
+    $unit_label = strtoupper($row['unit_code']) . " - " . $row['unit_name'];
+    $grouped_inventory[$div_name][$unit_label][] = $row;
 }
 
 $page_title = "Furniture Inventory";
@@ -80,7 +80,7 @@ ob_start();
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="fw-bold mb-0">Furniture Inventory</h4>
-            <p class="text-muted small mb-0">Summarized stock distribution per unit</p>
+            <p class="text-muted small mb-0">Stock distribution by Departments & Facilities</p>
         </div>
         <a href="add_furniture.php" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
             <i class="bi bi-plus-lg me-2"></i> Add New Stock
@@ -93,67 +93,86 @@ ob_start();
             <p class="text-muted mt-3">No inventory records found.</p>
         </div>
     <?php else: ?>
-        <div class="accordion border-0 shadow-sm rounded-4 overflow-hidden" id="unitAccordion">
+        <div class="accordion border-0" id="divisionAccordion">
             <?php 
-            $count = 0;
-            foreach ($grouped_inventory as $display_label => $items): 
-                $count++;
-                $collapse_id = "collapse" . $count;
-                $heading_id = "heading" . $count;
+            $div_count = 0;
+            foreach ($grouped_inventory as $division_name => $units): 
+                $div_count++;
+                $div_collapse_id = "div_collapse_" . $div_count;
             ?>
-                <div class="accordion-item border-0 border-bottom">
-                    <h2 class="accordion-header" id="<?= $heading_id ?>">
-                        <button class="accordion-button collapsed fw-bold py-3 bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $collapse_id ?>">
-                            <i class="bi bi-building text-primary me-2"></i>
-                            <?= htmlspecialchars($display_label) ?> 
-                            <span class="badge bg-light text-muted border rounded-pill ms-3 fw-normal small">
-                                <?= count($items) ?> Items
-                            </span>
+                <div class="accordion-item border shadow-sm rounded-4 overflow-hidden mb-3">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-success text-white fw-bold py-3" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $div_collapse_id ?>">
+                            <i class="bi bi-geo-alt-fill me-2 text-warning"></i>
+                            <?= htmlspecialchars(strtoupper($division_name)) ?>
                         </button>
                     </h2>
-                    <div id="<?= $collapse_id ?>" class="accordion-collapse collapse" data-bs-parent="#unitAccordion">
-                        <div class="accordion-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
-                                    <thead class="bg-light">
-                                        <tr class="small text-uppercase fw-bold text-muted">
-                                            <th class="ps-4" style="width: 80px;">Sl.No</th>
-                                            <th>Item Name</th>
-                                            <th class="text-center">Total Quantity</th>
-                                            <th>Vendor</th>
-                                            <th>Bill References</th>
-                                            <th class="text-end pe-4">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($items as $index => $row): ?>
-                                            <tr>
-                                                <td class="ps-4 text-muted small"><?= $index + 1 ?></td>
-                                                <td><div class="fw-bold text-dark"><?= htmlspecialchars($row['item_name']) ?></div></td>
-                                                <td class="text-center">
-                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-bold">
-                                                        <?= $row['total_qty'] ?>
-                                                    </span>
-                                                </td>
-                                                <td class="text-dark small"><?= htmlspecialchars($row['vendor_name']) ?></td>
-                                                <td>
-                                                    <div class="small fw-bold">Bills: <?= htmlspecialchars($row['combined_bills']) ?></div>
-                                                    <div class="x-small text-muted">Last Entry: <?= date('d M, Y', strtotime($row['latest_bill_date'])) ?></div>
-                                                </td>
-                                                <td class="text-end pe-4">
-                                                    <div class="btn-group">
-                                                        <button onclick="editStock(<?= $row['id'] ?>)" class="btn btn-sm btn-light border rounded-circle me-1" title="Edit Latest Entry">
-                                                            <i class="bi bi-pencil-square text-primary"></i>
-                                                        </button>
-                                                        <button onclick="deleteStock(<?= $row['id'] ?>)" class="btn btn-sm btn-light border rounded-circle" title="Delete Latest Entry">
-                                                            <i class="bi bi-trash3 text-danger"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                    <div id="<?= $div_collapse_id ?>" class="accordion-collapse collapse" data-bs-parent="#divisionAccordion">
+                        <div class="accordion-body p-3 bg-light">
+                            
+                            <div class="accordion accordion-flush rounded-3 border overflow-hidden" id="unitAccordion_<?= $div_count ?>">
+                                <?php 
+                                $unit_count = 0;
+                                foreach ($units as $unit_label => $items): 
+                                    $unit_count++;
+                                    $unit_collapse_id = "unit_collapse_" . $div_count . "_" . $unit_count;
+                                ?>
+                                    <div class="accordion-item border-bottom">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed fw-bold py-3 bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $unit_collapse_id ?>">
+                                                <i class="bi bi-building text-primary me-2"></i>
+                                                <?= htmlspecialchars($unit_label) ?>
+                                                <span class="badge bg-primary-subtle text-primary border rounded-pill ms-3 fw-normal small">
+                                                    <?= count($items) ?> Items
+                                                </span>
+                                            </button>
+                                        </h2>
+                                        <div id="<?= $unit_collapse_id ?>" class="accordion-collapse collapse" data-bs-parent="#unitAccordion_<?= $div_count ?>">
+                                            <div class="accordion-body p-0">
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover align-middle mb-0 bg-white">
+                                                        <thead class="bg-light">
+                                                            <tr class="small text-uppercase fw-bold text-muted">
+                                                                <th class="ps-4" style="width: 60px;">#</th>
+                                                                <th>Item Name</th>
+                                                                <th class="text-center">Stock Qty</th>
+                                                                <th>Vendor</th>
+                                                                <th>Bill Refs</th>
+                                                                <th class="text-end pe-4">Actions</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <?php foreach ($items as $idx => $row): ?>
+                                                                <tr>
+                                                                    <td class="ps-4 text-muted small"><?= $idx + 1 ?></td>
+                                                                    <td><div class="fw-bold text-dark"><?= htmlspecialchars($row['item_name']) ?></div></td>
+                                                                    <td class="text-center">
+                                                                        <span class="fw-bold text-dark"><?= $row['total_qty'] ?></span>
+                                                                    </td>
+                                                                    <td class="text-dark small"><?= htmlspecialchars($row['vendor_name']) ?></td>
+                                                                    <td>
+                                                                        <div class="small fw-bold text-truncate" style="max-width: 200px;"><?= htmlspecialchars($row['combined_bills']) ?></div>
+                                                                        <div class="x-small text-muted">Latest: <?= date('d M, Y', strtotime($row['latest_bill_date'])) ?></div>
+                                                                    </td>
+                                                                    <td class="text-end pe-4">
+                                                                        <div class="btn-group">
+                                                                            <button onclick="editStock(<?= $row['id'] ?>)" class="btn btn-sm btn-outline-primary border-0 rounded-0" title="Edit">
+                                                                                <i class="bi bi-pencil-square"></i>
+                                                                            </button>
+                                                                            <button onclick="deleteStock(<?= $row['id'] ?>)" class="btn btn-sm btn-outline-danger border-0 rounded-0" title="Delete">
+                                                                                <i class="bi bi-trash3"></i>
+                                                                            </button>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            <?php endforeach; ?>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
                         </div>
                     </div>
@@ -164,17 +183,22 @@ ob_start();
 </div>
 
 <style>
-    .accordion-button:not(.collapsed) { background-color: #f8f9fa; color: #0d6efd; box-shadow: inset 0 -1px 0 rgba(0,0,0,.125); }
-    .accordion-button:focus { box-shadow: none; border-color: rgba(0,0,0,.125); }
-    .x-small { font-size: 0.75rem; }
+    /* Division (Main) Accordion Styles */
+    #divisionAccordion .accordion-button:not(.collapsed) { background-color: #212529; color: #fff; box-shadow: none; }
+    #divisionAccordion .accordion-button::after { filter: brightness(0) invert(1); } /* Make arrow white */
+    
+    /* Unit (Nested) Accordion Styles */
+    .accordion-flush .accordion-item:last-child { border-bottom: 0; }
     .bg-primary-subtle { background-color: #eef2ff !important; }
-    .btn-group .btn { width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; }
+    .x-small { font-size: 0.7rem; }
+    
+    /* Hover effects for a premium feel */
+    .table-hover tbody tr:hover { background-color: #f8faff !important; }
+    .btn-group .btn:hover { background-color: #f0f0f0; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
-// 1. Display Flash Messages (Success or Error)
 <?php if ($display_swal): ?>
     Swal.fire({
         icon: '<?= $swal_type ?>',
@@ -187,15 +211,10 @@ ob_start();
 
 function editStock(id) {
     const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = 'add_furniture.php';
+    form.method = 'POST'; form.action = 'add_furniture.php';
     const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'trigger_edit';
-    input.value = id;
-    form.appendChild(input);
-    document.body.appendChild(form);
-    form.submit();
+    input.type = 'hidden'; input.name = 'trigger_edit'; input.value = id;
+    form.appendChild(input); document.body.appendChild(form); form.submit();
 }
 
 function deleteStock(id) {

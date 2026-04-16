@@ -52,6 +52,25 @@ if (isset($conn)) {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
+        
+        /* Global Focus Reset */
+        input:focus, 
+        select:focus, 
+        textarea:focus, 
+        button:focus,
+        .form-control:focus, 
+        .form-select:focus,
+        .select2-selection:focus,
+        .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Ensure Select2 search box also has no shadow */
+        .select2-search__field:focus {
+            box-shadow: none !important;
+        }
+
         :root {
             --sb-width: 290px;
             --primary-accent: #10b981;

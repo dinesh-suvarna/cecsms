@@ -364,7 +364,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <div class="mb-4">
                 <div class="d-flex justify-content-between">
                     <label class="form-label">Password</label>
-                    <a href="#" class="text-decoration-none fw-semibold" style="font-size: 0.75rem; color: var(--brand-primary);">Reset Credentials</a>
+                    <!-- <a href="#" class="text-decoration-none fw-semibold" style="font-size: 0.75rem; color: var(--brand-primary);">Reset Credentials</a> -->
                 </div>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-key-fill"></i></span>
@@ -382,7 +382,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <footer class="mt-auto pt-5 text-center">
             <p class="text-muted mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">
-                &copy; <?= date("Y") ?> CECSMS - INSTITUTIONAL ASSET MGMT
+                &copy; <?= date("Y") ?> CECSMS - INSTITUTIONAL ASSET MANAGEMENT
             </p>
         </footer>
     </div>

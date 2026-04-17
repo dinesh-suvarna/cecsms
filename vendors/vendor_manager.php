@@ -143,7 +143,7 @@ ob_start();
                                 <p class="text-muted small mb-0" id="formSubtitle">Add a new verified provider</p>
                             </div>
                         </div>
-                        <span class="badge bg-primary edit-badge animate__animated animate__fadeIn">EDIT MODE</span>
+                        <span id="editBadge" class="badge bg-primary edit-badge animate__animated animate__fadeIn d-none">EDIT MODE</span>
                     </div>
                 </div>
                 <div class="card-body p-4">
@@ -285,6 +285,7 @@ function prepareEditVendor(data) {
     
     cancelBtn.classList.remove('d-none');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('editBadge').classList.remove('d-none');
 }
 
 function resetVendorForm() {
@@ -303,6 +304,7 @@ function resetVendorForm() {
     document.getElementById('formSubtitle').innerText = "Add a new verified provider";
     
     cancelBtn.classList.add('d-none');
+    document.getElementById('editBadge').classList.add('d-none');
 }
 
 // --- MAIN INITIALIZATION ---

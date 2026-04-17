@@ -1,7 +1,7 @@
 <?php
 require_once "../admin/auth.php"; 
 $role = $_SESSION["role"] ?? 'User'; 
-$user_division = $_SESSION['division_id'] ?? 0; // Get the division from session
+$user_division = $_SESSION['division_id'] ?? 0; 
 
 if (!isset($page_title)) $page_title = "Furniture Dashboard";
 
@@ -12,10 +12,9 @@ header("Pragma: no-cache");
 
 $current_page = basename($_SERVER['PHP_SELF']);
 
-// --- PENDING ASSET COUNT LOGIC (Division Aware) ---
+// --- PENDING ASSET COUNT LOGIC ---
 $pending_count = 0;
 if (isset($conn)) {
-    // We join units to filter by division_id for non-SuperAdmins
     $count_sql = "
         SELECT COUNT(*) as total FROM (
             SELECT s.id
@@ -272,9 +271,6 @@ if (isset($conn)) {
             <a href="/cecsms/furniture_stock/add_furniture.php" class="nav-link <?= ($current_page == 'add_furniture.php') ? 'active' : '' ?>">
                 <i class="bi-box-seam"></i> Add Furniture Stock
             </a>
-            <a href="/cecsms/furniture_stock/view_furniture.php" class="nav-link <?= ($current_page == 'view_furniture.php') ? 'active' : '' ?>">
-                <i class="bi-boxes"></i> Furniture Inventory
-            </a>
             <a href="/cecsms/furniture_stock/tag_assets.php" class="nav-link <?= ($current_page == 'tag_assets.php') ? 'active' : '' ?>">
                 <i class="bi-upc-scan"></i> 
                 <span class="flex-grow-1">Add Asset ID</span>
@@ -287,8 +283,11 @@ if (isset($conn)) {
             <a href="/cecsms/furniture_stock/view_assets.php" class="nav-link <?= ($current_page == 'view_assets.php') ? 'active' : '' ?>">
                 <i class="bi-boxes"></i> View Assets
             </a>
+            <a href="/cecsms/furniture_stock/view_furniture.php" class="nav-link <?= ($current_page == 'view_furniture.php') ? 'active' : '' ?>">
+                <i class="bi-boxes"></i> Furniture Inventory
+            </a>
         </div>
-
+        <?php if ($role === 'SuperAdmin'): ?>
         <div class="nav-group-label">Logistics</div>
         <div class="nav flex-column">
             <a href="/cecsms/furniture_stock/dispatch_furniture.php" class="nav-link <?= ($current_page == 'dispatch_furniture.php') ? 'active' : '' ?>">
@@ -308,6 +307,7 @@ if (isset($conn)) {
                 <i class="bi bi-file-earmark-bar-graph"></i> View Purchase Ledger
             </a>
         </div>
+        <?php endif; ?>
     </div>
 
     <div class="p-3 border-top mt-auto">

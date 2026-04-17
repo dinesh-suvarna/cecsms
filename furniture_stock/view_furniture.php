@@ -10,7 +10,6 @@ if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Ad
 $user_role = $_SESSION['role'];
 $user_division = $_SESSION['division_id'] ?? 0;
 
-// HANDLE DELETION & SWAL LOGIC (Kept exactly as per your code)
 $display_swal = false;
 if (isset($_SESSION['swal_msg'])) {
     $display_swal = true;
@@ -38,9 +37,10 @@ if (isset($_GET['delete_id'])) {
     exit();
 }
 
-// UPDATED QUERY: Added division_name to handle grouping
+// QUERY
 $sql = "SELECT 
             SUM(s.total_qty) as total_qty, 
+            SUM(s.total_qty * s.unit_price) as total_investment,
             MAX(s.id) as id, 
             i.item_name, 
             v.vendor_name, 
@@ -64,7 +64,6 @@ $sql .= " GROUP BY i.item_name, u.id, v.vendor_name
 
 $result = $conn->query($sql);
 
-// MULTI-LEVEL GROUPING LOGIC
 $grouped_inventory = [];
 while ($row = $result->fetch_assoc()) {
     $div_name = $row['division_name'];
@@ -79,12 +78,17 @@ ob_start();
 <div class="container-fluid py-4 px-4 mt-n3">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold mb-0">Furniture Inventory</h4>
-            <p class="text-muted small mb-0">Stock distribution by Departments & Facilities</p>
+            <h4 class="fw-bold mb-0">Furniture Inventory & Reports</h4>
+            <p class="text-muted small mb-0">Financial tracking by Departments & Facilities</p>
         </div>
-        <a href="add_furniture.php" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
-            <i class="bi bi-plus-lg me-2"></i> Add New Stock
-        </a>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-outline-dark rounded-pill px-3 shadow-sm">
+                <i class="bi bi-printer me-1"></i> Print
+            </button>
+            <a href="add_furniture.php" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+                <i class="bi bi-plus-lg me-2"></i> Add New Stock
+            </a>
+        </div>
     </div>
 
     <?php if (empty($grouped_inventory)): ?>
@@ -99,81 +103,100 @@ ob_start();
             foreach ($grouped_inventory as $division_name => $units): 
                 $div_count++;
                 $div_collapse_id = "div_collapse_" . $div_count;
+                
+                $div_total_qty = 0;
+                $div_total_val = 0;
+                foreach($units as $u_items) {
+                    foreach($u_items as $item) {
+                        $div_total_qty += $item['total_qty'];
+                        $div_total_val += $item['total_investment'];
+                    }
+                }
             ?>
-                <div class="accordion-item border shadow-sm rounded-4 overflow-hidden mb-3">
+                <div class="accordion-item shadow-sm rounded-4 overflow-hidden mb-3 border">
                     <h2 class="accordion-header">
-                        <button class="accordion-button collapsed bg-success text-white fw-bold py-3" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $div_collapse_id ?>">
-                            <i class="bi bi-geo-alt-fill me-2 text-warning"></i>
-                            <?= htmlspecialchars(strtoupper($division_name)) ?>
+                        <button class="accordion-button collapsed py-3" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $div_collapse_id ?>">
+                            <div class="d-flex flex-wrap align-items-center w-100">
+                                <i class="bi bi-geo-alt-fill me-2"></i>
+                                <span class="fw-bold me-auto"><?= htmlspecialchars(strtoupper($division_name)) ?></span>
+                                <div class="mt-2 mt-md-0 me-3">
+                                    <span class="report-badge bg-qty">Qty: <?= number_format($div_total_qty) ?></span>
+                                    <span class="report-badge bg-invested">Invested: ₹<?= number_format($div_total_val, 2) ?></span>
+                                </div>
+                            </div>
                         </button>
                     </h2>
                     <div id="<?= $div_collapse_id ?>" class="accordion-collapse collapse" data-bs-parent="#divisionAccordion">
                         <div class="accordion-body p-3 bg-light">
                             
-                            <div class="accordion accordion-flush rounded-3 border overflow-hidden" id="unitAccordion_<?= $div_count ?>">
+                            <div class="accordion accordion-flush" id="unitAccordion_<?= $div_count ?>">
                                 <?php 
                                 $unit_count = 0;
                                 foreach ($units as $unit_label => $items): 
                                     $unit_count++;
                                     $unit_collapse_id = "unit_collapse_" . $div_count . "_" . $unit_count;
+                                    $unit_total_val = array_sum(array_column($items, 'total_investment'));
                                 ?>
-                                    <div class="accordion-item border-bottom">
-                                        <h2 class="accordion-header">
-                                            <button class="accordion-button collapsed fw-bold py-3 bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $unit_collapse_id ?>">
-                                                <i class="bi bi-building text-primary me-2"></i>
-                                                <?= htmlspecialchars($unit_label) ?>
-                                                <span class="badge bg-primary-subtle text-primary border rounded-pill ms-3 fw-normal small">
-                                                    <?= count($items) ?> Items
-                                                </span>
-                                            </button>
-                                        </h2>
-                                        <div id="<?= $unit_collapse_id ?>" class="accordion-collapse collapse" data-bs-parent="#unitAccordion_<?= $div_count ?>">
-                                            <div class="accordion-body p-0">
-                                                <div class="table-responsive">
-                                                    <table class="table table-hover align-middle mb-0 bg-white">
-                                                        <thead class="bg-light">
-                                                            <tr class="small text-uppercase fw-bold text-muted">
-                                                                <th class="ps-4" style="width: 60px;">#</th>
-                                                                <th>Item Name</th>
-                                                                <th class="text-center">Stock Qty</th>
-                                                                <th>Vendor</th>
-                                                                <th>Bill Refs</th>
-                                                                <th class="text-end pe-4">Actions</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            <?php foreach ($items as $idx => $row): ?>
-                                                                <tr>
-                                                                    <td class="ps-4 text-muted small"><?= $idx + 1 ?></td>
-                                                                    <td><div class="fw-bold text-dark"><?= htmlspecialchars($row['item_name']) ?></div></td>
-                                                                    <td class="text-center">
-                                                                        <span class="fw-bold text-dark"><?= $row['total_qty'] ?></span>
-                                                                    </td>
-                                                                    <td class="text-dark small"><?= htmlspecialchars($row['vendor_name']) ?></td>
-                                                                    <td>
-                                                                        <div class="small fw-bold text-truncate" style="max-width: 200px;"><?= htmlspecialchars($row['combined_bills']) ?></div>
-                                                                        <div class="x-small text-muted">Latest: <?= date('d M, Y', strtotime($row['latest_bill_date'])) ?></div>
-                                                                    </td>
-                                                                    <td class="text-end pe-4">
-                                                                        <div class="btn-group">
-                                                                            <button onclick="editStock(<?= $row['id'] ?>)" class="btn btn-sm btn-outline-primary border-0 rounded-0" title="Edit">
-                                                                                <i class="bi bi-pencil-square"></i>
-                                                                            </button>
-                                                                            <button onclick="deleteStock(<?= $row['id'] ?>)" class="btn btn-sm btn-outline-danger border-0 rounded-0" title="Delete">
-                                                                                <i class="bi bi-trash3"></i>
-                                                                            </button>
-                                                                        </div>
-                                                                    </td>
-                                                                </tr>
-                                                            <?php endforeach; ?>
-                                                        </tbody>
-                                                    </table>
+                                <div class="accordion-item border rounded-3 mb-2 overflow-hidden shadow-sm">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed bg-white text-primary fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $unit_collapse_id ?>">
+                                            <div class="d-flex align-items-center justify-content-between w-100 pe-3">
+                                                <div>
+                                                    <i class="bi bi-building me-2"></i> 
+                                                    <?= htmlspecialchars($unit_label) ?>
                                                 </div>
+                                                <div class="text-dark small fw-bold">
+                                                    Unit Total: ₹<?= number_format($unit_total_val, 2) ?>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </h2>
+                                    <div id="<?= $unit_collapse_id ?>" class="accordion-collapse collapse" data-bs-parent="#unitAccordion_<?= $div_count ?>">
+                                        <div class="accordion-body p-0 bg-white">
+                                            <div class="table-responsive">
+                                                <table class="table table-hover align-middle mb-0">
+                                                    <thead class="bg-unit-header text-uppercase">
+                                                        <tr class="x-small fw-bold">
+                                                            <th class="ps-4">Item Name</th>
+                                                            <th class="text-center">Qty</th>
+                                                            <th class="text-end">Investment</th>
+                                                            <th>Vendor</th>
+                                                            <th>Bill Details</th>
+                                                            <th class="text-end pe-4">Actions</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <?php foreach ($items as $row): ?>
+                                                            <tr>
+                                                                <td class="ps-4 fw-bold text-dark"><?= htmlspecialchars($row['item_name']) ?></td>
+                                                                <td class="text-center fw-bold"><?= $row['total_qty'] ?></td>
+                                                                <td class="text-end fw-bold text-success">₹<?= number_format($row['total_investment'], 2) ?></td>
+                                                                <td class="small text-muted fw-bold"><?= htmlspecialchars($row['vendor_name']) ?></td>
+                                                                <td>
+                                                                    <div class="x-small fw-bold"><?= htmlspecialchars($row['combined_bills']) ?></div>
+                                                                    <div class="x-small text-muted"><?= date('d M, Y', strtotime($row['latest_bill_date'])) ?></div>
+                                                                </td>
+                                                                <td class="text-end pe-4">
+                                                                    <div class="btn-group border rounded-pill overflow-hidden shadow-sm bg-white">
+                                                                        <button onclick="editStock(<?= $row['id'] ?>)" class="btn btn-sm btn-white border-end px-3">
+                                                                            <i class="bi bi-pencil-square text-primary"></i>
+                                                                        </button>
+                                                                        <button onclick="deleteStock(<?= $row['id'] ?>)" class="btn btn-sm btn-white px-3">
+                                                                            <i class="bi bi-trash3 text-danger"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        <?php endforeach; ?>
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
                                 <?php endforeach; ?>
                             </div>
+
                         </div>
                     </div>
                 </div>
@@ -183,18 +206,38 @@ ob_start();
 </div>
 
 <style>
-    /* Division (Main) Accordion Styles */
-    #divisionAccordion .accordion-button:not(.collapsed) { background-color: #212529; color: #fff; box-shadow: none; }
-    #divisionAccordion .accordion-button::after { filter: brightness(0) invert(1); } /* Make arrow white */
+    #divisionAccordion .accordion-button {
+        background-color: #ecfdf5 !important;
+        color: #065f46 !important;
+        box-shadow: none;
+    }
+    #divisionAccordion .accordion-button:not(.collapsed) {
+        background-color: #10b981 !important;
+        color: #fff !important;
+    }
+    #divisionAccordion .accordion-button::after { filter: sepia(100%) hue-rotate(110deg) saturate(500%); }
+    #divisionAccordion .accordion-button:not(.collapsed)::after { filter: brightness(0) invert(1); }
+
+    /* Report Badges */
+    .report-badge {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 0.4rem 0.8rem;
+        border-radius: 8px;
+        margin-left: 8px;
+        display: inline-block;
+        border: 1px solid transparent;
+    }
+    .bg-qty { background-color: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+    .bg-invested { background-color: #fef3c7; color: #92400e; border-color: #fde68a; }
+
+    /* Tables & Sub-Accordions */
+    .bg-unit-header { background-color: #f8fafc; color: #64748b; }
+    .x-small { font-size: 0.72rem; }
+    .btn-white { background-color: #fff; border:none; }
+    .btn-white:hover { background-color: #f8f9fa; }
     
-    /* Unit (Nested) Accordion Styles */
-    .accordion-flush .accordion-item:last-child { border-bottom: 0; }
-    .bg-primary-subtle { background-color: #eef2ff !important; }
-    .x-small { font-size: 0.7rem; }
-    
-    /* Hover effects for a premium feel */
-    .table-hover tbody tr:hover { background-color: #f8faff !important; }
-    .btn-group .btn:hover { background-color: #f0f0f0; }
+    #unitAccordion_ .accordion-button::after { scale: 0.8; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

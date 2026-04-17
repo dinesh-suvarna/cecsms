@@ -204,7 +204,7 @@ ob_start();
                         <i class="bi <?= $is_edit ? 'bi-pencil-square text-danger' : 'bi-plus-circle text-primary' ?> me-2"></i>
                         <?= $is_edit ? "Modify Stock Record" : "Furniture Stock Entry" ?>
                     </h4>
-                    <p class="text-muted small mb-0">Fill in the procurement and unit allocation details below.</p>
+                    <p class="text-muted small mb-0">Formalize stock entry and facility assignment.</p>
                 </div>
                 <?php if($is_edit): ?>
                     <span class="edit-indicator"><i class="bi bi-shield-exclamation me-1"></i> EDITING RECORD #<?= $edit_data['id'] ?></span>

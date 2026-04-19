@@ -12,7 +12,7 @@ header("Pragma: no-cache");
 
 $current_page = basename($_SERVER['PHP_SELF']);
 
-// --- PENDING ASSET COUNT LOGIC (Updated for Electrical) ---
+// --- PENDING ASSET COUNT LOGIC ---
 $pending_count = 0;
 if (isset($conn)) {
     $count_sql = "
@@ -59,7 +59,7 @@ if (isset($conn)) {
 
         :root {
             --sb-width: 290px;
-            --primary-accent: #3b82f6; /* Blue for Electrical */
+            --primary-accent: #f59e0b; 
             --bg-body: #f8fafc;
             --sidebar-bg: #ffffff;
             --text-main: #1e293b;
@@ -75,7 +75,6 @@ if (isset($conn)) {
             overflow-x: hidden;
         }
 
-        /* --- SIDEBAR --- */
         #sidebar {
             width: var(--sb-width);
             height: 100vh;
@@ -125,7 +124,7 @@ if (isset($conn)) {
         }
 
         #sidebar .nav-link:hover {
-            background: #eff6ff;
+            background: #fffbeb;
             color: var(--primary-accent);
             transform: translateX(4px);
         }
@@ -133,10 +132,9 @@ if (isset($conn)) {
         #sidebar .nav-link.active {
             background: var(--primary-accent);
             color: #ffffff !important;
-            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.25);
+            box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.25);
         }
 
-        /* --- MAIN CONTENT --- */
         .main-wrapper {
             margin-left: var(--sb-width);
             min-height: 100vh;
@@ -178,7 +176,6 @@ if (isset($conn)) {
             border-radius: 12px;
             border: 1px solid var(--border-color);
             background: #fff;
-            cursor: pointer;
         }
         
         .pulse-badge {
@@ -193,7 +190,7 @@ if (isset($conn)) {
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
         }
 
-        .bg-blue-soft { background-color: rgba(59, 130, 246, 0.1); }
+        .bg-amber-soft { background-color: rgba(245, 158, 11, 0.1); }
 
         .animate-fade-in {
             animation: fadeIn 0.4s ease-out forwards;
@@ -214,9 +211,9 @@ if (isset($conn)) {
 <body>
 
 <nav id="sidebar">
-    <a href="electrical_dashboard.php" class="sidebar-brand">
-        <div class="bg-primary text-white rounded-3 px-2 py-1 shadow-sm">
-            <i class="bi bi-lightning-charge-fill"></i>
+    <a href="electricals_dashboard.php" class="sidebar-brand">
+        <div class="bg-warning text-dark rounded-3 px-2 py-1 shadow-sm">
+            <i class="bi bi-lightning-fill"></i>
         </div>
         <span>Stock<span class="text-dark">Electrical</span></span>
     </a>
@@ -236,17 +233,17 @@ if (isset($conn)) {
                 <i class="bi bi-person-vcard-fill"></i> Manage Vendors
             </a>
             <a href="/cecsms/electrical_stock/manage_electricals_items.php" class="nav-link <?= ($current_page == 'manage_electricals_items.php') ? 'active' : '' ?>">
-                <i class="bi bi-journal-text"></i> Electrical Registry
+                <i class="bi-journal-text"></i> Electrical Registry
             </a>
         </div>
 
         <div class="nav-group-label">Inventory Management</div>
         <div class="nav flex-column">
             <a href="/cecsms/electrical_stock/add_electricals.php" class="nav-link <?= ($current_page == 'add_electricals.php') ? 'active' : '' ?>">
-                <i class="bi bi-box-seam"></i> Add Electrical Stock
+                <i class="bi-box-seam"></i> Add Electrical Stock
             </a>
-            <a href="tag_assets.php" class="nav-link <?= ($current_page == 'tag_assets.php') ? 'active' : '' ?>">
-                <i class="bi bi-upc-scan"></i> 
+            <a href="/cecsms/electrical_stock/tag_assets.php" class="nav-link <?= ($current_page == 'tag_assets.php') ? 'active' : '' ?>">
+                <i class="bi-upc-scan"></i> 
                 <span class="flex-grow-1">Add Asset ID</span>
                 <?php if ($pending_count > 0): ?>
                     <span class="badge rounded-pill bg-danger shadow-sm pulse-badge">
@@ -255,27 +252,31 @@ if (isset($conn)) {
                 <?php endif; ?>
             </a>
             <a href="/cecsms/electrical_stock/view_electricals_assets.php" class="nav-link <?= ($current_page == 'view_electricals_assets.php') ? 'active' : '' ?>">
-                <i class="bi bi-boxes"></i> View Assets
+                <i class="bi-boxes"></i> View Assets
             </a>
-            <a href="/cecsms/electrical_stock/view_electricals.php" class="nav-link <?= ($current_page == 'view_electricas.php') ? 'active' : '' ?>">
-                <i class="bi bi-lightning"></i> Electrical Inventory
+            <a href="/cecsms/electrical_stock/view_electricals.php" class="nav-link <?= ($current_page == 'view_electricals.php') ? 'active' : '' ?>">
+                <i class="bi-boxes"></i> Electrical Inventory
             </a>
         </div>
 
         <?php if ($role === 'SuperAdmin'): ?>
-        <div class="nav-group-label">Logistics & Reports</div>
+        <div class="nav-group-label">Logistics</div>
         <div class="nav flex-column">
             <a href="/cecsms/electrical_stock/dispatch_electrical.php" class="nav-link <?= ($current_page == 'dispatch_electrical.php') ? 'active' : '' ?>">
                 <i class="bi bi-truck"></i> Dispatch Electrical
             </a>
+            <div class="nav-group-label">Reports</div>
             <a href="/cecsms/electrical_stock/electrical_stockreports.php" class="nav-link <?= ($current_page == 'electrical_stockreports.php') ? 'active' : '' ?>">
                 <i class="bi bi-file-earmark-bar-graph"></i> Stock Reports
             </a>
             <a href="/cecsms/electrical_stock/electrical_reports.php" class="nav-link <?= ($current_page == 'electrical_reports.php') ? 'active' : '' ?>">
-                <i class="bi bi-file-earmark-text"></i> Asset Reports
+                <i class="bi bi-file-earmark-bar-graph"></i> Asset Reports
             </a>
             <a href="/cecsms/electrical_stock/electrical_purchase_ledger.php" class="nav-link <?= ($current_page == 'electrical_purchase_ledger.php') ? 'active' : '' ?>">
-                <i class="bi bi-journal-check"></i> Purchase Ledger
+                <i class="bi bi-file-earmark-bar-graph"></i> Purchase Ledger
+            </a>
+             <a href="/cecsms/electrical_stock/view_electrical_ledger.php" class="nav-link <?= ($current_page == 'view_electrical_ledger.php') ? 'active' : '' ?>">
+                <i class="bi bi-file-earmark-bar-graph"></i> View Purchase Ledger
             </a>
         </div>
         <?php endif; ?>
@@ -302,7 +303,7 @@ if (isset($conn)) {
             <div>
                 <h5 class="mb-0 fw-bold text-dark lh-1 mb-1"><?= htmlspecialchars($page_title) ?></h5>
                 <p class="text-muted mb-0 d-none d-md-block" style="font-size: 11px;">
-                    Technical monitoring for electrical equipment and maintenance logs.
+                    Managing separated electrical assets and bulk dispatches.
                 </p>
             </div>
         </div>
@@ -317,12 +318,12 @@ if (isset($conn)) {
                 <div class="user-profile shadow-sm" data-bs-toggle="dropdown">
                     <div class="text-end d-none d-md-block">
                         <p class="small fw-bold mb-0"><?= htmlspecialchars($_SESSION['username'] ?? 'Admin') ?></p>
-                        <span class="badge bg-blue-soft text-primary" style="font-size: 9px;">
+                        <span class="badge bg-amber-soft text-warning" style="font-size: 9px;">
                             <?= htmlspecialchars($role) ?>
                         </span>
                     </div>
                     <div class="avatar bg-light border rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
-                        <i class="bi bi-person text-primary"></i>
+                        <i class="bi bi-person text-warning"></i>
                     </div>
                 </div>
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
@@ -336,8 +337,6 @@ if (isset($conn)) {
         <?php if (isset($content)) echo $content; ?>
     </div>
 </main>
-
-<?php if (isset($modal_html)) echo $modal_html; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>

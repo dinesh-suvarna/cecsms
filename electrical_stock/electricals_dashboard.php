@@ -4,215 +4,262 @@ include "../config/db.php";
 
 $role = $_SESSION["role"] ?? 'User'; 
 $user_division = $_SESSION['division_id'] ?? 0;
-$page_title = "Electricals Control Center";
+$page_title = "Electrical Analytics";
 
-// --- 1. DYNAMIC DATA FETCHING ---
-// Total Active Assets
-$total_assets_query = "SELECT COUNT(ea.id) as total FROM electrical_assets ea 
-                       JOIN electrical_stock s ON ea.stock_id = s.id 
-                       JOIN units u ON s.unit_id = u.id";
-if ($role !== 'SuperAdmin') $total_assets_query .= " WHERE u.division_id = '$user_division'";
-$total_assets = $conn->query($total_assets_query)->fetch_assoc()['total'];
+// 1. Get Total Quantity from Electrical Stock
+$total_qty_sql = "SELECT SUM(s.total_qty) as total 
+                  FROM electrical_stock s 
+                  JOIN units u ON s.unit_id = u.id";
+if ($role !== 'SuperAdmin') {
+    $total_qty_sql .= " WHERE u.division_id = '$user_division'";
+}
+$total_assets = $conn->query($total_qty_sql)->fetch_assoc()['total'] ?? 0;
 
-// Category Distribution for the "Top Categories" Card
-$cat_query = "SELECT i.item_name, COUNT(ea.id) as count 
-              FROM electrical_assets ea
-              JOIN electrical_stock s ON ea.stock_id = s.id
+// 2. Get Distribution by Electrical Item Name
+$cat_query = "SELECT i.item_name, SUM(s.total_qty) as count 
+              FROM electrical_stock s
               JOIN electrical_items i ON s.electrical_item_id = i.id
               JOIN units u ON s.unit_id = u.id";
-if ($role !== 'SuperAdmin') $cat_query .= " WHERE u.division_id = '$user_division'";
-$cat_query .= " GROUP BY i.item_name ORDER BY count DESC LIMIT 4";
+if ($role !== 'SuperAdmin') {
+    $cat_query .= " WHERE u.division_id = '$user_division'";
+}
+$cat_query .= " GROUP BY i.item_name ORDER BY count DESC";
 $categories = $conn->query($cat_query);
 
-// --- 2. PENDING TAGGING CALCULATION ---
-$pending_query = "
-    SELECT COUNT(*) as total FROM (
-        SELECT s.id
-        FROM electrical_stock s
-        JOIN units u ON s.unit_id = u.id
-        LEFT JOIN electrical_assets ea ON s.id = ea.stock_id
-        WHERE 1=1";
-
+// 3. Recent Activities (Electrical Assets)
+$recent_activities_sql = "
+    SELECT ea.asset_tag, i.item_name, ea.created_at 
+    FROM electrical_assets ea 
+    JOIN electrical_stock s ON ea.stock_id = s.id 
+    JOIN electrical_items i ON s.electrical_item_id = i.id 
+    JOIN units u ON s.unit_id = u.id";
 if ($role !== 'SuperAdmin') {
-    $pending_query .= " AND u.division_id = '$user_division'";
+    $recent_activities_sql .= " WHERE u.division_id = '$user_division'";
 }
-
-$pending_query .= " GROUP BY s.id, s.total_qty
-    HAVING COUNT(ea.id) < s.total_qty
-) as pending_queue";
-
-$pending_res = $conn->query($pending_query);
-$pending_count = ($pending_res) ? $pending_res->fetch_assoc()['total'] : 0;
+$recent_activities_sql .= " ORDER BY ea.id DESC LIMIT 5";
+$recent_activities = $conn->query($recent_activities_sql);
 
 ob_start();
 ?>
 
 <style>
     :root {
-        --glass-bg: rgba(255, 255, 255, 0.95);
-        --accent-glow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-        --saas-blue: #2563eb;
+        --azure-600: #2563eb; /* Electrical Blue */
+        --slate-50: #f8fafc;
+        --slate-200: #e2e8f0;
+        --slate-900: #0f172a;
     }
 
-    body { background-color: #f1f5f9; }
-
-    .stat-card {
-        background: var(--glass-bg);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        box-shadow: var(--accent-glow);
-        border-radius: 20px;
-        transition: all 0.3s ease;
+    /* Distribution List Styling */
+    .stock-item-row {
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent;
     }
-
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.12);
+    .stock-item-row:hover {
+        background-color: var(--slate-50);
+        border-left: 3px solid var(--azure-600);
+        padding-left: 10px !important;
     }
-
-    .icon-box {
-        width: 54px;
-        height: 54px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 14px;
-    }
-
-    .action-pill {
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 15px;
-        padding: 20px;
-        text-decoration: none;
-        transition: 0.2s;
-    }
-
-    .action-pill:hover {
-        background: #f8fafc;
-        border-color: var(--saas-blue);
-    }
-
-    .category-bar {
-        height: 8px;
-        border-radius: 10px;
+    
+    .count-pill {
         background: #f1f5f9;
-        overflow: hidden;
+        color: var(--slate-900);
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: 8px;
+        min-width: 60px;
+        text-align: center;
+        border: 1px solid var(--slate-200);
     }
 
-    .progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #2563eb, #7c3aed);
+    .search-input-group {
+        position: relative;
     }
+    .search-input-group i {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+    }
+    .search-control {
+        padding-left: 38px !important;
+        border-radius: 12px !important;
+        border: 1px solid var(--slate-200) !important;
+        background: var(--slate-50);
+    }
+
+    .hero-stat {
+        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); /* Blue Gradient */
+        color: white;
+        border-radius: 24px;
+        min-height: 380px;
+    }
+
+    .custom-scroll {
+        max-height: 300px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    .custom-scroll::-webkit-scrollbar { width: 5px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 </style>
 
 <div class="container-fluid py-4">
-    <div class="row align-items-center mb-4">
-        <div class="col">
-            <h2 class="fw-800 text-dark mb-0">electricals <span class="text-primary">Hub</span></h2>
-            <p class="text-muted small mb-0">Live inventory monitoring and asset lifecycle</p>
-        </div>
-        <div class="col-auto">
-            <a href="add_electricals.php" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold">
-                <i class="bi bi-plus-circle me-2"></i> Register New Stock
-            </a>
-        </div>
-    </div>
-
     <div class="row g-4">
         
-        <div class="col-lg-8">
-            <div class="row g-4 mb-4">
-                <div class="col-md-6">
-                    <div class="stat-card p-4">
-                        <div class="d-flex justify-content-between mb-3">
-                            <div class="icon-box bg-primary-subtle text-primary">
-                                <i class="bi bi-cpu fs-4"></i>
-                            </div>
-                            <span class="badge rounded-pill bg-success-subtle text-success h-50">+12% vs last month</span>
-                        </div>
-                        <h6 class="text-muted fw-bold text-uppercase small">Total Assets Tracked</h6>
-                        <h2 class="fw-bold mb-0"><?= number_format($total_assets) ?></h2>
+        <div class="col-lg-4">
+            <div class="hero-stat p-4 shadow-lg d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <i class="bi bi-lightning-charge fs-1 opacity-50"></i>
+                        <span class="badge bg-white bg-opacity-20 rounded-pill">System Online</span>
                     </div>
+                    <p class="mt-4 mb-0 opacity-75 fw-medium">Live Electrical Units</p>
+                    <h1 class="display-1 fw-bold mb-0"><?= number_format($total_assets) ?></h1>
                 </div>
-                <div class="col-md-6">
-                    <div class="stat-card p-4">
-                        <div class="d-flex justify-content-between mb-3">
-                            <div class="icon-box bg-warning-subtle text-warning">
-                                <i class="bi bi-tag fs-4"></i>
-                            </div>
-                            <a href="tag_assets.php" class="text-decoration-none small fw-bold">View List</a>
-                        </div>
-                        <h6 class="text-muted fw-bold text-uppercase small">Pending Tagging</h6>
-                        <h2 class="fw-bold mb-0 text-warning"><?= $pending_count ?></h2>
+                <div class="mt-4 pt-3 border-top border-white border-opacity-10">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="spinner-grow spinner-grow-sm text-light" role="status"></div>
+                        <small class="opacity-75">Monitoring infrastructure...</small>
                     </div>
-                </div>
-            </div>
-
-            <div class="stat-card p-4">
-                <h5 class="fw-bold mb-4">Inventory Distribution</h5>
-                <div class="row">
-                    <?php while($cat = $categories->fetch_assoc()): 
-                        $percent = ($total_assets > 0) ? ($cat['count'] / $total_assets) * 100 : 0;
-                    ?>
-                        <div class="col-md-6 mb-4">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="fw-bold small text-dark"><?= $cat['item_name'] ?></span>
-                                <span class="text-muted extra-small"><?= $cat['count'] ?> units</span>
-                            </div>
-                            <div class="category-bar">
-                                <div class="progress-fill" style="width: <?= $percent ?>%"></div>
-                            </div>
-                        </div>
-                    <?php endwhile; ?>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-4">
-            <div class="stat-card p-4 h-100">
-                <h5 class="fw-bold mb-4">Quick Navigation</h5>
-                
-                <div class="d-grid gap-3">
-                    <a href="view_electricals_assets.php" class="action-pill d-flex align-items-center">
-                        <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-4 me-3">
-                            <i class="bi bi-shield-check fs-4"></i>
-                        </div>
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                         <div>
-                            <span class="d-block fw-bold text-dark">Audit Registry</span>
-                            <span class="text-muted extra-small">Verify asset conditions</span>
+                            <h5 class="fw-bold text-slate-900 mb-0">Electrical Inventory Breakdown</h5>
+                            <p class="text-muted small mb-0">Filtered by item classification</p>
                         </div>
-                    </a>
-
-                    <a href="view_electricals.php" class="action-pill d-flex align-items-center">
-                        <div class="bg-success bg-opacity-10 text-success p-3 rounded-4 me-3">
-                            <i class="bi bi-box-seam fs-4"></i>
+                        <div class="search-input-group">
+                            <i class="bi bi-search"></i>
+                            <input type="text" id="itemSearch" class="form-control search-control" placeholder="Search components...">
                         </div>
-                        <div>
-                            <span class="d-block fw-bold text-dark">Stock History</span>
-                            <span class="text-muted extra-small">Inward & outward logs</span>
-                        </div>
-                    </a>
-
-                    <a href="manage_electricals_type.php" class="action-pill d-flex align-items-center">
-                        <div class="bg-info bg-opacity-10 text-info p-3 rounded-4 me-3">
-                            <i class="bi bi-sliders fs-4"></i>
-                        </div>
-                        <div>
-                            <span class="d-block fw-bold text-dark">System Config</span>
-                            <span class="text-muted extra-small">Manage item categories</span>
-                        </div>
-                    </a>
+                    </div>
                 </div>
-
-                <div class="mt-5 p-4 rounded-4 bg-dark text-white shadow-lg">
-                    <h6 class="fw-bold mb-2 small"><i class="bi bi-lightning-fill text-warning me-2"></i>System Notice</h6>
-                    <p class="extra-small mb-0 text-white-50">Next scheduled inventory audit for this division starts in 4 days.</p>
+                
+                <div class="card-body px-4">
+                    <div class="custom-scroll" id="stockContainer">
+                        <?php 
+                        if($categories && $categories->num_rows > 0):
+                            $categories->data_seek(0);
+                            while($cat = $categories->fetch_assoc()): 
+                        ?>
+                            <div class="stock-item-row d-flex justify-content-between align-items-center p-3 mb-2 rounded-3 border-bottom border-light">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary bg-opacity-10 text-primary rounded-3 p-2 me-3">
+                                        <i class="bi bi-cpu"></i>
+                                    </div>
+                                    <span class="fw-bold text-slate-900 item-name"><?= htmlspecialchars($cat['item_name']) ?></span>
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="text-muted small d-none d-sm-block">Units:</span>
+                                    <div class="count-pill"><?= number_format($cat['count']) ?></div>
+                                </div>
+                            </div>
+                        <?php endwhile; else: ?>
+                            <div class="text-center py-5">
+                                <i class="bi bi-plug text-muted display-4"></i>
+                                <p class="text-muted mt-2">No electrical items registered.</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>
 
     </div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold text-slate-900 mb-4">Recent Asset Assignments</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="text-muted small border-bottom">
+                                <tr>
+                                    <th>TAG ID</th>
+                                    <th>COMPONENT</th>
+                                    <th class="text-end">TIMESTAMP</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if($recent_activities && $recent_activities->num_rows > 0): 
+                                    while($log = $recent_activities->fetch_assoc()): ?>
+                                <tr class="border-bottom border-light">
+                                    <td class="py-3 fw-bold text-primary">E-<?= $log['asset_tag'] ?></td>
+                                    <td class="text-slate-900 fw-medium"><?= $log['item_name'] ?></td>
+                                    <td class="text-end text-muted small"><?= date('M d, H:i', strtotime($log['created_at'])) ?></td>
+                                </tr>
+                                <?php endwhile; else: ?>
+                                    <tr><td colspan="3" class="text-center py-4 text-muted small">No recent activity detected</td></tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold text-slate-900 mb-4">Electrical Controls</h5>
+                    <div class="d-grid gap-3">
+                        <a href="view_electrical_assets.php" class="p-3 border rounded-4 d-flex align-items-center text-decoration-none shadow-sm transition">
+                            <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-3 me-3">
+                                <i class="bi bi-shield-check"></i>
+                            </div>
+                            <div>
+                                <p class="mb-0 fw-bold text-dark">Asset Registry</p>
+                                <small class="text-muted">Lifecycle tracking</small>
+                            </div>
+                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                        </a>
+                        
+                        <?php if ($role === 'SuperAdmin'): ?>
+                        <a href="manage_electrical_items.php" class="p-3 border rounded-4 d-flex align-items-center text-decoration-none shadow-sm transition">
+                            <div class="bg-info bg-opacity-10 text-info p-3 rounded-3 me-3">
+                                <i class="bi bi-gear"></i>
+                            </div>
+                            <div>
+                                <p class="mb-0 fw-bold text-dark">Hardware Configuration</p>
+                                <small class="text-muted">Manage item master</small>
+                            </div>
+                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                        </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('itemSearch');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            const searchValue = this.value.toLowerCase();
+            const items = document.querySelectorAll('.stock-item-row');
+            items.forEach(item => {
+                const itemName = item.querySelector('.item-name').textContent.toLowerCase();
+                if (itemName.includes(searchValue)) {
+                    item.setAttribute('style', 'display: flex !important');
+                } else {
+                    item.setAttribute('style', 'display: none !important');
+                }
+            });
+        });
+    }
+});
+</script>
 
 <?php 
 $content = ob_get_clean(); 

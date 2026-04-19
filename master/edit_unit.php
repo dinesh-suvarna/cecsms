@@ -16,11 +16,8 @@ if(!isset($_GET['id']) || !is_numeric($_GET['id'])){
 
 $unit_id = intval($_GET['id']);
 
-// Fetch unit - Updated to include new columns
-$stmt = $conn->prepare("
-    SELECT * FROM units 
-    WHERE id=? AND status='Active'
-");
+// Fetch unit
+$stmt = $conn->prepare("SELECT * FROM units WHERE id=? AND status='Active'");
 $stmt->bind_param("i", $unit_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -33,13 +30,9 @@ if($result->num_rows == 0){
 $unit = $result->fetch_assoc();
 $stmt->close();
 
-// 🔐 Security: prevent editing other institution unit
+// 🔐 Security check
 if($role != 'SuperAdmin'){
-    $check = $conn->prepare("
-        SELECT d.institution_id 
-        FROM divisions d
-        WHERE d.id=?
-    ");
+    $check = $conn->prepare("SELECT d.institution_id FROM divisions d WHERE d.id=?");
     $check->bind_param("i", $unit['division_id']);
     $check->execute();
     $inst_data = $check->get_result()->fetch_assoc();
@@ -51,7 +44,7 @@ if($role != 'SuperAdmin'){
     }
 }
 
-// Set variables for form
+
 $unit_code = $unit['unit_code'];
 $unit_name = $unit['unit_name'];
 $unit_type = $unit['unit_type'];
@@ -59,10 +52,21 @@ $location  = $unit['location'];
 $area_sqmt = $unit['area_sqmt'];
 $division_id = $unit['division_id'];
 
+// Fetch Institution 
+$inst_stmt = $conn->prepare("
+    SELECT i.institution_name 
+    FROM institutions i
+    JOIN divisions d ON i.id=d.institution_id
+    WHERE d.id=?
+");
+$inst_stmt->bind_param("i", $division_id);
+$inst_stmt->execute();
+$inst_result = $inst_stmt->get_result()->fetch_assoc();
+$display_inst_name = $inst_result['institution_name'] ?? 'N/A';
+$inst_stmt->close();
 
 // ================= UPDATE LOGIC =================
 if(isset($_POST['update_unit'])){
-
     $unit_code   = strtoupper(trim($_POST['unit_code']));
     $unit_name   = ucwords(trim($_POST['unit_name']));
     $division_id = intval($_POST['division_id']);
@@ -75,13 +79,7 @@ if(isset($_POST['update_unit'])){
     } elseif(empty($unit_name)){
         $error = "Unit name is required.";
     } else {
-        // Check for duplicates excluding current ID
-        $check = $conn->prepare("
-            SELECT id FROM units 
-            WHERE division_id=? 
-            AND (LOWER(unit_name)=LOWER(?) OR LOWER(unit_code)=LOWER(?))
-            AND id != ?
-        ");
+        $check = $conn->prepare("SELECT id FROM units WHERE division_id=? AND (LOWER(unit_name)=LOWER(?) OR LOWER(unit_code)=LOWER(?)) AND id != ?");
         $check->bind_param("issi", $division_id, $unit_name, $unit_code, $unit_id);
         $check->execute();
         $dup = $check->get_result();
@@ -89,28 +87,13 @@ if(isset($_POST['update_unit'])){
         if($dup->num_rows > 0){
             $error = "Unit code or name already exists in this division.";
         } else {
-            // Updated Update Query with new columns
-            $update = $conn->prepare("
-                UPDATE units 
-                SET unit_code=?, unit_name=?, unit_type=?, location=?, area_sqmt=?, division_id=? 
-                WHERE id=?
-            ");
-
-            $update->bind_param(
-                "ssssdii",
-                $unit_code,
-                $unit_name,
-                $unit_type,
-                $location,
-                $area_sqmt,
-                $division_id,
-                $unit_id
-            );
+            $update = $conn->prepare("UPDATE units SET unit_code=?, unit_name=?, unit_type=?, location=?, area_sqmt=?, division_id=? WHERE id=?");
+            $update->bind_param("ssssdii", $unit_code, $unit_name, $unit_type, $location, $area_sqmt, $division_id, $unit_id);
 
             if($update->execute()){
-                $success = "Unit updated successfully.";
+                $success = "Unit details updated successfully.";
             } else {
-                $error = "Failed to update unit.";
+                $error = "Database error: Failed to update unit.";
             }
             $update->close();
         }
@@ -118,105 +101,87 @@ if(isset($_POST['update_unit'])){
     }
 }
 ?>
+
 <?php ob_start(); ?>
 
-<div class="container mt-4">
-    <div class="card shadow rounded-4 border-0">
-        <div class="card-body p-4">
-            <h5 class="fw-bold mb-4"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Lab/Facility</h5>
+<div class="container-fluid py-3" style="max-width: 1200px;">
+    <div class="card shadow-lg rounded-4 border-0 position-relative overflow-hidden main-card">
+        
+        <div class="edit-corner-flag"></div>
 
-            <?php if($success): ?>
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <?= $success ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            <?php endif; ?>
+        <div class="card-body p-4 p-md-5">
+            <div class="mb-4">
+                <h4 class="fw-bold" style="color: #64b1ff;">
+                    <i class="bi bi-pencil-square me-2"></i>Edit Lab/Facility
+                </h4>
+                <p class="text-muted small">ID: #<?= $unit_id ?> | Managing records for <strong><?= htmlspecialchars($unit_name) ?></strong></p>
+            </div>
 
-            <?php if($error): ?>
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <?= $error ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            <?php endif; ?>
-
-            <form method="POST">
-                <div class="mb-3">
-                    <label class="small fw-bold">Institution</label>
-                    <?php
-                    $inst = $conn->prepare("
-                        SELECT i.institution_name 
-                        FROM institutions i
-                        JOIN divisions d ON i.id=d.institution_id
-                        WHERE d.id=?
-                    ");
-                    $inst->bind_param("i", $division_id);
-                    $inst->execute();
-                    $inst_name = $inst->get_result()->fetch_assoc();
-                    ?>
-                    <input type="text" class="form-control bg-light" value="<?= htmlspecialchars($inst_name['institution_name']) ?>" readonly>
-                </div>
-
-                <div class="mb-3">
-                    <label class="small fw-bold">Department / Division</label>
-                    <select name="division_id" class="form-select" required>
-                        <?php
-                        if($role == 'SuperAdmin'){
-                            $divisions = $conn->query("SELECT id, division_name FROM divisions WHERE status='Active' ORDER BY division_name");
-                        } else {
-                            $divisions = $conn->prepare("SELECT id, division_name FROM divisions WHERE institution_id=? AND status='Active' ORDER BY division_name");
-                            $divisions->bind_param("i", $user_institution_id);
-                            $divisions->execute();
-                            $divisions = $divisions->get_result();
-                        }
-                        while($div = $divisions->fetch_assoc()):
-                        ?>
-                            <option value="<?= $div['id'] ?>" <?= $division_id == $div['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($div['division_name']) ?>
-                            </option>
-                        <?php endwhile; ?>
-                    </select>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label class="small fw-bold">Unit Code</label>
-                        <input type="text" name="unit_code" value="<?= htmlspecialchars($unit_code) ?>" class="form-control" required>
+            <form method="POST" id="editUnitForm">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="small fw-bold text-muted mb-1">Institution</label>
+                        <input type="text" class="form-control bg-light border-0 py-2" value="<?= htmlspecialchars($display_inst_name) ?>" readonly>
                     </div>
 
-                    <div class="col-md-8 mb-3">
-                        <label class="small fw-bold">Unit Name</label>
-                        <input type="text" name="unit_name" value="<?= htmlspecialchars($unit_name) ?>" class="form-control" required>
+                    <div class="col-md-6">
+                        <label class="small fw-bold text-muted mb-1">Department / Division</label>
+                        <select name="division_id" class="form-select py-2" required>
+                            <?php
+                            if($role == 'SuperAdmin'){
+                                $divisions = $conn->query("SELECT id, division_name FROM divisions WHERE status='Active' ORDER BY division_name");
+                            } else {
+                                $divisions = $conn->prepare("SELECT id, division_name FROM divisions WHERE institution_id=? AND status='Active' ORDER BY division_name");
+                                $divisions->bind_param("i", $user_institution_id);
+                                $divisions->execute();
+                                $divisions = $divisions->get_result();
+                            }
+                            while($div = $divisions->fetch_assoc()):
+                            ?>
+                                <option value="<?= $div['id'] ?>" <?= $division_id == $div['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($div['division_name']) ?>
+                                </option>
+                            <?php endwhile; ?>
+                        </select>
                     </div>
-                </div>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="small fw-bold">Type</label>
-                        <select name="unit_type" class="form-select">
+                    <div class="col-md-4">
+                        <label class="small fw-bold text-muted mb-1">Unit Code</label>
+                        <input type="text" name="unit_code" value="<?= htmlspecialchars($unit_code) ?>" class="form-control py-2" required>
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="small fw-bold text-muted mb-1">Unit Name</label>
+                        <input type="text" name="unit_name" value="<?= htmlspecialchars($unit_name) ?>" class="form-control py-2" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="small fw-bold text-muted mb-1">Type</label>
+                        <select name="unit_type" class="form-select py-2">
                             <?php 
-                            $types = ['lab', 'office', 'store', 'room', 'classroom', 'other'];
+                            $types = ['lab', 'office', 'store', 'classroom', 'hodcabin', 'staffroom', 'library'];
                             foreach($types as $t): ?>
                                 <option value="<?= $t ?>" <?= $unit_type == $t ? 'selected' : '' ?>><?= ucfirst($t) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
 
-                    <div class="col-md-6 mb-3">
-                        <label class="small fw-bold">Area (Sq. Mt.)</label>
-                        <input type="number" step="0.01" name="area_sqmt" value="<?= htmlspecialchars($area_sqmt) ?>" class="form-control">
+                    <div class="col-md-6">
+                        <label class="small fw-bold text-muted mb-1">Area (Sq. Mt.)</label>
+                        <input type="number" step="0.01" name="area_sqmt" value="<?= htmlspecialchars($area_sqmt) ?>" class="form-control py-2">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="small fw-bold text-muted mb-1">Physical Location</label>
+                        <input type="text" name="location" value="<?= htmlspecialchars($location) ?>" class="form-control py-2" placeholder="e.g. Block A, 2nd Floor">
                     </div>
                 </div>
 
-                <div class="mb-4">
-                    <label class="small fw-bold">Physical Location</label>
-                    <input type="text" name="location" value="<?= htmlspecialchars($location) ?>" class="form-control" placeholder="e.g. Block A, 2nd Floor">
-                </div>
-
-                <div class="d-flex gap-2">
-                    <button type="submit" name="update_unit" class="btn btn-primary px-4 rounded-pill">
-                        <i class="bi bi-check-circle me-1"></i> Update Unit
+                <div class="d-flex gap-3 mt-5">
+                    <button type="submit" name="update_unit" class="btn text-white px-5 py-2 rounded-pill fw-bold shadow-sm" style="background-color: #64b1ff; border: none;">
+                        <i class="bi bi-check-circle me-1"></i> Update Record
                     </button>
-                    <a href="units.php" class="btn btn-light border px-4 rounded-pill">
+                    <a href="units.php" class="btn btn-light border px-5 py-2 rounded-pill fw-bold text-muted">
                         Back to List
                     </a>
                 </div>
@@ -224,6 +189,113 @@ if(isset($_POST['update_unit'])){
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    const GlassAlert = Swal.mixin({
+        background: 'rgba(255, 255, 255, 0.9)',
+        backdrop: `rgba(100, 177, 255, 0.12) blur(10px)`, // Glass blur effect
+        customClass: {
+            popup: 'glass-popup-style',
+            confirmButton: 'rounded-pill px-5 py-2 fw-bold shadow-sm'
+        },
+        buttonsStyling: true
+    });
+
+    
+    <?php if($success): ?>
+        GlassAlert.fire({
+            icon: 'success',
+            iconColor: '#64b1ff',
+            title: '<span style="color: #334155;">Success!</span>',
+            html: '<p class="text-muted mb-0"><?= $success ?></p>',
+            confirmButtonColor: '#64b1ff',
+            timer: 3000,
+            timerProgressBar: true,
+            didClose: () => {
+                window.location.href = 'units.php';
+            }
+        });
+    <?php endif; ?>
+
+    // Handle Error
+    <?php if($error): ?>
+        GlassAlert.fire({
+            icon: 'error',
+            iconColor: '#ef4444',
+            title: '<span style="color: #334155;">Entry Error</span>',
+            text: '<?= $error ?>',
+            confirmButtonColor: '#ef4444'
+        });
+    <?php endif; ?>
+});
+</script>
+
+<style>
+.main-card {
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.edit-corner-flag {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 80px 80px 0;
+    border-color: transparent #ef4444 transparent transparent;
+    z-index: 10;
+}
+
+.edit-corner-flag::before {
+    content: "EDIT";
+    position: absolute;
+    top: 10px;
+    right: -75px;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 900;
+    transform: rotate(45deg);
+    width: 80px;
+    text-align: center;
+    letter-spacing: 1.5px;
+}
+
+.form-control, .form-select {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    transition: all 0.25s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #64b1ff;
+    box-shadow: 0 0 0 4px rgba(100, 177, 255, 0.15);
+    background-color: #fff;
+}
+
+
+.glass-popup-style {
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08) !important;
+    border-radius: 28px !important;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+}
+
+.swal2-show {
+    animation: swal2-show 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+</style>
 
 <?php
 $content = ob_get_clean();

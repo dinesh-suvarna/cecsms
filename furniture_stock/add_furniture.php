@@ -78,7 +78,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_stock'])) {
 
 // --- 5. DATA FETCHING ---
 $items = $conn->query("SELECT * FROM furniture_items ORDER BY item_name");
-$vendors = $conn->query("SELECT * FROM vendors ORDER BY vendor_name");
+
+// Logic: Show all Electrical vendors PLUS the one currently saved in the record (if editing)
+$current_v_id = ($is_edit) ? (int)$edit_data['vendor_id'] : 0;
+$vendors = $conn->query("SELECT * FROM vendors WHERE category = 'Furniture' OR id = $current_v_id ORDER BY vendor_name");
 
 if ($user_role === 'SuperAdmin') {
     $divisions = $conn->query("SELECT * FROM divisions ORDER BY division_name");

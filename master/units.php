@@ -120,28 +120,30 @@ ob_start();
                     <div class="row g-2 mb-3">
                         <div class="col-4">
                             <label class="small fw-bold text-muted">Code</label>
-                            <input type="text" name="unit_code" class="form-control form-control-sm" placeholder="CSL01">
+                            <input type="text" name="unit_code" class="form-control form-control-sm" placeholder="eg.,CSL01">
                         </div>
                         <div class="col-8">
-                            <label class="small fw-bold text-muted">Name</label>
-                            <input type="text" name="unit_name" class="form-control form-control-sm" placeholder="Computer Lab 01" required>
+                            <label class="small fw-bold text-muted">Facility Name</label>
+                            <input type="text" name="unit_name" class="form-control form-control-sm" required>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="small fw-bold text-muted">Type</label>
+                        <label class="small fw-bold text-muted">Facility Type</label>
                         <select name="unit_type" class="form-select form-select-sm">
                             <option value="lab">Lab</option>
                             <option value="office">Office</option>
-                            <option value="store">Store</option>
+                            <option value="store room">Store Room</option>
                             <option value="classroom">Classroom</option>
-                            <option value="hodcabin">Hod Cabin</option>
-                            <option value="staffroom">Staff Room</option>
+                            <option value="room">Room</option>
+                            <option value="hod cabin">HoD Cabin</option>
+                            <option value="staffroom">Staffroom</option>
                             <option value="library">Library</option>
+                            <option value="other">Other</option>
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="small fw-bold text-muted">Location</label>
-                        <input type="text" name="location" class="form-control form-control-sm" placeholder="Block A, 2nd Floor">
+                        <input type="text" name="location" class="form-control form-control-sm" placeholder="eg.,Library Block, 3rd Floor">
                     </div>
                     <div class="mb-4">
                         <label class="small fw-bold text-muted">Area (Sq. Mt.)</label>
@@ -259,13 +261,14 @@ ob_start();
 
                         $unit_type_val = strtolower($row['unit_type']);
                         $badge_styles = [
-                            'lab'       => 'background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd;',
-                            'classroom' => 'background: #f0fdf4; color: #166534; border: 1px solid #dcfce7;',
-                            'office'    => 'background: #fff7ed; color: #9a3412; border: 1px solid #ffedd5;',
-                            'store'     => 'background: #fafafa; color: #525252; border: 1px solid #e5e5e5;',
-                            'library'   => 'background: #1e293b; color: #ffffff; border: 1px solid #0f172a;',
-                            'staffroom' => 'background: #fef9c3; color: #854d0e; border: 1px solid #fef08a;',
-                            'hodcabin'  => 'background: #fae8ff; color: #86198f; border: 1px solid #f5d0fe;',
+                            'lab'        => 'background: #ffffff; color: #0369a1; border: 1px solid #bae6fd; font-weight: 500; font-size: 0.65rem; border-radius: 6px;',
+                            'classroom'  => 'background: #ffffff; color: #15803d; border: 1px solid #bbf7d0; font-weight: 500; font-size: 0.65rem; border-radius: 6px;',
+                            'office'     => 'background: #ffffff; color: #b45309; border: 1px solid #fef3c7; font-weight: 500; font-size: 0.65rem; border-radius: 6px;',
+                            'store room' => 'background: #ffffff; color: #4b5563; border: 1px solid #e5e7eb; font-weight: 500; font-size: 0.65rem; border-radius: 6px;',
+                            'library'    => 'background: #ffffff; color: #4338ca; border: 1px solid #e0e7ff; font-weight: 500; font-size: 0.65rem; border-radius: 6px;',
+                            'staffroom'  => 'background: #ffffff; color: #6d28d9; border: 1px solid #ede9fe; font-weight: 500; font-size: 0.65rem; border-radius: 6px;',
+                            'hod cabin'  => 'background: #ffffff; color: #be185d; border: 1px solid #fce7f3; font-weight: 500; font-size: 0.65rem; border-radius: 6px;',
+                            'other'      => 'background: #ffffff; color: #64748b; border: 1px solid #f1f5f9; font-weight: 500; font-size: 0.65rem; border-radius: 6px;',
                         ];
                         $current_style = $badge_styles[$unit_type_val] ?? 'background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;';
                 ?>
@@ -394,6 +397,23 @@ function handleStatus(id, name, action) {
 .search-clear-btn:hover { background: #e2e8f0; color: #0f172a; }
 
 .bg-alternate-gray { background-color: #dee2e6 !important; }
+
+.badge {
+    padding: 0.5em 1em;
+    border-radius: 50px; /* Makes it a pill shape */
+    border: none;        /* Removes default bootstrap borders */
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    transition: transform 0.2s ease;
+}
+
+.badge:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+}
 
 /* Zebra Striping & Accordion Refinements */
 .bg-alternate { background-color: #64b1ff !important; }

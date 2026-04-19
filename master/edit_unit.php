@@ -125,7 +125,7 @@ if(isset($_POST['update_unit'])){
                     </div>
 
                     <div class="col-md-6">
-                        <label class="small fw-bold text-muted mb-1">Department / Division</label>
+                        <label class="small fw-bold text-muted mb-1">Department</label>
                         <select name="division_id" class="form-select py-2" required>
                             <?php
                             if($role == 'SuperAdmin'){
@@ -146,20 +146,20 @@ if(isset($_POST['update_unit'])){
                     </div>
 
                     <div class="col-md-4">
-                        <label class="small fw-bold text-muted mb-1">Unit Code</label>
+                        <label class="small fw-bold text-muted mb-1">Code</label>
                         <input type="text" name="unit_code" value="<?= htmlspecialchars($unit_code) ?>" class="form-control py-2" required>
                     </div>
 
                     <div class="col-md-8">
-                        <label class="small fw-bold text-muted mb-1">Unit Name</label>
+                        <label class="small fw-bold text-muted mb-1">Facility Name</label>
                         <input type="text" name="unit_name" value="<?= htmlspecialchars($unit_name) ?>" class="form-control py-2" required>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="small fw-bold text-muted mb-1">Type</label>
+                        <label class="small fw-bold text-muted mb-1">Facility Type</label>
                         <select name="unit_type" class="form-select py-2">
                             <?php 
-                            $types = ['lab', 'office', 'store', 'classroom', 'hodcabin', 'staffroom', 'library'];
+                            $types = ['lab', 'office', 'store room', 'classroom', 'room', 'hod cabin', 'staffroom', 'library','other'];
                             foreach($types as $t): ?>
                                 <option value="<?= $t ?>" <?= $unit_type == $t ? 'selected' : '' ?>><?= ucfirst($t) ?></option>
                             <?php endforeach; ?>
@@ -172,7 +172,7 @@ if(isset($_POST['update_unit'])){
                     </div>
 
                     <div class="col-12">
-                        <label class="small fw-bold text-muted mb-1">Physical Location</label>
+                        <label class="small fw-bold text-muted mb-1">Location</label>
                         <input type="text" name="location" value="<?= htmlspecialchars($location) ?>" class="form-control py-2" placeholder="e.g. Block A, 2nd Floor">
                     </div>
                 </div>

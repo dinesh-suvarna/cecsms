@@ -2,88 +2,105 @@
 include "../config/db.php";
 session_start();
 
-if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin','Admin'])) {
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
     header("Location: ../index.php");
     exit();
+}
+
+// Security: Generate CSRF Token if it doesn't exist
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
 $user_role = $_SESSION['role'];
 $user_division = $_SESSION['division_id'] ?? 0;
 
-/* ================= FETCH PENDING ================= */
-$query = "
-SELECT s.id, s.total_qty, s.bill_no, i.item_name, u.division_id,
-(SELECT COUNT(ea.id) FROM electrical_assets ea WHERE ea.stock_id = s.id) as assigned_count
-FROM electrical_stock s
-JOIN electrical_items i ON s.electrical_item_id = i.id
-JOIN units u ON s.unit_id = u.id
-WHERE 1=1";
+// 1. Fetch pending electrical stock entries
+$query_str = "
+    SELECT s.id, s.total_qty, s.bill_no, i.item_name, u.division_id, u.unit_code,
+    (SELECT COUNT(ea.id) FROM electrical_assets ea WHERE ea.stock_id = s.id) as assigned_count
+    FROM electrical_stock s
+    JOIN electrical_items i ON s.electrical_item_id = i.id
+    JOIN units u ON s.unit_id = u.id
+    WHERE 1=1";
 
 if ($user_role !== 'SuperAdmin') {
-    $query .= " AND u.division_id='$user_division'";
+    $query_str .= " AND u.division_id = ?";
 }
+$query_str .= " GROUP BY s.id HAVING assigned_count < s.total_qty ORDER BY s.id ASC";
 
-$query .= " GROUP BY s.id HAVING assigned_count < s.total_qty ORDER BY s.id ASC";
-
-$res = $conn->query($query);
+$stmt = $conn->prepare($query_str);
+if ($user_role !== 'SuperAdmin') {
+    $stmt->bind_param("i", $user_division);
+}
+$stmt->execute();
+$all_pending_query = $stmt->get_result();
 
 $pending_list = [];
-while($row=$res->fetch_assoc()){
-    $pending_list[]=$row;
+while($row = $all_pending_query->fetch_assoc()) {
+    $pending_list[] = $row;
 }
 
-/* ================= ACTIVE STOCK ================= */
+// 2. Determine active stock
 $stock_id = isset($_GET['stock_id']) ? (int)$_GET['stock_id'] : 0;
-
-if ($stock_id===0 && !empty($pending_list)) {
-    $stock_id = $pending_list[0]['id'];
+if ($stock_id === 0 && !empty($pending_list)) {
+    $stock_id = (int)$pending_list[0]['id'];
 }
 
+// 3. Fetch details for active electrical stock
 $stock = null;
 $current_assets = 0;
+if ($stock_id > 0) {
+    $stock_stmt = $conn->prepare("SELECT 
+        s.*, i.item_name, i.item_code, u.unit_code, u.unit_name 
+        FROM electrical_stock s 
+        JOIN electrical_items i ON s.electrical_item_id = i.id 
+        JOIN units u ON s.unit_id = u.id 
+        WHERE s.id = ?");
+    $stock_stmt->bind_param("i", $stock_id);
+    $stock_stmt->execute();
+    $stock = $stock_stmt->get_result()->fetch_assoc();
 
-if ($stock_id>0) {
-    $q = $conn->query("SELECT s.*, i.item_name FROM electrical_stock s 
-                       JOIN electrical_items i ON s.electrical_item_id=i.id 
-                       WHERE s.id=$stock_id");
-
-    $stock = $q->fetch_assoc();
-
-    $c = $conn->query("SELECT COUNT(id) as cnt FROM electrical_assets WHERE stock_id=$stock_id");
-    $current_assets = $c->fetch_assoc()['cnt'];
+    $check_stmt = $conn->prepare("SELECT COUNT(id) as current_count FROM electrical_assets WHERE stock_id = ?");
+    $check_stmt->bind_param("i", $stock_id);
+    $check_stmt->execute();
+    $current_assets = $check_stmt->get_result()->fetch_assoc()['current_count'];
 }
 
-/* ================= GENERATE TAGS ================= */
-$error_message="";
+// 4. Handle Tag Generation Logic
+$error_message = ""; 
 
-if ($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['generate_tags']) && $stock) {
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_tags']) && $stock) {
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Invalid security token.");
+    }
 
     $qty = (int)$stock['total_qty'];
-
     if ($current_assets < $qty) {
-
-        $prefix = strtoupper(mysqli_real_escape_string($conn,$_POST['prefix']));
+        $prefix = strtoupper(trim($_POST['prefix']));
         $start_no = (int)$_POST['start_no'];
         $remaining = $qty - $current_assets;
+        $duplicates = [];
 
-        $duplicates=[];
+        $tag_check = $conn->prepare("SELECT id FROM electrical_assets WHERE asset_tag = ?");
+        $tag_insert = $conn->prepare("INSERT INTO electrical_assets (stock_id, asset_tag) VALUES (?, ?)");
 
-        for ($i=0;$i<$remaining;$i++) {
+        for ($i = 0; $i < $remaining; $i++) {
+            $current_no = str_pad($start_no + $i, 2, '0', STR_PAD_LEFT);
+            $full_tag = $prefix . $current_no;
 
-            $num = str_pad($start_no+$i,2,'0',STR_PAD_LEFT);
-            $tag = $prefix.$num;
-
-            $check = $conn->query("SELECT id FROM electrical_assets WHERE asset_tag='$tag'");
-
-            if ($check->num_rows>0) {
-                $duplicates[]=$tag;
+            $tag_check->bind_param("s", $full_tag);
+            $tag_check->execute();
+            if ($tag_check->get_result()->num_rows > 0) {
+                $duplicates[] = $full_tag;
             } else {
-                $conn->query("INSERT INTO electrical_assets (stock_id,asset_tag) VALUES ($stock_id,'$tag')");
+                $tag_insert->bind_param("is", $stock_id, $full_tag);
+                $tag_insert->execute();
             }
         }
 
         if (!empty($duplicates)) {
-            $error_message = "Already used: ".implode(", ",$duplicates);
+            $error_message = "The following electrical tags are already in use: " . implode(", ", $duplicates);
         } else {
             header("Location: tag_assets.php?msg=success");
             exit();
@@ -91,194 +108,150 @@ if ($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['generate_tags']) && $sto
     }
 }
 
-$page_title="Electrical Asset Tagging";
+$page_title = "Electrical Tagging Queue";
 ob_start();
 ?>
 
 <div class="container-fluid py-4 px-4">
-<div class="row g-4">
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 py-3">
+                    <h6 class="fw-bold m-0"><i class="bi bi-lightning-charge-fill me-2 text-warning"></i>Electrical Queue</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <?php if (empty($pending_list)): ?>
+                            <div class="p-4 text-center text-muted small">
+                                <i class="bi bi-check2-all d-block fs-2 mb-2"></i>
+                                All electrical items tagged.
+                            </div>
+                        <?php else: ?>
+                            <?php foreach ($pending_list as $p): ?>
+                                <a href="tag_electrical_assets.php?stock_id=<?= $p['id'] ?>" 
+                                   class="list-group-item list-group-item-action p-3 border-0 <?= ($stock_id == $p['id']) ? 'bg-primary-subtle border-start border-primary border-4' : '' ?>">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="text-truncate">
+                                            <div class="fw-bold text-dark small text-uppercase"><?= htmlspecialchars($p['item_name']) ?></div>
+                                            <div class="text-muted extra-small">Bill: #<?= htmlspecialchars($p['bill_no']) ?> </div>
+                                            <div class="text-muted extra-small">Loc: <?= htmlspecialchars($p['unit_code']) ?> </div>
+                                        </div>
+                                        <span class="badge rounded-pill bg-white text-primary border border-primary-subtle">
+                                            <?= $p['total_qty'] - $p['assigned_count'] ?> Left
+                                        </span>
+                                    </div>
+                                </a>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-<!-- LEFT QUEUE -->
-<div class="col-lg-4">
-<div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 min-vh-50">
+                <div class="card-body p-5">
+                    <?php if (!$stock || ($current_assets >= (int)$stock['total_qty'])): ?>
+                        <div class="text-center py-5">
+                            <div class="mb-4">
+                                <div class="bg-success bg-opacity-10 d-inline-flex p-4 rounded-circle">
+                                    <i class="bi bi-check-lg text-success display-4"></i>
+                                </div>
+                            </div>
+                            <h4 class="fw-bold text-dark">Queue Cleared</h4>
+                            <p class="text-muted mb-4">All electrical components have been assigned unique Asset IDs.</p>
+                            <a href="view_electrical_assets.php" class="btn btn-outline-dark rounded-pill px-4">Go to Registry</a>
+                        </div>
+                    <?php else: ?>
+                        <div class="d-flex align-items-center mb-4">
+                            <i class="bi bi-hash text-primary fs-3 me-3"></i>
+                            <div>
+                                <h5 class="fw-bold m-0">Generate Electrical Asset IDs</h5>
+                                <p class="text-muted small m-0">Assigning unique identifiers to electrical inventory</p>
+                            </div>
+                        </div>
 
-<div class="card-header bg-white border-0 py-3">
-<h6 class="fw-bold m-0">
-<i class="bi bi-cpu me-2 text-primary"></i>Pending Queue
-</h6>
-</div>
+                        <div class="alert bg-light border-0 rounded-4 p-4 mb-4">
+                            <div class="row align-items-center">
+                                <div class="col-sm-8">
+                                    <div class="small text-muted text-uppercase fw-bold mb-1">Stock Item</div>
+                                    <h5 class="fw-bold mb-0 text-primary"><?= htmlspecialchars($stock['item_name']) ?> (<?= htmlspecialchars($stock['item_code']) ?>)</h5>
+                                    <div class="small mt-1">Ref: <strong><?= htmlspecialchars($stock['bill_no']) ?></strong> | Location: <strong><?= htmlspecialchars($stock['unit_code']) ?></strong></div>
+                                </div>
+                                <div class="col-sm-4 text-sm-end mt-3 mt-sm-0">
+                                    <div class="display-6 fw-bold text-dark"><?= (int)$stock['total_qty'] - $current_assets ?></div>
+                                    <div class="small text-muted text-uppercase">Items Remaining</div>
+                                </div>
+                            </div>
+                        </div>
 
-<div class="card-body p-0">
-<div class="list-group list-group-flush">
+                        <form method="POST">
+                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                            
+                            <div class="row g-4">
+                                <div class="col-md-8">
+                                    <label class="form-label small fw-bold text-muted text-uppercase">ID Prefix (Pattern)</label>
+                                    <input type="text" id="prefixInput" name="prefix" 
+                                           class="form-control form-control-lg rounded-3 border-light-subtle bg-light fw-bold" 
+                                           placeholder="e.g. CEC/ELEC/2026/L3-AC/" required>
+                                    <div class="mt-2 d-flex align-items-center gap-2">
+                                        <span class="text-muted small">ID Format:</span>
+                                        <span id="prefixPreview" class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-2 font-monospace" style="display:none;"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-muted text-uppercase">Start From</label>
+                                    <input type="number" name="start_no" class="form-control form-control-lg rounded-3 border-light-subtle bg-light" value="1" min="1" required>
+                                </div>
+                            </div>
 
-<?php if(empty($pending_list)): ?>
-<div class="p-4 text-center text-muted small">
-<i class="bi bi-check2-all d-block fs-2 mb-2"></i>
-No pending electricals.
-</div>
-<?php else: ?>
-
-<?php foreach($pending_list as $p): ?>
-<a href="tag_assets.php?stock_id=<?= $p['id'] ?>"
-class="list-group-item list-group-item-action p-3 border-0 <?= ($stock_id==$p['id'])?'bg-primary-subtle border-start border-primary border-4':'' ?>">
-
-<div class="d-flex justify-content-between">
-
-<div class="text-truncate">
-<div class="fw-bold small text-uppercase"><?= htmlspecialchars($p['item_name']) ?></div>
-<div class="text-muted extra-small">Bill: #<?= $p['bill_no'] ?></div>
-</div>
-
-<span class="badge rounded-pill bg-white text-primary border">
-<?= $p['total_qty'] - $p['assigned_count'] ?> Left
-</span>
-
-</div>
-</a>
-<?php endforeach; ?>
-
-<?php endif; ?>
-
-</div>
-</div>
-</div>
-</div>
-
-<!-- RIGHT PANEL -->
-<div class="col-lg-8">
-<div class="card border-0 shadow-sm rounded-4 min-vh-50">
-<div class="card-body p-5">
-
-<?php if(!$stock || $current_assets >= (int)$stock['total_qty']): ?>
-
-<!-- EMPTY -->
-<div class="text-center py-5">
-<div class="mb-4">
-<div class="bg-success bg-opacity-10 d-inline-flex p-4 rounded-circle">
-<i class="bi bi-check-lg text-success display-4"></i>
-</div>
-</div>
-
-<h4 class="fw-bold">Queue Cleared</h4>
-<p class="text-muted">All electricals tagged.</p>
-
-<a href="view_electricals_assets.php" class="btn btn-outline-dark rounded-pill px-4">
-Go to Registry
-</a>
-</div>
-
-<?php else: ?>
-
-<!-- HEADER -->
-<div class="d-flex align-items-center mb-4">
-<i class="bi bi-upc-scan text-primary fs-3 me-3"></i>
-<div>
-<h5 class="fw-bold m-0">Assign Asset ID</h5>
-<p class="text-muted small m-0">Finalize device tagging</p>
-</div>
-</div>
-
-<!-- INFO -->
-<div class="alert bg-light border-0 rounded-4 p-4 mb-4">
-<div class="row align-items-center">
-
-<div class="col-sm-8">
-<div class="small text-muted text-uppercase fw-bold">Active Device</div>
-<h5 class="fw-bold text-primary"><?= htmlspecialchars($stock['item_name']) ?></h5>
-<div class="small">Bill: <strong><?= $stock['bill_no'] ?></strong></div>
-</div>
-
-<div class="col-sm-4 text-end">
-<div class="display-6 fw-bold"><?= $stock['total_qty'] - $current_assets ?></div>
-<div class="small text-muted">Remaining</div>
-</div>
-
-</div>
-</div>
-
-<!-- FORM -->
-<form method="POST">
-<div class="row g-4">
-
-<div class="col-md-8">
-<label class="form-label">Prefix</label>
-<input type="text" id="prefixInput" name="prefix"
-class="form-control form-control-lg bg-light fw-bold"
-placeholder="EX: CEC/LAB/PC/"
-required>
-
-<div class="mt-2">
-<span id="prefixPreview" class="badge bg-primary-subtle text-primary" style="display:none;"></span>
-</div>
-</div>
-
-<div class="col-md-4">
-<label class="form-label">Start No</label>
-<input type="number" name="start_no" class="form-control form-control-lg" value="1">
-</div>
-
-</div>
-
-<button type="submit" name="generate_tags"
-class="btn btn-primary btn-lg rounded-pill mt-5 px-5">
-<i class="bi bi-cpu-fill me-2"></i> Generate
-</button>
-</form>
-
-<?php endif; ?>
-
-</div>
-</div>
-</div>
-
-</div>
+                            <button type="submit" name="generate_tags" class="btn btn-primary btn-lg rounded-pill px-5 shadow-sm mt-5">
+                                <i class="bi bi-lightning-fill me-2"></i> Generate IDs
+                            </button>
+                        </form>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <style>
-.extra-small{font-size:0.75rem;}
-.min-vh-50{min-height:60vh;}
-
-.list-group-item{transition:0.2s;}
-.list-group-item:hover{background:#f8fafc;}
-
-.bg-primary-subtle{background:#eef2ff;}
-
+    .extra-small { font-size: 0.75rem; }
+    .min-vh-50 { min-height: 60vh; }
+    .list-group-item { transition: all 0.2s; border-bottom: 1px solid #f8f9fa !important; }
+    .list-group-item:hover { background-color: #f8f9fa; }
+    .bg-primary-subtle { background-color: #eef2ff !important; }
+    .font-monospace { font-family: 'Monaco', 'Consolas', monospace; letter-spacing: 1px; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-
-/* LIVE PREVIEW */
-const input=document.getElementById('prefixInput');
-
-if(input){
-input.addEventListener('input',function(){
-this.value=this.value.toUpperCase();
-
-let preview=document.getElementById('prefixPreview');
-
-if(this.value.length>0){
-preview.style.display='inline-block';
-preview.textContent=this.value+"01";
-}else{
-preview.style.display='none';
-}
-});
+const prefixInput = document.getElementById('prefixInput');
+if (prefixInput) {
+    prefixInput.addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+        const preview = document.getElementById('prefixPreview');
+        if (this.value.length > 0) {
+            preview.style.display = 'inline-block';
+            preview.textContent = this.value + "01"; 
+        } else {
+            preview.style.display = 'none';
+        }
+    });
 }
 
-/* SUCCESS */
-if(new URLSearchParams(window.location.search).get('msg')==='success'){
-Swal.fire({icon:'success',title:'Done',text:'Tags generated',timer:2000,showConfirmButton:false});
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('msg') === 'success') {
+    Swal.fire({ icon: 'success', title: 'Electrical IDs Generated', text: 'All items have been successfully tagged.', timer: 2000, showConfirmButton: false });
 }
 
-/* ERROR */
-<?php if(!empty($error_message)): ?>
-Swal.fire({icon:'error',title:'Duplicate',text:'<?= addslashes($error_message) ?>'});
+<?php if (!empty($error_message)): ?>
+    Swal.fire({ icon: 'error', title: 'Duplicate Found', text: '<?= addslashes($error_message) ?>', confirmButtonColor: '#3085d6' });
 <?php endif; ?>
-
 </script>
 
-<?php
-$content = ob_get_clean();
-include "electricalslayout.php";
+<?php 
+$content = ob_get_clean(); 
+include "electricalslayout.php"; 
 ?>

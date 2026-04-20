@@ -23,7 +23,7 @@ if (isset($_POST['delete_id'])) {
         $_SESSION['swal_msg'] = "Cannot delete: Stock is already partially dispatched!";
         $_SESSION['swal_type'] = "error";
     }
-    header("Location: view_central_stock.php");
+    header("Location: view_furniture_central_stock.php");
     exit();
 }
 

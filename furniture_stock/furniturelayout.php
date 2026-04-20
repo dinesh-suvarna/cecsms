@@ -248,7 +248,7 @@ if (isset($conn)) {
         <span>Stock<span class="text-dark">Furniture</span></span>
     </a>
 
-    <div class="overflow-y-auto flex-grow-1">
+    <div id="sidebarScrollArea" class="overflow-y-auto flex-grow-1">
     <div class="nav-group-label">General</div>
         <div class="nav flex-column">
             <a href="../furniture_stock/furniture_dashboard.php" class="nav-link <?= ($current_page == 'furniture_dashboard.php') ? 'active' : '' ?>">
@@ -287,26 +287,41 @@ if (isset($conn)) {
                 <i class="bi-boxes"></i> Furniture Inventory
             </a>
         </div>
+        <div class="nav-group-label">Central Supply</div>
+        <div class="nav flex-column">
+            <a href="/cecsms/furniture_stock/add_furniture_central_stock.php" class="nav-link <?= ($current_page == 'add_furniture_central_stock.php') ? 'active' : '' ?>">
+                <i class="bi bi-building-down"></i> Add Central Stock
+            </a>
+            <a href="/cecsms/furniture_stock/view_furniture_central_stock.php" class="nav-link <?= ($current_page == 'view_furniture_central_stock.php') ? 'active' : '' ?>">
+                <i class="bi bi-database-fill-check"></i> View Central Stock
+            </a>
+        </div>
         <?php if ($role === 'SuperAdmin'): ?>
         <div class="nav-group-label">Logistics</div>
         <div class="nav flex-column">
             <a href="/cecsms/furniture_stock/dispatch_furniture.php" class="nav-link <?= ($current_page == 'dispatch_furniture.php') ? 'active' : '' ?>">
                 <i class="bi bi-truck"></i> Dispatch Furniture
             </a>
-        <div class="nav-group-label">Reports</div>
+        
+        <div class="nav-group-label">Procurement</div>
+        <div class="nav flex-column">
+            <a href="/cecsms/furniture_stock/purchase_ledger.php" class="nav-link <?= ($current_page == 'purchase_ledger.php') ? 'active' : '' ?>">
+                <i class="bi bi-journal-plus"></i> Purchase Ledger
+            </a>
+             <a href="/cecsms/furniture_stock/view_purchase_ledger.php" class="nav-link <?= ($current_page == 'view_purchase_ledger.php') ? 'active' : '' ?>">
+                <i class="bi bi-journal-check"></i> View Purchase Ledger
+            </a>
+        </div>
+
+        <div class="nav-group-label">Analysis Reports</div>
+        <div class="nav flex-column">
             <a href="/cecsms/furniture_stock/furniture_stockreports.php" class="nav-link <?= ($current_page == 'furniture_stockreports.php') ? 'active' : '' ?>">
                 <i class="bi bi-file-earmark-bar-graph"></i> Stock Reports
             </a>
             <a href="/cecsms/furniture_stock/furniture_reports.php" class="nav-link <?= ($current_page == 'furniture_reports.php') ? 'active' : '' ?>">
                 <i class="bi bi-file-earmark-bar-graph"></i> Asset Reports
             </a>
-            <a href="/cecsms/furniture_stock/purchase_ledger.php" class="nav-link <?= ($current_page == 'purchase_ledger.php') ? 'active' : '' ?>">
-                <i class="bi bi-file-earmark-bar-graph"></i> Purchase Ledger
-            </a>
-             <a href="/cecsms/furniture_stock/view_purchase_ledger.php" class="nav-link <?= ($current_page == 'view_purchase_ledger.php') ? 'active' : '' ?>">
-                <i class="bi bi-file-earmark-bar-graph"></i> View Purchase Ledger
-            </a>
-        </div>
+        </div>    
         <?php endif; ?>
     </div>
 
@@ -379,6 +394,29 @@ if (isset($conn)) {
     if(menuToggle) {
         menuToggle.addEventListener('click', () => { sidebar.classList.toggle('show'); });
     }
+</script>
+<script>
+    // 1. Get the scrollable element
+    const scrollContainer = document.getElementById('sidebarScrollArea');
+
+    // 2. On Load: Check if there is a saved position and apply it
+    window.addEventListener('load', () => {
+        const savedScrollPos = localStorage.getItem('sidebarScrollPos');
+        if (savedScrollPos && scrollContainer) {
+            scrollContainer.scrollTop = savedScrollPos;
+        }
+        const activeLink = document.querySelector('#sidebar .nav-link.active');
+    if (activeLink) {
+        activeLink.scrollIntoView({ behavior: 'instant', block: 'nearest' });
+    }
+    });
+
+    // 3. Before Unload: Save the current scroll position
+    window.addEventListener('beforeunload', () => {
+        if (scrollContainer) {
+            localStorage.setItem('sidebarScrollPos', scrollContainer.scrollTop);
+        }
+    });
 </script>
 </body>
 </html>

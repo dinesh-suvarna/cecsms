@@ -44,57 +44,75 @@ ob_start();
 
 <style>
     :root {
-        --azure-600: #2563eb; /* Electrical Blue */
+        --amber-500: rgb(245, 158, 11); 
+        --amber-600: rgb(217, 119, 6);  
+        --amber-50: #fffbeb;
         --slate-50: #f8fafc;
         --slate-200: #e2e8f0;
         --slate-900: #0f172a;
     }
 
-    /* Distribution List Styling */
     .stock-item-row {
         transition: all 0.2s ease;
         border-left: 3px solid transparent;
     }
     .stock-item-row:hover {
-        background-color: var(--slate-50);
-        border-left: 3px solid var(--azure-600);
+        background-color: var(--amber-50);
+        border-left: 3px solid var(--amber-500);
         padding-left: 10px !important;
     }
     
     .count-pill {
-        background: #f1f5f9;
-        color: var(--slate-900);
+        background: var(--amber-50);
+        color: var(--amber-600);
         font-weight: 700;
         padding: 4px 12px;
         border-radius: 8px;
         min-width: 60px;
         text-align: center;
-        border: 1px solid var(--slate-200);
+        border: 1px solid #fde68a; 
     }
 
+   
     .search-input-group {
-        position: relative;
+        position: relative; 
+        width: 100%;
+        max-width: 300px; 
     }
+
     .search-input-group i {
         position: absolute;
-        left: 12px;
+        left: 14px;
         top: 50%;
         transform: translateY(-50%);
         color: #94a3b8;
+        z-index: 5; 
+        display: flex;
+        align-items: center;
     }
+
     .search-control {
-        padding-left: 38px !important;
+        padding-left: 40px !important; 
         border-radius: 12px !important;
         border: 1px solid var(--slate-200) !important;
         background: var(--slate-50);
+        height: 42px; 
+    }
+    .search-control:focus {
+        border-color: var(--amber-500) !important;
+        box-shadow: 0 0 0 0.25rem rgba(245, 158, 11, 0.25) !important;
     }
 
     .hero-stat {
-        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); /* Blue Gradient */
+        /* Gradient using the theme color */
+        background: linear-gradient(135deg, rgb(217, 119, 6) 0%, rgb(245, 158, 11) 100%); 
         color: white;
         border-radius: 24px;
         min-height: 380px;
     }
+
+    /* Text and Icon Accents */
+    .btn-primary { background-color: var(--amber-500); border-color: var(--amber-500); }
 
     .custom-scroll {
         max-height: 300px;
@@ -152,12 +170,12 @@ ob_start();
                             <div class="stock-item-row d-flex justify-content-between align-items-center p-3 mb-2 rounded-3 border-bottom border-light">
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-sm bg-primary bg-opacity-10 text-primary rounded-3 p-2 me-3">
-                                        <i class="bi bi-cpu"></i>
+                                        <i class="bi bi-box-seam"></i>
                                     </div>
                                     <span class="fw-bold text-slate-900 item-name"><?= htmlspecialchars($cat['item_name']) ?></span>
                                 </div>
                                 <div class="d-flex align-items-center gap-3">
-                                    <span class="text-muted small d-none d-sm-block">Units:</span>
+                                    <span class="text-muted small d-none d-sm-block">Quantity:</span>
                                     <div class="count-pill"><?= number_format($cat['count']) ?></div>
                                 </div>
                             </div>

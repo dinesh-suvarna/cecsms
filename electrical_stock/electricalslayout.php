@@ -258,44 +258,44 @@ if (isset($conn)) {
                 <i class="bi-boxes"></i> Electrical Inventory
             </a>
         </div>
-
-        <div class="nav-group-label">Central Supply</div>
-        <div class="nav flex-column">
-            <a href="/cecsms/electrical_stock/add_electrical_central_stock.php" class="nav-link <?= ($current_page == 'add_electrical_central_stock.php') ? 'active' : '' ?>">
-                <i class="bi bi-building-down"></i> Add Central Stock
-            </a>
-            <a href="/cecsms/electrical_stock/view_electrical_central_stock.php" class="nav-link <?= ($current_page == 'view_electrical_central_stock.php') ? 'active' : '' ?>">
-                <i class="bi bi-database-fill-check"></i> View Central Stock
-            </a>
-        </div>
-
         <?php if ($role === 'SuperAdmin'): ?>
-        <div class="nav-group-label">Logistics</div>
-        <div class="nav flex-column">
-            <a href="/cecsms/electrical_stock/dispatch_electrical.php" class="nav-link <?= ($current_page == 'dispatch_electrical.php') ? 'active' : '' ?>">
-                <i class="bi bi-truck"></i> Dispatch Electrical
-            </a>
-        </div>
+            <div class="nav-group-label">Central Supply</div>
+            <div class="nav flex-column">
+                <a href="/cecsms/electrical_stock/add_electrical_central_stock.php" class="nav-link <?= ($current_page == 'add_electrical_central_stock.php') ? 'active' : '' ?>">
+                    <i class="bi bi-building-down"></i> Add Central Stock
+                </a>
+                <a href="/cecsms/electrical_stock/view_electrical_central_stock.php" class="nav-link <?= ($current_page == 'view_electrical_central_stock.php') ? 'active' : '' ?>">
+                    <i class="bi bi-database-fill-check"></i> View Central Stock
+                </a>
+            </div>
 
-        <div class="nav-group-label">Procurement</div>
-        <div class="nav flex-column">
-            <a href="/cecsms/electrical_stock/electrical_purchase_ledger.php" class="nav-link <?= ($current_page == 'electrical_purchase_ledger.php') ? 'active' : '' ?>">
-                <i class="bi bi-journal-plus"></i> Purchase Ledger
-            </a>
-             <a href="/cecsms/electrical_stock/view_electrical_ledger.php" class="nav-link <?= ($current_page == 'view_electrical_ledger.php') ? 'active' : '' ?>">
-                <i class="bi bi-journal-check"></i> Ledger History
-            </a>
-        </div>
+            <div class="nav-group-label">Logistics</div>
+            <div class="nav flex-column">
+                <a href="/cecsms/electrical_stock/dispatch_electrical.php" class="nav-link <?= ($current_page == 'dispatch_electrical.php') ? 'active' : '' ?>">
+                    <i class="bi bi-truck"></i> Dispatch Electrical
+                </a>
+            </div>
 
-        <div class="nav-group-label">Analysis Reports</div>
-        <div class="nav flex-column">
-            <a href="/cecsms/electrical_stock/electrical_stockreports.php" class="nav-link <?= ($current_page == 'electrical_stockreports.php') ? 'active' : '' ?>">
-                <i class="bi bi-file-earmark-bar-graph"></i> Stock Reports
-            </a>
-            <a href="/cecsms/electrical_stock/electrical_reports.php" class="nav-link <?= ($current_page == 'electrical_reports.php') ? 'active' : '' ?>">
-                <i class="bi bi-file-earmark-bar-graph"></i> Asset Reports
-            </a>
-        </div>
+            <div class="nav-group-label">Procurement</div>
+            <div class="nav flex-column">
+                <a href="/cecsms/electrical_stock/electrical_purchase_ledger.php" class="nav-link <?= ($current_page == 'electrical_purchase_ledger.php') ? 'active' : '' ?>">
+                    <i class="bi bi-journal-plus"></i> Purchase Ledger
+                </a>
+                <a href="/cecsms/electrical_stock/view_electrical_ledger.php" class="nav-link <?= ($current_page == 'view_electrical_ledger.php') ? 'active' : '' ?>">
+                    <i class="bi bi-journal-check"></i> Ledger History
+                </a>
+            </div>
+
+            <div class="nav-group-label">Analysis Reports</div>
+            <div class="nav flex-column">
+                <a href="/cecsms/electrical_stock/electrical_stockreports.php" class="nav-link <?= ($current_page == 'electrical_stockreports.php') ? 'active' : '' ?>">
+                    <i class="bi bi-file-earmark-bar-graph"></i> Stock Reports
+                </a>
+                <a href="/cecsms/electrical_stock/electrical_reports.php" class="nav-link <?= ($current_page == 'electrical_reports.php') ? 'active' : '' ?>">
+                    <i class="bi bi-file-earmark-bar-graph"></i> Asset Reports
+                </a>
+            </div>
+
         <?php endif; ?>
     </div>
 

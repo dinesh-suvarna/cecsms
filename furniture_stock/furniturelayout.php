@@ -287,6 +287,7 @@ if (isset($conn)) {
                 <i class="bi-boxes"></i> Furniture Inventory
             </a>
         </div>
+        <?php if ($role === 'SuperAdmin'): ?>
         <div class="nav-group-label">Central Supply</div>
         <div class="nav flex-column">
             <a href="/cecsms/furniture_stock/add_furniture_central_stock.php" class="nav-link <?= ($current_page == 'add_furniture_central_stock.php') ? 'active' : '' ?>">
@@ -296,7 +297,7 @@ if (isset($conn)) {
                 <i class="bi bi-database-fill-check"></i> View Central Stock
             </a>
         </div>
-        <?php if ($role === 'SuperAdmin'): ?>
+        
         <div class="nav-group-label">Logistics</div>
         <div class="nav flex-column">
             <a href="/cecsms/furniture_stock/dispatch_furniture.php" class="nav-link <?= ($current_page == 'dispatch_furniture.php') ? 'active' : '' ?>">

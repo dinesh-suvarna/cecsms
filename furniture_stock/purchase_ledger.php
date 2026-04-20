@@ -10,10 +10,27 @@ if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Ad
 // Fetch Vendors only
 $vendors = $conn->query("SELECT id, vendor_name FROM vendors ORDER BY vendor_name ASC");
 
+// 1. Filtered by category
+$max_sl_query = $conn->query("SELECT MAX(CAST(master_sl_no AS UNSIGNED)) as max_sl 
+                             FROM purchase_ledger 
+                             WHERE category = 'Furniture'");
+
+// 2. Fetch the associative array
+$max_row = $max_sl_query->fetch_assoc();
+
+// 3. Calculate the next number
+$next_sl_no = ($max_row['max_sl'] ?? 0) + 1;
+
 $page_title = "Manual Purchase Ledger";
 ob_start();
 ?>
-
+<?php if (isset($_GET['msg']) && $_GET['msg'] == 'duplicate'): ?>
+    <div class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm mb-4" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Duplicate SL No!</strong> Reference Number <b><?= htmlspecialchars($_GET['sl']) ?></b> is already in use. Please use a different one.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+<?php endif; ?>
 <div class="container-fluid py-4 px-4">
     <form action="process_purchase.php" method="POST" id="purchaseForm">
         <div class="row justify-content-center">
@@ -24,7 +41,13 @@ ob_start();
                         <div class="row g-3">
                             <div class="col-md-2">
                                 <label class="form-label small fw-bold text-muted text-uppercase">SL. No (Ref)</label>
-                                <input type="text" name="master_sl_no" class="form-control rounded-3 border-primary-subtle fw-bold" placeholder="e.g. 1" required>
+                                <input type="text" 
+                                    name="master_sl_no" 
+                                    class="form-control rounded-3 border-primary-subtle fw-bold" 
+                                    placeholder="e.g. 1" 
+                                    value="<?= $next_sl_no ?>" 
+                                    required>
+                                <div class="form-text" style="font-size: 0.7rem;">Auto-suggested next ID</div>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label small fw-bold text-muted text-uppercase">Date</label>

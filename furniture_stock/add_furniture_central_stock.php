@@ -3,13 +3,14 @@ include "../config/db.php";
 session_start();
 
 // --- 1. SESSION & ROLE CHECK ---
-if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
-    header("Location: ../index.php");
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'SuperAdmin') {
+    header("Location: ../index.php?error=unauthorized");
     exit();
 }
 
 $message = "";
 $user_role = $_SESSION['role'];
+//$user_division = $_SESSION['division_id'] ?? 0;
 
 // --- 2. THE "FLASH" LOGIC ---
 $display_swal = false;
@@ -35,31 +36,17 @@ if (isset($_POST['trigger_edit'])) {
 }
 
 // --- 4. INSERT / UPDATE LOGIC ---
-    if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_stock'])) {
-        $item_id = (int)$_POST['furniture_item_id'];
-        $qty = (int)$_POST['total_qty'];
-        $bill_no = mysqli_real_escape_string($conn, $_POST['bill_no']);
-        $bill_date = $_POST['bill_date'];
-        $vendor_id = (int)$_POST['vendor_id'];
-        $price = (float)$_POST['unit_price'];
-        $master_sl_no = mysqli_real_escape_string($conn, $_POST['master_sl_no']); // New line
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_stock'])) {
+    $item_id = (int)$_POST['furniture_item_id'];
+    $qty = (int)$_POST['total_qty'];
+    $bill_no = mysqli_real_escape_string($conn, $_POST['bill_no']);
+    $bill_date = $_POST['bill_date'];
+    $vendor_id = (int)$_POST['vendor_id'];
+    $price = (float)$_POST['unit_price'];
 
-        // Check for Duplicates in the ledger table
-        $check_sql = "SELECT id FROM purchase_ledger WHERE master_sl_no = '$master_sl_no'";
-        if (!empty($_POST['edit_id'])) {
-            $check_sql .= " AND id != " . (int)$_POST['edit_id'];
-        }
-        $check_res = $conn->query($check_sql);
-
-        if ($check_res->num_rows > 0) {
-            $_SESSION['swal_msg'] = "Serial Number '$master_sl_no' already exists!";
-            $_SESSION['swal_type'] = "error";
-            header("Location: " . $_SERVER['PHP_SELF']); // Redirect to show error
-            exit();
-        } elseif ($price <= 0 || $qty <= 0) {
-            $message = "error";
-        } else {
-    
+    if ($price <= 0 || $qty <= 0) {
+        $message = "error";
+    } else {
         if (!empty($_POST['edit_id'])) {
             $edit_id = (int)$_POST['edit_id'];
             // In update, we usually don't mess with remaining_qty unless specifically logic dictates
@@ -72,7 +59,7 @@ if (isset($_POST['trigger_edit'])) {
             if ($conn->query($sql)) {
                 $_SESSION['swal_msg'] = "Central stock updated successfully!";
                 $_SESSION['swal_type'] = "success";
-                header("Location: view_furniture_central_stock.php");
+                header("Location: view_central_stock.php");
                 exit();
             } else { $message = "error"; }
         } else {
@@ -94,15 +81,6 @@ if (isset($_POST['trigger_edit'])) {
 $items = $conn->query("SELECT * FROM furniture_items ORDER BY item_name");
 $vendors = $conn->query("SELECT * FROM vendors WHERE category='Furniture' OR category='General' ORDER BY vendor_name");
 
-$suggested_sl = 1;
-// fetch the highest current number from the ledger
-$last_sl_res = $conn->query("SELECT master_sl_no FROM purchase_ledger ORDER BY id DESC LIMIT 1");
-if ($last_sl_res && $last_sl_res->num_rows > 0) {
-    $last_val = $last_sl_res->fetch_assoc()['master_sl_no'];
-    if (is_numeric($last_val)) {
-        $suggested_sl = (int)$last_val + 1;
-    }
-}
 $page_title = $is_edit ? "Edit Central Stock" : "Add Central Stock"; 
 ob_start();
 ?>
@@ -237,16 +215,7 @@ ob_start();
                     <div class="line"></div>
                 </div>
                 <div class="row g-3">
-                    <div class="col-md-2">
-                        <div class="field-wrapper" style="border: 2px solid #4361ee20;">
-                            <label class="text-primary">Master SL.No</label>
-                            <input type="text" name="master_sl_no" class="form-control" 
-                                value="<?= $edit_data['master_sl_no'] ?? $suggested_sl ?>" 
-                                placeholder="e.g. 101" required>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <div class="field-wrapper">
                             <label>Total Quantity</label>
                             <input type="number" name="total_qty" class="form-control" value="<?= $edit_data['total_qty'] ?? '' ?>" min="1" required>
@@ -258,7 +227,7 @@ ob_start();
                             <input type="number" name="unit_price" class="form-control" value="<?= $edit_data['unit_price'] ?? '' ?>" step="0.01" min="0.01" required>
                         </div>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <div class="field-wrapper">
                             <label>Invoice Number</label>
                             <input type="text" name="bill_no" class="form-control" value="<?= $edit_data['bill_no'] ?? '' ?>" required>
@@ -273,7 +242,7 @@ ob_start();
                 </div>
 
                 <div class="d-flex justify-content-end gap-3 mt-5 pt-3 border-top">
-                    <a href="view_furniture_central_stock.php" class="btn btn-light px-4 text-muted discard-btn" style="border-radius:10px;">
+                    <a href="view_central_stock.php" class="btn btn-light px-4 text-muted discard-btn" style="border-radius:10px;">
                         <i class="bi bi-arrow-left me-1"></i> Back to View
                     </a>
                     <button type="submit" name="save_stock" class="btn btn-save-stock">

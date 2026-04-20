@@ -24,13 +24,18 @@ $assets_query = "
     JOIN vendors v ON s.vendor_id = v.id
     JOIN units u ON s.unit_id = u.id
     JOIN divisions d ON u.division_id = d.id
-    JOIN institutions inst ON d.institution_id = inst.id";
+    JOIN institutions inst ON d.institution_id = inst.id
+    WHERE ea.deleted_at IS NULL";
 
 if ($user_role !== 'SuperAdmin') {
-    $assets_query .= " WHERE u.division_id = '$user_division'";
+    $assets_query .= " AND u.division_id = '$user_division'";
 }
 $assets_query .= " ORDER BY inst.institution_name ASC, d.division_name ASC, u.unit_code ASC, i.item_name ASC, ea.asset_tag ASC";
 $result = $conn->query($assets_query);
+
+$result = $conn->query($assets_query);
+// DEBUG: This will tell you the TRUE count coming from the DB
+echo "<script>console.log('Database returned: " . $result->num_rows . " items');</script>";
 
 $registry = [];
 while ($row = $result->fetch_assoc()) {
@@ -88,7 +93,15 @@ ob_start();
                                                                 <div class="list-group list-group-flush">
                                                                     <?php $idx4 = 0; foreach ($items as $item_name => $bills): $idx4++; 
                                                                         $item_collapse_id = "itemCollapse_" . $idx1 . "_" . $idx2 . "_" . $idx3 . "_" . $idx4;
-                                                                        $all_ids = []; foreach($bills as $bl) { foreach($bl as $ast) { $all_ids[] = $ast['asset_db_id']; } }
+                                                                        $all_ids = []; 
+                                                                        foreach($bills as $bl) { 
+                                                                            foreach($bl as $ast) { 
+                                                                                // GUARD CLAUSE: Only add to count if not deleted (extra safety)
+                                                                                if (!isset($ast['deleted_at']) || $ast['deleted_at'] === null) {
+                                                                                    $all_ids[] = $ast['asset_db_id']; 
+                                                                                }
+                                                                            } 
+                                                                        }
                                                                     ?>
                                                                         <div class="list-group-item border-0 p-0">
                                                                             <div class="d-flex justify-content-between align-items-center px-4 py-3 bg-light border-bottom">
@@ -265,19 +278,37 @@ window.handleAssetAction = function(actionType, assetId, assetTag, remarks) {
 
 function deleteAsset(id, tag) {
     Swal.fire({
-        title: 'Delete Electrical Asset?',
-        text: `Removing ${tag} is permanent.`,
-        icon: 'error',
+        title: 'Remove Electrical Asset?',
+        text: `Choose how you want to remove ${tag}:`,
+        icon: 'warning',
+        showDenyButton: true,
         showCancelButton: true,
-        confirmButtonColor: '#dc3545'
+        confirmButtonText: 'Archive (Soft)',
+        denyButtonText: 'Permanent (Hard)',
+        confirmButtonColor: '#3085d6',
+        denyButtonColor: '#dc3545',
     }).then((result) => {
+        let actionType = '';
+        
         if (result.isConfirmed) {
+            actionType = 'soft_delete'; // Hides it, keeps it out of queue
+        } else if (result.isDenied) {
+            actionType = 'hard_delete'; // Deletes it, returns to queue
+        }
+
+        if (actionType !== '') {
             fetch('update_electrical_asset.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=delete&id=${id}`
-            }).then(res => res.json()).then(data => {
-                if(data.success) location.reload();
+                body: `action=${actionType}&id=${id}`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    Swal.fire('Removed', data.message, 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
             });
         }
     });

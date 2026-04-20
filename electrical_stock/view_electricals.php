@@ -35,14 +35,24 @@ if (isset($_GET['delete_id'])) {
         $_SESSION['swal_msg'] = "Cannot delete: Asset IDs already generated for this electrical batch.";
         $_SESSION['swal_type'] = "error";
     }
-    header("Location: view_electrical.php");
+    header("Location: view_electricals.php");
     exit();
 }
 
 // QUERY - Updated for electrical tables
 $sql = "SELECT 
-            SUM(s.total_qty) as total_qty, 
-            SUM(s.total_qty * s.unit_price) as total_investment,
+            -- Count only live assets from the assets table
+            (SELECT COUNT(*) 
+             FROM electrical_assets ea 
+             WHERE ea.stock_id = s.id 
+             AND ea.deleted_at IS NULL) as total_qty, 
+            
+            -- Calculate investment based on the live count
+            ((SELECT COUNT(*) 
+              FROM electrical_assets ea 
+              WHERE ea.stock_id = s.id 
+              AND ea.deleted_at IS NULL) * s.unit_price) as total_investment,
+
             MAX(s.id) as id, 
             i.item_name, 
             v.vendor_name, 
@@ -61,8 +71,10 @@ if ($user_role !== 'SuperAdmin') {
     $sql .= " WHERE u.division_id = '$user_division'";
 }
 
+// Add HAVING to hide items that have 0 live assets left
 $sql .= " GROUP BY i.item_name, u.id, v.vendor_name 
-         ORDER BY d.division_name ASC, u.unit_code ASC, i.item_name ASC";
+          HAVING total_qty > 0
+          ORDER BY d.division_name ASC, u.unit_code ASC, i.item_name ASC";
 
 $result = $conn->query($sql);
 
@@ -270,7 +282,7 @@ function deleteStock(id) {
         confirmButtonText: 'Yes, delete it!'
     }).then((result) => {
         if (result.isConfirmed) {
-            window.location.href = `view_electrical.php?delete_id=${id}`;
+            window.location.href = `view_electricals.php?delete_id=${id}`;
         }
     });
 }

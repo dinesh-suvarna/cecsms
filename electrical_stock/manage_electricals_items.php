@@ -159,7 +159,7 @@ ob_start();
                         </div>
                         <div class="mb-3">
                             <label class="small fw-bold text-muted text-uppercase">Item Code</label>
-                            <input type="text" name="item_code" id="item_code" class="form-control rounded-3 border-light-subtle" placeholder="e.g. FAN-01" required>
+                            <input type="text" name="item_code" id="item_code" class="form-control rounded-3 border-light-subtle" placeholder="e.g. CF" required>
                         </div>
                         <button type="submit" name="save_type" id="submitBtn" class="btn text-white w-100 rounded-pill py-2 fw-bold" style="background-color: #10b981;">
                             <i class="bi bi-check-circle me-2"></i> Save to Registry

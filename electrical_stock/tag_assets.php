@@ -128,7 +128,7 @@ ob_start();
                             </div>
                         <?php else: ?>
                             <?php foreach ($pending_list as $p): ?>
-                                <a href="tag_electrical_assets.php?stock_id=<?= $p['id'] ?>" 
+                                <a href="tag_assets.php?stock_id=<?= $p['id'] ?>" 
                                    class="list-group-item list-group-item-action p-3 border-0 <?= ($stock_id == $p['id']) ? 'bg-primary-subtle border-start border-primary border-4' : '' ?>">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div class="text-truncate">

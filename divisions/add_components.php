@@ -159,7 +159,7 @@ $content = ob_get_clean();
 
 // Check role for layout
 if (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin') {
-    include "stocklayout.php";
+    include "../stock/stocklayout.php";
 } else {
     include "../divisions/divisionslayout.php";
 }

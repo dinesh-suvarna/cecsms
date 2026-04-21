@@ -114,6 +114,68 @@ ob_start();
     
     .bg-emerald-soft { background: rgba(16, 185, 129, 0.1); }
     .fw-800 { font-weight: 800 !important; letter-spacing: -0.5px; }
+
+    /* Align Search bar to the right and style it */
+.dataTables_filter {
+    text-align: right;
+    margin-bottom: 15px;
+}
+
+.dataTables_filter input {
+    width: 250px !important;
+    border-radius: 20px !important;
+    padding: 8px 15px !important;
+    border: 1px solid #dee2e6 !important;
+    outline: none;
+}
+
+/* Style Pagination buttons */
+.pagination .page-link {
+    border: none;
+    color: #64748b;
+    margin: 0 2px;
+    border-radius: 8px !important;
+}
+
+.pagination .active .page-link {
+    background: var(--primary-gradient) !important;
+    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.2);
+}
+
+/* 1. Remove Search Bar Focus Outline (Blue Glow) */
+.dataTables_filter input:focus {
+    border-color: #dee2e6 !important; /* Keep the original border color */
+    box-shadow: none !important;      /* Remove blue glow */
+    outline: none !important;
+}
+
+/* 2. Style the length dropdown focus as well */
+.dataTables_length select:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* 3. Adjust Pagination Colors (Lighten the dark active state) */
+.pagination .active .page-link {
+    /* Changing from the dark primary-gradient to a softer blue */
+    background: #e0e7ff !important; 
+    color: #4338ca !important;
+    border: 1px solid #c7d2fe !important;
+    box-shadow: none !important;
+}
+
+.pagination .page-link:hover {
+    background: #f8fafc !important;
+    color: #0d6efd !important;
+}
+
+/* 4. Fix for Length and Search Alignment */
+.dataTables_wrapper .d-flex {
+    padding: 0.5rem 1rem;
+    background: #fdfdfd;
+    border-bottom: 1px solid #f1f5f9;
+}
+
 </style>
 
 <div class="container-fluid px-0">
@@ -260,106 +322,100 @@ ob_start();
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
-// --- FORM TRANSITIONS ---
+// Global UI Functions
 function prepareEditVendor(data) {
     document.getElementById('vendor_id').value = data.id;
     document.getElementById('vendor_name').value = data.vendor_name;
+    if(document.getElementById('categorySelect')) document.getElementById('categorySelect').value = data.category;
     
-    const catSelect = document.getElementById('categorySelect');
-    if(catSelect) catSelect.value = data.category;
-
-    const card = document.getElementById('registryCard');
-    const submitBtn = document.getElementById('submitBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const formTitle = document.getElementById('formTitle');
-    const formSubtitle = document.getElementById('formSubtitle');
-
-    card.classList.add('edit-mode-active');
-    submitBtn.classList.replace('btn-success', 'btn-primary');
-    submitBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Update Vendor';
+    document.getElementById('registryCard').classList.add('edit-mode-active');
+    const btn = document.getElementById('submitBtn');
+    btn.classList.replace('btn-success', 'btn-primary');
+    btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Update Vendor';
     
-    formTitle.innerText = "Modify Vendor";
-    formSubtitle.innerText = "Updating details for " + data.vendor_name;
-    
-    cancelBtn.classList.remove('d-none');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('formTitle').innerText = "Modify Vendor";
+    document.getElementById('cancelBtn').classList.remove('d-none');
     document.getElementById('editBadge').classList.remove('d-none');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function resetVendorForm() {
     document.getElementById('vendorForm').reset();
     document.getElementById('vendor_id').value = "";
-    
-    const card = document.getElementById('registryCard');
-    const submitBtn = document.getElementById('submitBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-
-    card.classList.remove('edit-mode-active');
-    submitBtn.classList.replace('btn-primary', 'btn-success');
-    submitBtn.innerHTML = '<i class="bi bi-plus-lg me-1"></i> Register Vendor';
-    
-    document.getElementById('formTitle').innerText = "<?= $category_type ?> Vendor Registry";
-    document.getElementById('formSubtitle').innerText = "Add a new verified provider";
-    
-    cancelBtn.classList.add('d-none');
+    document.getElementById('registryCard').classList.remove('edit-mode-active');
+    const btn = document.getElementById('submitBtn');
+    btn.classList.replace('btn-primary', 'btn-success');
+    btn.innerHTML = '<i class="bi bi-plus-lg me-1"></i> Register Vendor';
+    document.getElementById('cancelBtn').classList.add('d-none');
     document.getElementById('editBadge').classList.add('d-none');
 }
 
-// --- MAIN INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', function() {
-    
-    // 1. ATTACH DELETE CLICK EVENTS (This makes the buttons clickable again)
-    document.querySelectorAll('.delete-vendor-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const id = this.getAttribute('data-id');
-            const name = this.getAttribute('data-name');
-            
+$(document).ready(function() {
+    // 1. Initialize Tables
+    const allTables = $('.vendorDataTable').DataTable({
+        "pageLength": 10,
+        "dom": '<"d-flex justify-content-between align-items-center mb-3"lf>rt<"d-flex justify-content-between align-items-center mt-3"ip>',
+        "language": {
+            "lengthMenu": "_MENU_",
+            "search": "",
+            "searchPlaceholder": "Search across all tabs...",
+            "paginate": {
+                "previous": "<i class='bi bi-chevron-left'></i>",
+                "next": "<i class='bi bi-chevron-right'></i>"
+            }
+        },
+        "drawCallback": function() {
+            attachDeleteEvents();
+        }
+    });
+
+    // 2. Cross-Tab Search Logic
+    $('.dataTables_filter input').on('keyup', function () {
+        allTables.search(this.value).draw();
+    });
+
+    // 3. Tab Refresh
+    $('button[data-bs-toggle="pill"]').on('shown.bs.tab', function() {
+        allTables.columns.adjust();
+    });
+
+    // 4. Delete Logic
+    function attachDeleteEvents() {
+        $('.delete-vendor-btn').off('click').on('click', function() {
+            const id = $(this).data('id');
+            const name = $(this).data('name');
             Swal.fire({
                 title: 'Delete Vendor?',
                 text: `Removing "${name}" cannot be undone.`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',
-                confirmButtonText: 'Yes, remove',
-                reverseButtons: true
+                confirmButtonText: 'Yes, remove'
             }).then((result) => {
                 if (result.isConfirmed) {
                     window.location.href = `delete_vendor.php?id=${id}&type=<?= urlencode($category_type) ?>`;
                 }
             });
         });
-    });
+    }
 
-    // 2. HANDLE ALERTS (Based on Session and URL)
-    const urlParams = new URLSearchParams(window.location.search);
-
-    // Session Success
+    // 5. Notifications
     <?php if($success_msg): ?>
-        Swal.fire({ icon: 'success', title: 'Done!', text: '<?= $success_msg ?>', timer: 1500, showConfirmButton: false });
+        Swal.fire({ icon: 'success', title: 'Success', text: '<?= $success_msg ?>', timer: 2000, showConfirmButton: false });
     <?php endif; ?>
 
-    // URL Error (Access Denied)
-    if (urlParams.has('error')) {
-        const errorType = urlParams.get('error');
-        let errorText = "This action could not be completed.";
-
-        if (errorType === 'used_in_services') {
-            errorText = "This vendor is linked to existing Service records and cannot be removed.";
-        } else if (errorType === 'used_in_stock') {
-            errorText = "This vendor is currently linked to active Stock items and cannot be removed.";
-        }
-
-        Swal.fire({ icon: 'error', title: 'Access Denied', text: errorText, confirmButtonColor: '#6b7280' });
-    }
-
-    // URL Success (After Delete)
+    const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('success') === '1') {
-        Swal.fire({ icon: 'success', title: 'Removed', text: 'Vendor successfully deleted.', timer: 1500, showConfirmButton: false });
+        Swal.fire({ icon: 'success', title: 'Deleted', text: 'Vendor removed successfully.', timer: 2000, showConfirmButton: false });
     }
 
-    // 3. CLEANUP URL 
+    // URL Cleanup
     setTimeout(() => {
         window.history.replaceState({}, document.title, window.location.pathname + "?type=<?= urlencode($category_type) ?>");
     }, 500);

@@ -234,7 +234,7 @@ ob_start();
                 <div class="feature-desc">Track location and status of tagged assets.</div>
             </a>
         </div>
-
+         <?php if(in_array($role, ['SuperAdmin'])): ?>               
         <div class="col-12 mt-5"><div class="section-label">Logistics & Intelligence</div></div>
         
         <div class="col-lg-8">
@@ -269,6 +269,7 @@ ob_start();
                 </div>
             </div>
         </div>
+        
 
         <div class="col-lg-4">
             <div class="activity-feed shadow-lg h-100">
@@ -289,6 +290,7 @@ ob_start();
                 </div>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 

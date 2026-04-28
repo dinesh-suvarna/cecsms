@@ -1,5 +1,5 @@
 <?php 
-include "../config/db.php"; 
+require_once __DIR__ . "/../config/db.php";
 include "../includes/functions.php"; 
 session_start();
 
@@ -19,7 +19,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_component'])) {
     $price = (float)$_POST['unit_price'];
     $vendor_id = !empty($_POST['vendor_id']) ? (int)$_POST['vendor_id'] : "NULL";
 
-    // Logic: Insert including the division_id
+    // Insert including the division_id
     $sql = "INSERT INTO component_stock (division_id, item_name, category, specification, total_quantity, unit_price, vendor_id) 
             VALUES ($notif_division_id, '$item_name', '$category', '$spec', '$qty', '$price', $vendor_id)";
 

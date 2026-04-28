@@ -1,8 +1,7 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
-// Ensure the response is always JSON for AJAX/Fetch calls
 header('Content-Type: application/json');
 
 // 1. SESSION & ROLE SECURITY
@@ -22,7 +21,6 @@ if (!$id) {
 }
 
 // 2. DIVISIONAL SECURITY CHECK
-// Prevents Admins from tampering with assets belonging to other divisions
 if ($user_role !== 'SuperAdmin') {
     $auth_check = $conn->prepare("
         SELECT ea.id 
@@ -56,7 +54,7 @@ if ($action === 'verify') {
 // --- SOFT DELETE (Archive) ---
 elseif ($action === 'soft_delete') {
     $now = date('Y-m-d H:i:s');
-    // We set deleted_at. This hides it from the Registry but keeps the row in DB.
+    // set deleted_at. This hides it from the Registry but keeps the row in DB.
     $stmt = $conn->prepare("UPDATE electrical_assets SET deleted_at = ? WHERE id = ?");
     $stmt->bind_param("si", $now, $id);
     
@@ -69,7 +67,7 @@ elseif ($action === 'soft_delete') {
 
 // --- HARD DELETE (Permanent) ---
 elseif ($action === 'hard_delete') {
-    // We remove the row. This allows the stock quantity to "re-open" in the tagging queue.
+    // remove the row. This allows the stock quantity to "re-open" in the tagging queue.
     $stmt = $conn->prepare("DELETE FROM electrical_assets WHERE id = ?");
     $stmt->bind_param("i", $id);
     
@@ -126,7 +124,6 @@ elseif ($action === 'lifecycle') {
 
     $new_status = $status_map[$type];
 
-    // NOTE: If you have an 'asset_logs' table, this is where you'd insert the $remarks.
     $stmt = $conn->prepare("UPDATE electrical_assets SET status = ? WHERE id = ?");
     $stmt->bind_param("si", $new_status, $id);
     

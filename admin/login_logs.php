@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../includes/session.php";
 
 $page_title = "Login History";
@@ -34,7 +34,7 @@ $query = "SELECT ll.*, u.username, u.role, u.last_activity FROM login_logs ll
           ORDER BY ll.login_time DESC LIMIT 100";
 $result = $conn->query($query);
 
-// Keep track of users we've already marked as "pulsing" so old logs don't blink
+
 $active_pulses = [];
 
 ob_start();
@@ -72,7 +72,7 @@ ob_start();
                                 $showPulse = false;
                                 if ($isOnline && !in_array($row['user_id'], $active_pulses)) {
                                     $showPulse = true;
-                                    $active_pulses[] = $row['user_id']; // Mark user as "pulsed" for this page load
+                                    $active_pulses[] = $row['user_id']; 
                                 }
                             ?>
                             <tr>

@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 // Ensure the response is always JSON
@@ -22,7 +22,7 @@ if (!$id) {
 
 /**
  * SECURITY CHECK: 
- * If the user is an Admin, we verify that the asset actually belongs 
+ * If the user is an Admin, verify that the asset actually belongs 
  * to a unit within their division before allowing any changes.
  */
 if ($user_role !== 'SuperAdmin') {
@@ -97,7 +97,6 @@ elseif ($action === 'edit_tag') {
 elseif ($action === 'lifecycle') {
     $type = $_POST['type'] ?? ''; // 'return', 'repair', or 'dispose'
     
-    // Map the JavaScript "type" to your Database "status"
     $status_map = [
         'return'  => 'Available',
         'repair'  => 'Damaged',

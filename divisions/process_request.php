@@ -1,10 +1,10 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../admin/auth.php";
 include "../includes/session.php";
 
 /**
- * 1. MANDATORY SECURITY GATE
+ * 1. MANDATORY SECURITY
  */
 if ($_SESSION['role'] !== 'SuperAdmin') {
     $_SESSION['error_msg'] = "Access Denied: Only SuperAdmins can approve lifecycle changes.";

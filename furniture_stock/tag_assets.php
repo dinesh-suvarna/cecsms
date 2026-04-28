@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {

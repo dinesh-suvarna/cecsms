@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 // --- 1. SESSION & ROLE CHECK ---
@@ -102,7 +102,7 @@ ob_start();
         padding: 0 15px;
         font-weight: 800;
         font-size: 0.85rem;
-        color: #ff9f1c; /* Electrical Amber */
+        color: #ff9f1c;
         text-transform: uppercase;
         letter-spacing: 1px;
     }

@@ -1,9 +1,9 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $category = 'Electrical'; // Hardcoded for this file
+    $category = 'Electrical'; 
     $master_sl = $_POST['master_sl_no'];
     $p_date = $_POST['purchase_date'];
     $vendor_id = $_POST['vendor_id'];
@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit();
     }
   
-    // 2. Insert with correct column order (Matching Furniture logic)
+    // 2. Insert with correct column order 
     $stmt = $conn->prepare("INSERT INTO purchase_ledger (master_sl_no, purchase_date, vendor_id, bill_no, discount_amount, category) VALUES (?, ?, ?, ?, ?, ?)");
     $stmt->bind_param("ssisds", $master_sl, $p_date, $vendor_id, $bill_no, $global_discount, $category);
     

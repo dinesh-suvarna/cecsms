@@ -1,5 +1,5 @@
 <?php
-require_once "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 require_once "../includes/session.php";
 
 $role = $_SESSION['role'];
@@ -58,7 +58,7 @@ if ($role == 'SuperAdmin') {
     $total_q = "SELECT SUM(quantity) as total FROM stock_details";
     $total_res = $conn->query($total_q);
 } else {
-    // For specific institutions, we join with items_master to filter
+    // For specific institutions, join with items_master to filter
     $stmt = $conn->prepare("
         SELECT SUM(sd.quantity) as total 
         FROM stock_details sd
@@ -166,7 +166,6 @@ $avail_percent = ($total_assets > 0) ? round(($dispatched_assets / $total_assets
         color: var(--primary-accent);
     }
 
-    /* --- ACCENT COLORS --- */
     .accent-green { --accent-color: #10b981; --soft-bg: rgba(16, 185, 129, 0.1); }
     .accent-blue { --accent-color: #3b82f6; --soft-bg: rgba(59, 130, 246, 0.1); }
     .accent-purple { --accent-color: #8b5cf6; --soft-bg: rgba(139, 92, 246, 0.1); }

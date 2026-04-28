@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . "/../config/db.php";
 if (!isset($page_title)) $page_title = "Division Dashboard";
 
 // --- CACHE CONTROL ---
@@ -10,7 +11,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
 $notif_division_id = $_SESSION['division_id'] ?? 0;
 
 /**
- * REWRITTEN QUERY:
  * 1. Fetches Repair/Return status updates from asset_logs
  * 2. Fetches Dispatches from SuperAdmin where items don't have a Division Asset ID yet
  */
@@ -300,7 +300,7 @@ $notif_count = $notifications->num_rows;
                                     $icon = 'bi-box-seam-fill text-primary';
                                     $bg = 'rgba(13, 110, 253, 0.05)';
                                     // Dispatches clear automatically once an Asset ID is assigned, 
-                                    // so we can link directly to the assignment page.
+                                    // link directly to the assignment page.
                                     $link = 'assign_asset.php'; 
                                     $title = "New Dispatch Received";
                                     $message = "Items have arrived. Please <strong>Assign Asset IDs</strong>.";

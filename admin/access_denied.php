@@ -4,7 +4,6 @@ require_once "../includes/security_headers.php";
 
 http_response_code(403);
 
-// Get role safely
 $role = $_SESSION['role'] ?? 'Unknown';
 ?>
 
@@ -15,10 +14,8 @@ $role = $_SESSION['role'] ?? 'Unknown';
     <title>Access Denied</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Bootstrap -->
+   
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 
     <style>

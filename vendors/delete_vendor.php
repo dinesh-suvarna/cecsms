@@ -6,7 +6,7 @@ if (!isset($_SESSION["user_id"])) {
     exit();
 }
 
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 
 if (isset($_GET['id'])) {
     $id = (int)$_GET['id'];

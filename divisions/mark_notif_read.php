@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 // Check if ID is present
@@ -11,10 +11,10 @@ if (isset($_GET['id'])) {
         $stmt = $conn->prepare("UPDATE asset_logs SET is_read = 1 WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
-        $stmt->close(); // Clean up the statement
+        $stmt->close(); 
         
         header("Location: asset_logs.php");
-        exit(); // Always use exit() after a header redirect
+        exit(); 
     } else {
         header("Location: assign_asset.php");
         exit();

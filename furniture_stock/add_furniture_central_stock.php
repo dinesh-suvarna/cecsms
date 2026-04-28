@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 // --- 1. SESSION & ROLE CHECK ---
@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_stock'])) {
     } else {
         if (!empty($_POST['edit_id'])) {
             $edit_id = (int)$_POST['edit_id'];
-            // In update, we usually don't mess with remaining_qty unless specifically logic dictates
+    
             $sql = "UPDATE furniture_central_stock SET 
                     furniture_item_id='$item_id', total_qty='$qty', 
                     bill_no='$bill_no', bill_date='$bill_date', vendor_id='$vendor_id', 

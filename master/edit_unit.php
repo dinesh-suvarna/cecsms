@@ -1,5 +1,5 @@
 <?php
-require_once "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 require_once "../includes/session.php";
 
 $error = "";
@@ -30,7 +30,7 @@ if($result->num_rows == 0){
 $unit = $result->fetch_assoc();
 $stmt->close();
 
-// 🔐 Security check
+// Security check
 if($role != 'SuperAdmin'){
     $check = $conn->prepare("SELECT d.institution_id FROM divisions d WHERE d.id=?");
     $check->bind_param("i", $unit['division_id']);

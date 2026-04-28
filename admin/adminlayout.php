@@ -1,9 +1,9 @@
 <?php 
 require_once __DIR__ . "/auth.php"; 
+require_once __DIR__ . "/../config/db.php";
 $role = $_SESSION["role"] ?? 'User'; 
 if (!isset($page_title)) $page_title = "Admin Panel";
 
-/* Detect current page */
 $current_page = basename($_SERVER['PHP_SELF']);
 
 /* Prevent caching */
@@ -200,7 +200,7 @@ header("Pragma: no-cache");
             color: var(--text-main);
         }
 
-        /* Red dot pulse animation (optional) */
+        /* Red dot pulse animation */
         .position-absolute.badge {
             animation: pulse-red 2s infinite;
         }
@@ -510,7 +510,6 @@ header("Pragma: no-cache");
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Sidebar Mobile Toggle
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
         if(menuToggle) {
@@ -519,7 +518,6 @@ header("Pragma: no-cache");
             });
         }
 
-        // Auto-scroll to active link
         document.addEventListener("DOMContentLoaded", function() {
             const sidebarContainer = document.querySelector('.overflow-y-auto');
             const activeLink = document.querySelector('#sidebar .nav-link.active');
@@ -531,7 +529,6 @@ header("Pragma: no-cache");
             }
         });
 
-        // Back button cache fix
         window.onpageshow = function(event) {
             if (event.persisted) { window.location.reload(); }
         };

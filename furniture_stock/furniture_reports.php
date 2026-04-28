@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../includes/session.php";
 
 date_default_timezone_set('Asia/Kolkata'); 
@@ -103,7 +103,6 @@ ob_start();
     .table-modern thead { background: #f8fafc; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05rem; }
     .tag-mono { background: #eef2ff; color: var(--accent); padding: 3px 8px; border-radius: 5px; font-family: monospace; font-weight: bold; }
 
-    /* Search Bar Styling */
     .search-input-group {
         position: relative;
         margin-bottom: 20px;

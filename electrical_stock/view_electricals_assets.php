@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 // Security Check
@@ -11,8 +11,6 @@ if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Ad
 $user_role = $_SESSION['role'];
 $user_division = $_SESSION['division_id'] ?? 0;
 
-// Query tailored for Electrical Assets
-// Assuming table naming convention: electrical_assets, electrical_stock, electrical_items
 $assets_query = "
     SELECT 
         ea.id as asset_db_id, ea.asset_tag, ea.status, ea.last_verified_date,
@@ -34,7 +32,6 @@ $assets_query .= " ORDER BY inst.institution_name ASC, d.division_name ASC, u.un
 $result = $conn->query($assets_query);
 
 $result = $conn->query($assets_query);
-// DEBUG: This will tell you the TRUE count coming from the DB
 echo "<script>console.log('Database returned: " . $result->num_rows . " items');</script>";
 
 $registry = [];
@@ -96,7 +93,6 @@ ob_start();
                                                                         $all_ids = []; 
                                                                         foreach($bills as $bl) { 
                                                                             foreach($bl as $ast) { 
-                                                                                // GUARD CLAUSE: Only add to count if not deleted (extra safety)
                                                                                 if (!isset($ast['deleted_at']) || $ast['deleted_at'] === null) {
                                                                                     $all_ids[] = $ast['asset_db_id']; 
                                                                                 }
@@ -190,7 +186,6 @@ ob_start();
 </div>
 
 <style>
-    /* Styling adjusted for Electrical Theme (Warning/Gold accent) */
     .asset-tag-text { font-family: 'Monaco', 'Consolas', monospace; font-weight: 700; font-size: 1.05rem; color: #856404; }
     .table-secondary-subtle { background-color: #fef9e7; font-size: 0.95rem; border-left: 4px solid #ffc107; }
     .accordion-button:not(.collapsed) { background-color: #fffdf5; color: #856404; box-shadow: none; }

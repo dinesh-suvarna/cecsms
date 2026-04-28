@@ -1,6 +1,6 @@
 <?php
 ob_start();
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../includes/session.php";
 $user_id = $_SESSION['user_id'] ?? null;
 $user_role = $_SESSION['role'] ?? '';
@@ -256,14 +256,14 @@ while($row = $result->fetch_assoc()){
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    let isAllExpanded = false; // Track state for the toggle button
+    let isAllExpanded = false; 
 
-    // 1. BOOTSTRAP COLLAPSE LISTENERS (Icons & Glitch Fix)
+    // 1. BOOTSTRAP COLLAPSE LISTENERS 
     const collapseElements = document.querySelectorAll('.collapse');
     collapseElements.forEach(el => {
         el.addEventListener('show.bs.collapse', function (e) {
             e.stopPropagation();
-            this.style.overflow = 'hidden'; // Restored glitch fix
+            this.style.overflow = 'hidden'; 
             const header = document.querySelector(`[data-bs-target="#${this.id}"]`);
             if (header) {
                 const icon = header.querySelector('.toggle-icon');
@@ -403,7 +403,7 @@ window.addEventListener("load", function(){
                     block: "center"
                 });
 
-                // ✅ SHOW CLEAR BUTTON
+                // SHOW CLEAR BUTTON
                 document.getElementById("clearHighlightBtn").style.display = "inline-block";
 
             }
@@ -422,26 +422,23 @@ document.getElementById("clearHighlightBtn").addEventListener("click", function(
         if(badge) badge.remove();
     });
 
-    // Remove group highlight
     document.querySelectorAll('.match-group-highlight').forEach(unit => {
         unit.classList.remove("match-group-highlight");
     });
 
-    // Hide button again
     this.style.display = "none";
 });
 </script>
 
 <style>
-/* 1. BRAND COLORS & ROOT VARIABLES */
+
 :root {
-    --brand-emerald: #10b981;    /* Vibrant accent */
-    --brand-forest: #065f46;     /* High-contrast readable text */
+    --brand-emerald: #10b981;    
+    --brand-forest: #065f46;     
     --brand-hover: rgba(16, 185, 129, 0.05);
-    --div-bg: #f9fafb;           /* Ultra-light grey for division */
+    --div-bg: #f9fafb;           
 }
 
-/* 2. LAYOUT & STICKY HEADER */
 html { overflow-y: scroll; scrollbar-gutter: stable; }
 
 .sticky-top {
@@ -457,7 +454,6 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
     border-bottom: 2px solid var(--brand-emerald) !important;
 }
 
-/* 3. GROUPING HIERARCHY */
 .institution-card { 
     border: 1px solid #eef0f3 !important;
      transition: box-shadow 0.3s ease;
@@ -475,7 +471,6 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 }
 .unit-block:hover { background-color: var(--brand-hover); }
 
-/* 4. ANIMATION & TABLE FIXES (The Glitch Fix) */
 .collapse { 
     transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1); 
     will-change: height; 
@@ -491,7 +486,6 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
     width: 100% !important;
 }
 
-/* 5. UI ELEMENTS & TEXT */
 .text-forest { color: var(--brand-forest) !important; }
 .text-emerald { color: var(--brand-emerald) !important; }
 .bg-emerald { background-color: var(--brand-emerald) !important; }
@@ -507,28 +501,25 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 }
 .btn-primary:hover { background-color: #059669 !important; }
 
-/* MODERN ARROW ANIMATION */
 .toggle-icon {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     font-size: 0.8rem;
-    color: #64748b; /* Muted slate */
+    color: #64748b; 
 }
 
 .division-header .btn {
     position: relative;
-    z-index: 10; /* Ensures the button sits "above" the collapse trigger layer */
+    z-index: 10; 
     white-space: nowrap;
 }
 
-/* Rotation logic for when the parent is NOT collapsed */
 [aria-expanded="true"] .toggle-icon {
     transform: rotate(90deg);
     color: var(--brand-forest);
 }
 
-/* DIVISION HEADER: Modern Slate Bar */
 .division-header {
-    background-color: #f1f5f9 !important; /* Modern Light Slate */
+    background-color: #f1f5f9 !important; 
     border-left: 5px solid #475569 !important;
     border-radius: 6px;
     margin: 8px 0;
@@ -552,24 +543,21 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
     box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
 }
 
-/* Make sure the badge looks clean next to the button */
 .division-header .badge {
     font-size: 0.75rem;
     letter-spacing: 0.5px;
 }
 
-/* UNIT DATA BLOCK: The "Clean Nest" Look */
 .unit-block {
     background-color: #ffffff;
     border: 1px solid #eef0f3;
     border-left: 4px solid var(--brand-emerald);
     border-radius: 8px;
-    margin: 5px 0 15px 30px; /* Indented to show hierarchy */
+    margin: 5px 0 15px 30px; 
     padding: 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04); /* Soft "Floating" effect */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04); 
 }
 
-/* Ensure the table inside units looks integrated */
 .unit-block .table {
     margin-bottom: 0;
     background: transparent;
@@ -584,23 +572,20 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
     color: #64748b;
 }
 
-/* Status Row Icon Animation */
 .report-row:hover .bi-truck {
     transform: translateX(3px);
     transition: transform 0.2s ease-in-out;
     display: inline-block;
 }
 
-/* GROUP HIGHLIGHT CONTAINER */
 .match-group-highlight {
-    background: rgba(255, 243, 205, 0.35); /* soft yellow */
+    background: rgba(255, 243, 205, 0.35); 
     border-left: 4px solid #ffc107;
     border-radius: 6px;
     padding: 8px;
     transition: all 0.3s ease;
 }
 
-/* OPTIONAL: smoother row highlight */
 .report-row.match-highlight {
     background-color: #fff3cd !important;
     outline: 2px solid #ffc107;
@@ -614,7 +599,6 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
-/* 6. SCROLLBAR & PRINT */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #f1f1f1; }
 ::-webkit-scrollbar-thumb { background: var(--brand-emerald); border-radius: 10px; }
@@ -627,8 +611,6 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
     .sticky-top { position: static !important; }
 }
 </style>
-
-
 
 <?php
 $content = ob_get_clean();

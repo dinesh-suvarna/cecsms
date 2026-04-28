@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
@@ -227,7 +227,6 @@ $(document).ready(function () {
     $('#itemsTable').DataTable({
         pageLength: 10,
         lengthMenu: [10, 25, 50],
-        // Using a custom wrapper class 'dt-controls-wrapper'
         dom: "<'dt-controls-wrapper'lf>" +
              "<'row'<'col-sm-12'tr>>" +
              "<'row p-4'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-end'p>>",

@@ -51,8 +51,6 @@ if (isset($conn)) {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
-        
-        /* Global Focus Reset */
         input:focus, 
         select:focus, 
         textarea:focus, 
@@ -65,7 +63,6 @@ if (isset($conn)) {
             box-shadow: none !important;
         }
 
-        /* Ensure Select2 search box also has no shadow */
         .select2-search__field:focus {
             box-shadow: none !important;
         }
@@ -165,7 +162,7 @@ if (isset($conn)) {
             border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 0.8rem 1.5rem;
-            margin-bottom: 1rem; /* Changed from 2rem to 1rem */
+            margin-bottom: 1rem; 
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -397,10 +394,7 @@ if (isset($conn)) {
     }
 </script>
 <script>
-    // 1. Get the scrollable element
     const scrollContainer = document.getElementById('sidebarScrollArea');
-
-    // 2. On Load: Check if there is a saved position and apply it
     window.addEventListener('load', () => {
         const savedScrollPos = localStorage.getItem('sidebarScrollPos');
         if (savedScrollPos && scrollContainer) {

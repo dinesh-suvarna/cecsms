@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../includes/session.php";
 
 $page_title = "Inventory Reports";
@@ -49,62 +49,53 @@ ob_start();
         --slate-900: #0f172a;
     }
 
-    /* SaaS Table Styling */
     .report-card { border-radius: 12px; border: 1px solid #e2e8f0 !important; background: #fff; }
     .table thead { background-color: var(--slate-900); color: white; text-transform: uppercase; font-size: 0.75rem; }
     .table th { padding: 15px 12px !important; }
     .table td { padding: 12px !important; border-color: #f1f5f9 !important; }
 
-    /* Header Bar (The one you want to keep) */
     .header-info-bar {
         background: linear-gradient(to right, var(--emerald-600), var(--emerald-700));
         color: white;
         border-radius: 8px;
     }
-    /* Custom Emerald Button */
-.btn-emerald {
-    background-color: var(--emerald-600);
-    border-color: var(--emerald-600);
-    color: #fff !important;
-    transition: all 0.2s ease;
-}
+    
+    .btn-emerald {
+        background-color: var(--emerald-600);
+        border-color: var(--emerald-600);
+        color: #fff !important;
+        transition: all 0.2s ease;
+    }
 
-.btn-emerald:hover {
-    background-color: var(--emerald-700);
-    border-color: var(--emerald-700);
-    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
-    transform: translateY(-1px);
-}
+    .btn-emerald:hover {
+        background-color: var(--emerald-700);
+        border-color: var(--emerald-700);
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+        transform: translateY(-1px);
+    }
 
     
     @media print {
-    /* 1. Hides the AdminCenter Sidebar and Top Navigation Bar */
     .no-print, .sidebar, .navbar, .header-container, .top-nav, header, nav { 
         display: none !important; 
     }
 
-    /* 2. Hides the center Filter Summary box */
     .filter-summary-box { 
         display: none !important; 
     }
 
-    /* Adjusts layout for the paper */
     body { background: #fff !important; padding: 0 !important; }
     .container-fluid { width: 100% !important; padding: 0 !important; margin: 0 !important; }
     .report-card { border: none !important; box-shadow: none !important; }
     
-    /* Ensure the Emerald bar and colors print correctly */
     .header-info-bar { 
         background: #f8fafc !important; 
         color: black !important; 
         border: 1px solid #e2e8f0 !important; 
         
-        /* Forces colors to render in print across all browsers */
-        -webkit-print-color-adjust: exact; /* Chrome, Edge, Safari */
-        print-color-adjust: exact;         /* Standard / Firefox */
-    }
+        -webkit-print-color-adjust: exact; 
+        print-color-adjust: exact;         
 
-    /* Apply to badges as well if they have light emerald backgrounds */
     .asset-id-badge {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;

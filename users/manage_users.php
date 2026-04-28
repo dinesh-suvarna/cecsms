@@ -2,7 +2,7 @@
 require_once "../includes/session.php";
 require_once "../includes/role_admin.php";
 require_once "../includes/security_headers.php";
-require_once "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 
 /* -----------------------------
    Page title
@@ -312,7 +312,6 @@ ob_start();
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// Logic remains identical to your existing file to ensure no breakdown in functionality
 function editUser(id, username, role, status, institution_id, division_id) {
     document.getElementById('user_id').value = id;
     document.getElementById('username').value = username;

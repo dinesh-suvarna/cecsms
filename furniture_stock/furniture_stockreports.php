@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../includes/session.php";
 
 date_default_timezone_set('Asia/Kolkata'); 
@@ -38,7 +38,7 @@ if ($f_unit) {
 $filter_display = !empty($filter_parts) ? implode(" | ", $filter_parts) : "All Institutions";
 // --------------------------------------------------------------
 
-// 2. Build Grouped Query
+// 2. Query
 $sql = "SELECT 
             fi.item_name,
             SUM(s.total_qty) as total_quantity

@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../admin/auth.php";
 include "../includes/session.php";
 
@@ -10,8 +10,6 @@ $division_id = $_SESSION['division_id'] ?? 0;
 $role = $_SESSION['role'] ?? '';
 
 /* ================= FETCH ANALYTICS ================= */
-
-// 1. General Stats - FIXED JOIN AND COUNT LOGIC
 $stats_query = "SELECT 
     COUNT(da.id) as total,
     SUM(CASE WHEN da.status = 'assigned' THEN 1 ELSE 0 END) as active,

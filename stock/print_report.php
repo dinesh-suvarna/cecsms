@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../includes/session.php";
 
 $type = $_GET['type'] ?? 'unit'; // unit, division, or institution

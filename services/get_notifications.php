@@ -1,8 +1,8 @@
 <?php
 session_start();
-include "../config/db.php"; // 
+require_once __DIR__ . "/../config/db.php"; 
 
-// EXACT same query logic from layout.php
+
 $notif_query = "SELECT 
                     da.status, 
                     d.division_name, 
@@ -25,7 +25,7 @@ $result = $conn->query($notif_query);
 
 $items = [];
 while($row = $result->fetch_assoc()) {
-    // Format a nice message for the JavaScript to display
+    
     $type = strtoupper(str_replace('_requested', '', $row['status']));
     $row['message'] = "<strong>$type:</strong> " . $row['item_name'];
     $items[] = $row;

@@ -1,9 +1,8 @@
 <?php
-require_once "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 require_once "../includes/session.php";
 require_once "../admin/auth.php";
 
-// Your notify function (Assumed to be in an included file, but defined here if not)
 if (!function_exists('notify')) {
     function notify($type, $msg){
         $_SESSION['notify_type'] = $type; 
@@ -203,6 +202,5 @@ $modal_html = '
     </div>
 </div>';
 
-// Include the layout (it will now see both $main_content and $modal_html)
 include "../master/masterlayout.php";
 ?>

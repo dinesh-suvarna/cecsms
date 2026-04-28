@@ -1,10 +1,10 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // 1. Capture Header Data (Added Category)
-    $category = $_POST['category'] ?? 'Furniture'; // Get from hidden input
+    // 1. Capture Header Data 
+    $category = $_POST['category'] ?? 'Furniture'; 
     $master_sl = $_POST['master_sl_no'];
     $p_date = $_POST['purchase_date'];
     $vendor_id = $_POST['vendor_id'];
@@ -18,12 +18,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $check_result = $check_stmt->get_result();
 
     if ($check_result->num_rows > 0) {
-        // Redirect back with the specific category logic
         header("Location: purchase_ledger.php?msg=duplicate&sl=" . urlencode($master_sl));
         exit();
     }
   
-    // 2. Insert into purchase_ledger (Added category to the columns)
+    // 2. Insert into purchase_ledger 
     $stmt = $conn->prepare("INSERT INTO purchase_ledger (master_sl_no, purchase_date, vendor_id, bill_no, discount_amount, category) VALUES (?, ?, ?, ?, ?, ?)");
     $stmt->bind_param("ssisds", $master_sl, $p_date, $vendor_id, $bill_no, $global_discount, $category);
     
@@ -31,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $ledger_id = $conn->insert_id; 
         $running_total_with_tax = 0;
 
-        // 3. Loop through the items (This part was perfect!)
+        // 3. Loop through the items 
         $item_stmt = $conn->prepare("INSERT INTO purchase_items (ledger_id, item_name, qty, unit_price, gst_percent, net_total, grand_total) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
         foreach ($_POST['item_name'] as $key => $name) {

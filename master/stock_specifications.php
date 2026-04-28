@@ -1,9 +1,8 @@
 <?php
-require_once "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 require_once "../includes/session.php";
 require_once "../admin/auth.php";
 
-/* ---------- NOTIFY (SweetAlert2 Style) ---------- */
 if (!function_exists('notify')) {
     function notify($type, $msg){
         $_SESSION['swal_type'] = ($type == 'danger') ? 'error' : $type; 
@@ -23,7 +22,7 @@ if(isset($_POST['add_model'])){
     $storage_type = $_POST['storage_type'];
     $storage_size = trim($_POST['storage_size']);
 
-    // 1. Manual Check for Duplicate (This ensures the "Add" works reliably)
+    // 1. Manual Check for Duplicate 
     $check = $conn->prepare("SELECT id FROM item_models WHERE item_id=? AND model_name=?");
     $check->bind_param("is", $item_id, $model_name);
     $check->execute();
@@ -250,7 +249,6 @@ $modal_html = '
 </div>';
 
 $main_content = ob_get_clean();
-// CRITICAL: Append the modal to the content so it actually renders
 
 include "masterlayout.php";
 ?>

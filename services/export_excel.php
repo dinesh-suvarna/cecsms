@@ -2,7 +2,7 @@
 session_start();
 if (!isset($_SESSION["user_id"])) { exit("Access Denied"); }
 
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 
 // 1. SET FILTERS FROM URL
 $vendor_id = isset($_GET['vendor_id']) ? intval($_GET['vendor_id']) : null;

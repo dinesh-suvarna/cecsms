@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
@@ -199,7 +199,6 @@ ob_start();
 </div>
 
 <script>
-// Configure Toast Settings
 const Toast = Swal.mixin({
     toast: true,
     position: 'top-end',

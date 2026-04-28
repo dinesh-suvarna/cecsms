@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../includes/session.php";
 
 $unit_id = (int)$_GET['id'];
@@ -22,7 +22,7 @@ $query = "SELECT
           INNER JOIN stock_details sd ON dd.stock_detail_id = sd.id
           /* Link to items_master using the correct FK from stock_details */
           INNER JOIN items_master im ON sd.stock_item_id = im.id
-          /* Optional: Link to vendors if you want to show who supplied it */
+          /* Optional: Link to vendors to show who supplied it */
           LEFT JOIN vendors v ON sd.vendor_id = v.id
           LEFT JOIN institutions i ON dm.institution_id = i.id
           LEFT JOIN divisions d ON dm.division_id = d.id

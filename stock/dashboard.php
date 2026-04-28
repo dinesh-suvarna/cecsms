@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../includes/session.php";
 
 // 1. FINANCIAL OVERVIEW
@@ -10,7 +10,7 @@ $stock_stats = $conn->query("
     FROM stock_details
 ")->fetch_assoc();
 
-// 2. OPERATIONAL VELOCITY (Last 30 Days)
+// 2. OPERATIONAL VELOCITY 
 $thirty_days_ago = date('Y-m-d', strtotime('-30 days'));
 $velocity = $conn->query("
     SELECT SUM(dd.quantity) as moved_items 
@@ -28,7 +28,7 @@ $comp_stats = $conn->query("
     WHERE im.category = 'Computer'
 ")->fetch_assoc();
 
-// 4. CATEGORY DIVERSITY (Replacement for Stock Health)
+// 4. CATEGORY DIVERSITY 
 $cat_stats = $conn->query("
     SELECT COUNT(DISTINCT category) as cat_count FROM items_master
 ")->fetch_assoc();

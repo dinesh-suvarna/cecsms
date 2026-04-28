@@ -5,7 +5,7 @@ if (!isset($_SESSION["user_id"])) {
     exit();
 }
 
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 
 $page_title = "Service Records";
 $page_icon  = "bi-card-checklist";
@@ -13,7 +13,6 @@ $page_icon  = "bi-card-checklist";
 $where = "";
 $total = 0;
 
-// ✅ YOUR ORIGINAL LOGIC: Date Filtering
 if(isset($_GET['from']) && isset($_GET['to']) && $_GET['from'] && $_GET['to']){
     $from = $_GET['from'];
     $to = $_GET['to'];
@@ -35,7 +34,6 @@ if(isset($_GET['from']) && isset($_GET['to']) && $_GET['from'] && $_GET['to']){
     $total = $total_res['total'] ?? 0;
 }
 
-// ✅ YOUR DATA GROUPED (For Accordion View)
 $grouped_data = [];
 if ($result && $result->num_rows > 0) {
     while($row = $result->fetch_assoc()) {
@@ -311,7 +309,7 @@ ob_start();
 </div>
 
 <script>
-// ✅ SEARCH LOGIC
+// SEARCH LOGIC
 document.getElementById('vendorSearch').addEventListener('input', function(e) {
     let term = e.target.value.toLowerCase();
     document.querySelectorAll('.vendor-group').forEach(group => {
@@ -320,7 +318,7 @@ document.getElementById('vendorSearch').addEventListener('input', function(e) {
     });
 });
 
-// ✅ STATUS TOGGLE LOGIC (REFRESHES PAGE TO UPDATE UNPAID COUNTERS)
+// STATUS TOGGLE LOGIC (REFRESHES PAGE TO UPDATE UNPAID COUNTERS)
 document.querySelectorAll('.toggle-pill').forEach(btn => {
     btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
@@ -375,6 +373,5 @@ setTimeout(function() {
 
 <?php
 $content = ob_get_clean();
-//$conn->close();
 include "layout.php";
 ?>

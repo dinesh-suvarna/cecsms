@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . "/../config/db.php";
+
 if (!isset($page_title)) $page_title = "Stock Dashboard";
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
@@ -197,8 +199,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
             #sidebar.show { transform: translateX(0); }
         }
     
-
-/* Ensure the H5 and Icon align visually */
 h5 {
     line-height: 1.2;
 }

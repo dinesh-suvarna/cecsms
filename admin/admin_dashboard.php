@@ -6,7 +6,6 @@ $role = $_SESSION['role'] ?? '';
 ?>
 
 <style>
-/* Elite SaaS Variables */
 :root {
     --bg-main: #f8fafc;
     --card-bg: #ffffff;
@@ -22,7 +21,6 @@ $role = $_SESSION['role'] ?? '';
     min-height: 100vh;
 }
 
-/* THE ELITE CARD */
 .elite-card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
@@ -43,7 +41,6 @@ $role = $_SESSION['role'] ?? '';
     border-color: var(--accent-color);
 }
 
-/* HEADER AREA */
 .card-header-row {
     display: flex;
     justify-content: space-between;
@@ -83,7 +80,6 @@ $role = $_SESSION['role'] ?? '';
     box-shadow: 0 0 10px var(--accent-color);
 }
 
-/* CONTENT */
 .elite-card h5 {
     font-weight: 700;
     color: var(--text-main);
@@ -99,7 +95,6 @@ $role = $_SESSION['role'] ?? '';
     margin-bottom: 25px;
 }
 
-/* FOOTER ACTION */
 .card-action {
     margin-top: auto;
     display: flex;

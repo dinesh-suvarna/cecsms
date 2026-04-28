@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
@@ -18,7 +18,7 @@ if (isset($_SESSION['swal_msg'])) {
     unset($_SESSION['swal_msg'], $_SESSION['swal_type']);
 }
 
-// DELETE LOGIC - Updated for electrical tables
+// DELETE LOGIC - 
 if (isset($_GET['delete_id'])) {
     $delete_id = (int)$_GET['delete_id'];
     // Check against electrical_assets
@@ -39,7 +39,7 @@ if (isset($_GET['delete_id'])) {
     exit();
 }
 
-// QUERY - Updated for electrical tables
+// QUERY - 
 $sql = "SELECT 
             -- Count only live assets from the assets table
             (SELECT COUNT(*) 
@@ -220,7 +220,6 @@ ob_start();
 </div>
 
 <style>
-    /* Electrical blue theme */
     #divisionAccordion .accordion-button {
         background-color: #eff6ff !important;
         color: #1e40af !important;
@@ -290,5 +289,5 @@ function deleteStock(id) {
 
 <?php 
 $content = ob_get_clean(); 
-include "electricalslayout.php"; // Changed to electrical layout
+include "electricalslayout.php"; 
 ?>

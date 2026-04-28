@@ -1,10 +1,10 @@
 <?php
-include "../config/db.php"; 
+require_once __DIR__ . "/../config/db.php"; 
 session_start();
 
 $notif_division_id = $_SESSION['division_id'] ?? 0;
 
-// Optimized Query
+// Query
 $notif_query = "
     /* 1. Only fetch UNREAD Repair/Return status updates */
     (SELECT 
@@ -57,7 +57,7 @@ if($count > 0) {
             $bg = $is_rejected ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)';
             
             // ROUTING THROUGH TRACKER: 
-            // We point to mark_notif_read.php so the DB updates before the redirect
+            // point to mark_notif_read.php so the DB updates before the redirect
             $link = "mark_notif_read.php?id=$ref_id"; 
             
             $title = str_replace('_', ' ', $type);

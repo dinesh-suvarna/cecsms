@@ -1,6 +1,6 @@
 <?php
 require_once "../admin/auth.php"; 
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 
 $role = $_SESSION["role"] ?? 'User'; 
 $user_division = $_SESSION['division_id'] ?? 0;

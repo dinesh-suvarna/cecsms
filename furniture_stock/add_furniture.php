@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 // --- 1. SESSION & ROLE CHECK ---
@@ -78,8 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_stock'])) {
 
 // --- 5. DATA FETCHING ---
 $items = $conn->query("SELECT * FROM furniture_items ORDER BY item_name");
+$divisions=null;
 
-// Logic: Show all Electrical vendors PLUS the one currently saved in the record (if editing)
+// Logic: Show all Furniture vendors PLUS the one currently saved in the record (if editing)
 $current_v_id = ($is_edit) ? (int)$edit_data['vendor_id'] : 0;
 $vendors = $conn->query("SELECT * FROM vendors WHERE category = 'Furniture' OR id = $current_v_id ORDER BY vendor_name");
 

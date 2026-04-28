@@ -1,5 +1,5 @@
 <?php
-require_once "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 require_once "../includes/session.php";
 
 $role = $_SESSION['role'];
@@ -376,7 +376,6 @@ function handleStatus(id, name, action) {
 </script>
 
 <style>
-/* Modern SaaS Search Bar UI */
 .search-container { position: relative; }
 .search-box { 
     display: flex; align-items: center; background: #fff; 
@@ -400,8 +399,8 @@ function handleStatus(id, name, action) {
 
 .badge {
     padding: 0.5em 1em;
-    border-radius: 50px; /* Makes it a pill shape */
-    border: none;        /* Removes default bootstrap borders */
+    border-radius: 50px; 
+    border: none;        
     font-size: 0.75rem;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -415,7 +414,6 @@ function handleStatus(id, name, action) {
     filter: brightness(1.1);
 }
 
-/* Zebra Striping & Accordion Refinements */
 .bg-alternate { background-color: #64b1ff !important; }
 .inst-header:not(.collapsed) { background: #fff !important; color: #0d6efd !important; border-bottom: 1px solid #f1f5f9; }
 .div-header:not(.collapsed) { border-left: 4px solid #0d6efd !important; }

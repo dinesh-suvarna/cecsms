@@ -1,5 +1,4 @@
 <?php
-// Ensure session_start() is at the top of your actual file
 $role = $_SESSION["role"] ?? 'User'; 
 if (!isset($page_title)) $page_title = "Service Dashboard";
 
@@ -11,7 +10,8 @@ header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
 
-include_once "../config/db.php"; 
+require_once __DIR__ . "/../config/db.php";
+
 $notif_query = "SELECT da.status, d.division_name, im.item_name, al.created_at
                 FROM division_assets da 
                 JOIN stock_details sd ON da.stock_detail_id = sd.id
@@ -380,7 +380,6 @@ $pending_count = $notif_res->num_rows;
 <script>
 
     function checkNotifications() {
-    // Use an absolute path starting with /cecsms/ to avoid folder depth issues
     fetch('/cecsms/services/get_notifications.php?v=' + Date.now())
         .then(response => {
             if (!response.ok) throw new Error('Network response was not ok');
@@ -467,7 +466,6 @@ document.addEventListener('DOMContentLoaded', checkNotifications);
         }
     });
 
-    // Browser Back Refresh fix
     window.onpageshow = function(event) {
         if (event.persisted) { window.location.reload(); }
     };

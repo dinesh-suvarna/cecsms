@@ -1,11 +1,11 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 $notif_division_id = $_SESSION['division_id'] ?? 0;
 
 if ($notif_division_id > 0) {
-    // We update all logs belonging to this division's users
+    // update all logs belonging to this division's users
     $query = "UPDATE asset_logs 
               SET is_read = 1 
               WHERE is_read = 0 

@@ -2,7 +2,7 @@
 require_once "../includes/session.php";
 require_once "../includes/security_headers.php";
 require_once "../includes/csrf.php";
-require_once "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 
 /* Destroy previous session if exists */
 if (isset($_SESSION["user_id"])) {
@@ -61,7 +61,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             else if (preg_match('/linux/i', $ua)) $os = 'Linux';
 
             // Detect Browser
-            
             $browser = "Unknown Browser";
             if (preg_match('/edg/i', $ua)) {
                 $browser = 'Edge';

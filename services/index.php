@@ -1,4 +1,5 @@
 <?php
+
 session_start();
 
 if (!isset($_SESSION["role"])) {
@@ -6,7 +7,7 @@ if (!isset($_SESSION["role"])) {
     exit();
 }
 
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 
 $page_title = "Service Dashboard";
 

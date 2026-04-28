@@ -1,5 +1,5 @@
 <?php
-require_once "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 require_once "../includes/session.php";
 
 $error = "";
@@ -53,7 +53,7 @@ if(isset($_POST['update_division'])){
         $error = "Division name is required.";
     } else {
 
-        // ✅ Duplicate check excluding current ID
+        // Duplicate check excluding current ID
         $check = $conn->prepare("
             SELECT id 
             FROM divisions 

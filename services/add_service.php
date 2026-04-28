@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . "/../config/db.php";
+
 session_start();
 if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
@@ -50,7 +52,7 @@ if($result) {
     while($row = $result->fetch_assoc()) { $vendors[] = $row; }
 }
 
-/* ✅ START BUFFER */
+/* START BUFFER */
 ob_start();
 ?>
 
@@ -164,7 +166,7 @@ document.addEventListener("DOMContentLoaded", function(){
 <?php endif; ?>
 
 <?php
-/* ✅ STORE CONTENT & LOAD LAYOUT */
+/* STORE CONTENT & LOAD LAYOUT */
 $content = ob_get_clean();
 //$conn->close();
 include "layout.php";

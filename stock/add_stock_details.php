@@ -1,7 +1,7 @@
 <?php
 $page_title = "Add Stock Details";
 $page_icon  = "bi-receipt";
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 
 
 /* Fetch Items from item_master */
@@ -43,7 +43,7 @@ if(isset($_POST['submit'])){
 
     if(empty($errorMsg)){
 
-        // 1️⃣ Fetch item and stock type
+        // Fetch item and stock type
         $stmtType = $conn->prepare("SELECT stock_type FROM items_master WHERE id = ?");
         $stmtType->bind_param("i", $item_id);
         $stmtType->execute();
@@ -60,7 +60,7 @@ if(isset($_POST['submit'])){
 
     if(empty($errorMsg)){
 
-        // 2️⃣ Check if item has models
+        // Check if item has models
         $stmtCheckModel = $conn->prepare("
             SELECT COUNT(*) 
             FROM item_models 
@@ -97,7 +97,7 @@ if(isset($_POST['submit'])){
 
     if(empty($errorMsg)){
 
-        // 3️⃣ Serial number validation
+        // Serial number validation
         $serials = $_POST['serial_number'] ?? [];
         $serials = array_map('trim', $serials);
         $filledSerials = array_filter($serials);
@@ -136,7 +136,7 @@ if(isset($_POST['submit'])){
         }
     }
 
-    // ✅ Only proceed to insert if no errors
+    // Only proceed to insert if no errors
     if(empty($errorMsg)){
         $conn->begin_transaction();
         try {

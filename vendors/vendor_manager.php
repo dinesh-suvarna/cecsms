@@ -5,7 +5,7 @@ if (!isset($_SESSION["user_id"])) {
     exit();
 }
 
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 
 $success_msg = "";
 $error_msg = "";
@@ -92,7 +92,6 @@ ob_start();
         100% { border-color: #0d6efd; }
     }
     
-    /* Tabs Styling */
     .nav-pills .nav-link {
         border-radius: 10px;
         color: #64748b;
@@ -105,7 +104,6 @@ ob_start();
         box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
     }
     
-    /* DataTables Layout Fix */
     .dataTables_wrapper .row { margin: 0; padding: 1rem 0.5rem; }
     .dataTables_filter input { border-radius: 20px; padding: 0.4rem 1rem; border: 1px solid #e2e8f0; }
     
@@ -115,66 +113,65 @@ ob_start();
     .bg-emerald-soft { background: rgba(16, 185, 129, 0.1); }
     .fw-800 { font-weight: 800 !important; letter-spacing: -0.5px; }
 
-    /* Align Search bar to the right and style it */
-.dataTables_filter {
-    text-align: right;
-    margin-bottom: 15px;
-}
+    .dataTables_filter {
+        text-align: right;
+        margin-bottom: 15px;
+    }
 
-.dataTables_filter input {
-    width: 250px !important;
-    border-radius: 20px !important;
-    padding: 8px 15px !important;
-    border: 1px solid #dee2e6 !important;
-    outline: none;
-}
+    .dataTables_filter input {
+        width: 250px !important;
+        border-radius: 20px !important;
+        padding: 8px 15px !important;
+        border: 1px solid #dee2e6 !important;
+        outline: none;
+    }
 
-/* Style Pagination buttons */
-.pagination .page-link {
-    border: none;
-    color: #64748b;
-    margin: 0 2px;
-    border-radius: 8px !important;
-}
+    /* Style Pagination buttons */
+    .pagination .page-link {
+        border: none;
+        color: #64748b;
+        margin: 0 2px;
+        border-radius: 8px !important;
+    }
 
-.pagination .active .page-link {
-    background: var(--primary-gradient) !important;
-    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.2);
-}
+    .pagination .active .page-link {
+        background: var(--primary-gradient) !important;
+        box-shadow: 0 4px 10px rgba(13, 110, 253, 0.2);
+    }
 
-/* 1. Remove Search Bar Focus Outline (Blue Glow) */
-.dataTables_filter input:focus {
-    border-color: #dee2e6 !important; /* Keep the original border color */
-    box-shadow: none !important;      /* Remove blue glow */
-    outline: none !important;
-}
+    /* 1. Remove Search Bar Focus Outline (Blue Glow) */
+    .dataTables_filter input:focus {
+        border-color: #dee2e6 !important; /* Keep the original border color */
+        box-shadow: none !important;      /* Remove blue glow */
+        outline: none !important;
+    }
 
-/* 2. Style the length dropdown focus as well */
-.dataTables_length select:focus {
-    box-shadow: none !important;
-    outline: none !important;
-}
+    /* 2. Style the length dropdown focus as well */
+    .dataTables_length select:focus {
+        box-shadow: none !important;
+        outline: none !important;
+    }
 
-/* 3. Adjust Pagination Colors (Lighten the dark active state) */
-.pagination .active .page-link {
-    /* Changing from the dark primary-gradient to a softer blue */
-    background: #e0e7ff !important; 
-    color: #4338ca !important;
-    border: 1px solid #c7d2fe !important;
-    box-shadow: none !important;
-}
+    /* 3. Adjust Pagination Colors (Lighten the dark active state) */
+    .pagination .active .page-link {
+        /* Changing from the dark primary-gradient to a softer blue */
+        background: #e0e7ff !important; 
+        color: #4338ca !important;
+        border: 1px solid #c7d2fe !important;
+        box-shadow: none !important;
+    }
 
-.pagination .page-link:hover {
-    background: #f8fafc !important;
-    color: #0d6efd !important;
-}
+    .pagination .page-link:hover {
+        background: #f8fafc !important;
+        color: #0d6efd !important;
+    }
 
-/* 4. Fix for Length and Search Alignment */
-.dataTables_wrapper .d-flex {
-    padding: 0.5rem 1rem;
-    background: #fdfdfd;
-    border-bottom: 1px solid #f1f5f9;
-}
+    /* 4. Fix for Length and Search Alignment */
+    .dataTables_wrapper .d-flex {
+        padding: 0.5rem 1rem;
+        background: #fdfdfd;
+        border-bottom: 1px solid #f1f5f9;
+    }
 
 </style>
 

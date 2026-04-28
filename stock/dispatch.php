@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../includes/session.php";
 include "../includes/csrf.php";
 include "../includes/functions.php";
@@ -120,7 +120,6 @@ ob_start();
 ?>
 
 <style>
-    /* Layout Containers */
     .inventory-source { 
         max-height: 650px; 
         overflow-y: auto; 
@@ -132,7 +131,6 @@ ob_start();
         top: 20px; 
     }
 
-    /* Grid for Serials */
     .serial-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -140,7 +138,6 @@ ob_start();
         width: 100%;
     }
 
-    /* Combined Button Logic */
     .btn-hardware {
         min-height: 40px;
         display: flex;
@@ -150,12 +147,11 @@ ob_start();
         width: 100%;
         padding: 5px 12px;
         font-size: 0.8rem;
-        border-radius: 8px; /* Slightly more modern than 20px for grid items */
+        border-radius: 8px; 
         border: 1px solid #dee2e6;
         background: #fff;
         transition: all 0.2s ease;
         
-        /* Text Truncation Logic */
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -167,7 +163,6 @@ ob_start();
         color: #4361ee;
     }
 
-    /* Utility Classes */
     .item-hidden { display: none !important; }
     
     .category-label { 
@@ -355,10 +350,9 @@ document.getElementById('stockSearch').addEventListener('keyup', function() {
             let content = btn.innerText.toLowerCase() + " " + btn.dataset.serial.toLowerCase();
             
             if (content.includes(filter)) {
-                btn.classList.remove('d-none'); // Show matching button
-                hasVisibleHardware = true;
+                btn.classList.remove('d-none'); 
             } else {
-                btn.classList.add('d-none'); // Hide non-matching button
+                btn.classList.add('d-none'); 
             }
         });
 

@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../admin/auth.php";
 include "../includes/session.php";
 
@@ -56,7 +56,7 @@ if ($role !== 'SuperAdmin' && isset($_POST['assign'])) {
             $update->bind_param("i", $stock_detail_id);
             $update->execute();
 
-            // 4. Commit all changes
+        
             $conn->commit();
 
             $_SESSION['swal_type'] = "success";

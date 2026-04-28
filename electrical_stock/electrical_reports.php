@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../includes/session.php";
 
 date_default_timezone_set('Asia/Kolkata'); 
@@ -70,7 +70,7 @@ ob_start();
 <style>
     :root {
         --saas-bg: #f8fafc;
-        --accent: #0284c7; /* Electrical Blue */
+        --accent: #0284c7; 
         --dark-slate: #0f172a;
     }
 
@@ -103,7 +103,7 @@ ob_start();
     .table-modern thead { background: #f8fafc; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05rem; }
     .tag-mono { background: #f0f9ff; color: var(--accent); padding: 3px 8px; border-radius: 5px; font-family: monospace; font-weight: bold; border: 1px solid #e0f2fe; }
 
-    /* Search Bar Styling */
+   
     .search-input-group { position: relative; margin-bottom: 20px; }
     .search-input-group .bi-search { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
     .live-search-field { padding-left: 45px !important; height: 50px; border-radius: 12px; border: 2px solid #e2e8f0; transition: border-color 0.2s; }

@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
@@ -218,7 +218,6 @@ ob_start();
     #divisionAccordion .accordion-button::after { filter: sepia(100%) hue-rotate(110deg) saturate(500%); }
     #divisionAccordion .accordion-button:not(.collapsed)::after { filter: brightness(0) invert(1); }
 
-    /* Report Badges */
     .report-badge {
         font-size: 0.75rem;
         font-weight: 700;

@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 // --- 1. SESSION & ROLE CHECK ---
@@ -97,7 +97,6 @@ ob_start();
         padding: 10px 20px;
     }
 
-    /* Electrical specific color override */
     .btn-electrical { background: #ffc107; border: none; color: #000; font-weight: 600; }
     .btn-electrical:hover { background: #e0a800; color: #000; }
     .text-electrical { color: #ff9f1c !important; }

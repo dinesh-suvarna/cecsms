@@ -1,12 +1,12 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../admin/auth.php";
 include "../includes/session.php";
 
 $page_title = "Lifecycle Approvals";
 $page_icon  = "bi-shield-check";
 
-// Get role and ID from session
+
 $role = $_SESSION['role'] ?? '';
 $division_id = $_SESSION['division_id'] ?? 0;
 
@@ -199,7 +199,7 @@ ob_start();
 </div>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// Add 'unitName' to the parameters list
+
 function processItem(id, type, assetTag, itemName, serial, notes, iconClass, unitName, divisionName) {
     let iconColor = (type === 'REPAIR') ? '#0ea5e9' : (type === 'RETURN') ? '#10b981' : '#ef4444';
     const displayNotes = notes ? notes : "No remarks provided by department.";
@@ -243,7 +243,6 @@ function processItem(id, type, assetTag, itemName, serial, notes, iconClass, uni
                 </div>
             </div>
         `,
-        // ... (rest of the SweetAlert logic for Approve/Deny remains same)
         showCancelButton: true,
         showDenyButton: true,
         confirmButtonText: 'Approve ' + type,

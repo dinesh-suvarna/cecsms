@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
@@ -173,7 +173,6 @@ ob_start();
 </div>
 
 <style>
-    /* CSS TO MATCH FURNITURE VIEW */
     .vendor-toggle:not(.collapsed) { background-color: #fffaf0; border-bottom: 2px solid #ffc107; }
     .vendor-toggle .toggle-icon { transition: transform 0.3s; }
     .vendor-toggle:not(.collapsed) .toggle-icon { transform: rotate(180deg); color: #ffc107; }
@@ -221,7 +220,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     bootstrap.Collapse.getOrCreateInstance(vendorCollapse, {toggle: false}).hide();
                     vendorBtn.classList.add('collapsed');
                 } else {
-                    // --- THE UPDATED SMART FILTERING ---
                     
                     // A. STRICT: Ref No must be an exact match (Typing '1' won't show '21')
                     const isExactRef = (refNo === query); 
@@ -300,7 +298,6 @@ function deletePurchase(id, billNo) {
         cancelButtonText: 'Cancel'
     }).then((result) => {
         if (result.isConfirmed) {
-            // Show a "Deleting..." loading state
             Swal.fire({
                 title: 'Processing...',
                 allowOutsideClick: false,
@@ -322,7 +319,7 @@ function deletePurchase(id, billNo) {
                         timer: 1500,
                         showConfirmButton: false
                     }).then(() => {
-                        location.reload(); // Refresh the page
+                        location.reload(); 
                     });
                 } else {
                     Swal.fire('Error!', data.message, 'error');

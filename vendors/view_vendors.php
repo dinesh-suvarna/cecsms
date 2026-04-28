@@ -5,7 +5,7 @@ if (!isset($_SESSION["user_id"])) {
     exit();
 }
 
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 
 $page_title = "Vendor Directory";
 $page_icon  = "bi-people-fill";
@@ -13,7 +13,6 @@ $page_icon  = "bi-people-fill";
 /* Fetch Vendors */
 $result = $conn->query("SELECT * FROM vendors ORDER BY id DESC");
 
-/* ✅ START BUFFER TO PREVENT "JUMPING TO BOTTOM" */
 ob_start();
 ?>
 
@@ -109,7 +108,6 @@ ob_start();
 </style>
 
 <?php 
-/* ✅ STORE CONTENT & LOAD LAYOUT */
 $content = ob_get_clean();
 include "layout.php"; 
 ?>

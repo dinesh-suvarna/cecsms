@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 // Security Check
@@ -11,7 +11,6 @@ if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Ad
 $user_role = $_SESSION['role'];
 $user_division = $_SESSION['division_id'] ?? 0;
 
-// Corrected Query with institution_name
 $assets_query = "
     SELECT 
         fa.id as asset_db_id, fa.asset_tag, fa.status, fa.last_verified_date,
@@ -217,10 +216,9 @@ ob_start();
         border-radius: 8px;
         border: none;
         transition: all 0.2s ease;
-        background-color: #f8fafc; /* Light gray base */
+        background-color: #f8fafc; 
     }
 
-    /* Icon Specific Colors & Hovers */
     .btn-edit { color: #0d6efd; }
     .btn-edit:hover { background-color: #e7f1ff; color: #0a58ca; }
 
@@ -233,7 +231,6 @@ ob_start();
     .btn-delete { color: #dc3545; }
     .btn-delete:hover { background-color: #f8d7da; color: #b02a37; }
 
-    /* Ensure icons are a consistent size */
     .btn-action i { font-size: 1.1rem; }
 </style>
 
@@ -259,9 +256,6 @@ function openManageModal(id, tag, name, vendor, invoice) {
     
     manageModal.show();
 }
-
-
-
 
 // Use this to ensure the function is globally available
 window.prepareAction = function(type) {

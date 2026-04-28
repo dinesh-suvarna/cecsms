@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 session_start();
 
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
@@ -67,7 +67,6 @@ ob_start();
     .edit-badge { display: none; }
     .edit-mode-active .edit-badge { display: inline-block; }
 
-    /* DataTables Control Styling */
     .dt-controls-wrapper {
         display: flex;
         justify-content: space-between;

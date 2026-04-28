@@ -1,5 +1,5 @@
 <?php
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 include "../admin/auth.php";
 include "../includes/session.php";
 
@@ -27,7 +27,7 @@ if (isset($_POST['update_asset_id'])) {
 
 /* ================= HANDLE ASSET ACTION ================= */
 if (isset($_POST['asset_action'])) {
-    $db_id    = (int)$_POST['asset_id']; // This is the ID from division_assets
+    $db_id    = (int)$_POST['asset_id']; //ID from division_assets
     $action   = $_POST['asset_action'];
     $user_id  = $_SESSION['user_id'] ?? null;
     $user_remarks = trim($_POST['remarks'] ?? '');
@@ -40,7 +40,7 @@ if (isset($_POST['asset_action'])) {
     $status = $status_map[$action] ?? 'assigned';
 
     // 1. FETCH THE PERMANENT STOCK_DETAIL_ID FIRST
-    // This is required to satisfy the Foreign Key constraint in asset_logs
+    // Foreign Key constraint in asset_logs
     $stmt_fetch = $conn->prepare("SELECT stock_detail_id FROM division_assets WHERE id = ?");
     $stmt_fetch->bind_param("i", $db_id);
     $stmt_fetch->execute();
@@ -141,7 +141,6 @@ ob_start();
 ?>
 
 <style>
-    /* SaaS Style Accordion */
     .unit-accordion .accordion-item {
         border: 1px solid #eef2f6;
         margin-bottom: 1rem;
@@ -149,45 +148,43 @@ ob_start();
         background: #fff;
     }
     .unit-accordion .accordion-button:not(.collapsed) {
-    background-color: #f0fdf4; /* Very light emerald tint */
+    background-color: #f0fdf4; 
     border-left: 4px solid #10b981;
-    color: #059669; /* Slightly darker emerald for text readability */
+    color: #059669; 
     box-shadow: none;
 }
 
-    /* --- REFINED PREMIUM TEXT HIERARCHY --- */
     .item-info-title { 
         font-weight: 700; 
-        color: #0f172a; /* Slate 900 */
+        color: #0f172a; 
         font-size: 0.875rem; 
         letter-spacing: -0.01em;
     }
 
     .model-detail-text { 
         font-weight: 600; 
-        color: #334155; /* Slate 800 - slightly darker for better readability */
+        color: #334155; 
         font-size: 0.825rem; 
         display: block; 
         margin-bottom: 3px;
     }
 
     .sn-label { 
-        font-weight: 600; /* Increased to 600 for better stroke definition */
-        color: #64748b; /* Slate 500 - Deep enough for white BG, but still "muted" */
+        font-weight: 600; 
+        color: #64748b; 
         font-size: 0.7rem; 
         font-family: 'Inter', sans-serif; 
         text-transform: uppercase; 
         letter-spacing: 0.05em;
         
-        /* The "SaaS Touch": A tiny bit of padding and a soft left border */
+        
         display: inline-flex;
         align-items: center;
-        border-left: 2px solid #e2e8f0; /* Very light separator */
+        border-left: 2px solid #e2e8f0; 
         padding-left: 8px;
         margin-top: 2px;
     }
     
-    /* Synchronized Typography for Config and Asset ID */
     .saas-info-text {
         font-size: 0.82rem;
         font-weight: 600;
@@ -197,23 +194,21 @@ ob_start();
         gap: 6px;
     }
 
-    /* Asset ID specific alignment */
     .asset-id-wrapper {
         display: flex;
         align-items: center;
         gap: 8px;
     }
 
-    /* --- ITEM TYPE SEPARATOR --- */
     .item-group-separator {
-        background-color: #f0fdf4 !important; /* Very soft Emerald tint */
+        background-color: #f0fdf4 !important; 
         padding: 12px 24px !important;
         border-top: 1px solid #dcfce7 !important;
         border-bottom: 1px solid #dcfce7 !important;
     }
 
     .category-label {
-        color: #059669; /* Darker green for text */
+        color: #059669; 
         font-weight: 700;
         font-size: 0.8rem;
         text-transform: uppercase;
@@ -223,12 +218,10 @@ ob_start();
     }
 
 
-    /* Make the numbering column look distinct but subtle */
     td:first-child {
         border-right: 1px solid #f8fafc;
     }
 
-    /* Subtle row hover for premium feel */
     tbody tr:hover {
         background-color: #fafbfc;
     }
@@ -260,7 +253,6 @@ ob_start();
         box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
     }
 
-    /* Color tweak for the Tag Icon in the separator */
     .item-group-separator i {
         color: #10b981;
     }

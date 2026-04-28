@@ -1,6 +1,6 @@
 <?php
 require_once "../admin/auth.php"; 
-include "../config/db.php";
+require_once __DIR__ . "/../config/db.php";
 
 $role = $_SESSION["role"] ?? 'User'; 
 $user_division = $_SESSION['division_id'] ?? 0;
@@ -53,7 +53,6 @@ ob_start();
 
     body { background: var(--bg-main); font-family: 'Inter', sans-serif; color: var(--brand-slate); }
 
-    /* Hero Section (From File 2) */
     .hero-stat-card {
         background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
         color: white;
@@ -73,7 +72,6 @@ ob_start();
         border-radius: 50%;
     }
 
-    /* Breakdown Card */
     .bento-card {
         background: #ffffff;
         border-radius: 24px;
@@ -99,7 +97,6 @@ ob_start();
         font-size: 0.85rem;
     }
 
-    /* Functional Modules (Bento Style from File 1) */
     .feature-card {
         background: white;
         border-radius: 20px;

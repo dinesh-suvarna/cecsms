@@ -1,5 +1,6 @@
 <?php
 require_once "../admin/auth.php"; 
+require_once __DIR__ . "/../config/db.php";
 $role = $_SESSION["role"] ?? 'User'; 
 if (!isset($page_title)) $page_title = "Stock Dashboard";
 
@@ -197,23 +198,20 @@ $current_page = basename($_SERVER['PHP_SELF']);
         .input-group,
         .input-group-text {
             outline: none !important;
-            box-shadow: none !important; /* This kills the blue glow */
-            -webkit-tap-highlight-color: transparent; /* Fix for mobile blue tap */
+            box-shadow: none !important; 
+            -webkit-tap-highlight-color: transparent; 
         }
 
-        /* 2. Custom Focus State (Emerald Theme) */
         .form-control:focus, 
         .form-select:focus {
             border-color: var(--primary-accent) !important;
             background-color: #fff !important;
-            /* This creates a very tiny, soft green shadow instead of a thick blue one */
             box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.1) !important;
         }
 
-        /* 3.Search Bar  */
         .input-group:focus-within {
             box-shadow: none !important;
-            border-radius: 10px; /* Adjust to match your UI */
+            border-radius: 10px;
         }
 
         .btn:focus, .btn:active {
@@ -226,8 +224,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
         }
 
         .input-group.rounded-pill:focus-within {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important; /* Soft shadow instead of blue */
-            border-color: #10b981 !important; /* Changes the pill border to emerald */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important; 
+            border-color: #10b981 !important; 
         }
 
         #inventorySearch:focus {
@@ -481,7 +479,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
         }
     });
 
-    // Back button cache fix
     window.onpageshow = function(event) {
         if (event.persisted) { window.location.reload(); }
     };

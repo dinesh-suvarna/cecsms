@@ -161,6 +161,17 @@ $role = $_SESSION['role'] ?? '';
                     <div class="card-action">Configure <i class="bi bi-arrow-right"></i></div>
                 </a>
             </div>
+            <div class="col-lg-4 col-md-6">
+                <a href="/cecsms/vendors/vendor_manager.php" class="elite-card accent-blue">
+                    <div class="card-header-row">
+                        <div class="icon-wrapper"><i class="bi bi-person-vcard"></i></div>
+                        <div class="status-dot"></div>
+                    </div>
+                    <h5>Vendor Management</h5>
+                    <p>Manage official supplier profiles, contact information, and partner directory records.</p>
+                    <div class="card-action">View Directory <i class="bi bi-arrow-right"></i></div>
+                </a>
+            </div>
 
             <div class="col-lg-4 col-md-6">
                 <a href="/cecsms/services/index.php" class="elite-card accent-slate">

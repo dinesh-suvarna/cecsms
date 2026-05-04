@@ -24,7 +24,6 @@ $page_title = "Register " . $category_type . " Vendor";
 
 // --- ADD / UPDATE LOGIC ---
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_vendor'])) {
-    // 1. Server-side Sanitization
     $vendor_name = trim($_POST['vendor_name'] ?? '');
     $contact_person = trim($_POST['contact_person'] ?? '');
     $phone_number = trim($_POST['phone_number'] ?? '');
@@ -34,14 +33,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_vendor'])) {
     $assigned_category = (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin' && isset($_POST['category'])) ? $_POST['category'] : $category_type;
     $edit_id = $_POST['vendor_id'] ?? '';
 
-    // 2. Server-side Validation
     if (empty($vendor_name)) {
         $error_msg = "Vendor Name is required.";
     } elseif (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error_msg = "Please enter a valid email address.";
     } else {
         if (!empty($edit_id)) {
-            // Update Logic
             $stmt = $conn->prepare("UPDATE vendors SET vendor_name = ?, contact_person = ?, phone_number = ?, email = ?, address = ? WHERE id = ?");
             $stmt->bind_param("sssssi", $vendor_name, $contact_person, $phone_number, $email, $address, $edit_id);
             if ($stmt->execute()) {
@@ -50,7 +47,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_vendor'])) {
                 exit();
             }
         } else {
-            // Insert Logic with Duplicate Check
             $check = $conn->prepare("SELECT id FROM vendors WHERE LOWER(vendor_name) = LOWER(?) AND category = ?");
             $check->bind_param("ss", $vendor_name, $assigned_category);
             $check->execute();
@@ -87,9 +83,14 @@ ob_start();
     .bg-emerald-soft { background: rgba(16, 185, 129, 0.1); }
     .fw-800 { font-weight: 800 !important; letter-spacing: -0.5px; }
     .full-height-card { min-height: 80vh; }
-    /* Validation Styles */
     .form-control:invalid:focus { border-color: #dc3545; box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25); }
     .required-dot { color: #dc3545; margin-left: 3px; }
+    <?php if(isset($_GET['edit'])): ?>
+        #registryCard {
+        border: 2px solid #dc3545 !important;
+        transition: border 0.3s ease-in-out;
+        }
+    <?php endif; ?>
 </style>
 
 <div class="container-fluid py-4">
@@ -115,23 +116,16 @@ ob_start();
                 </div>
                 <hr class="mx-4 my-0 text-muted opacity-25">
                 <div class="card-body p-4 p-lg-5">
-                    <!-- Added 'needs-validation' class for Bootstrap JS validation -->
                     <form method="POST" id="vendorForm" class="needs-validation" novalidate>
                         <input type="hidden" name="vendor_id" value="<?= $edit_data['id'] ?? '' ?>">
-                        
                         <div class="row g-4">
-                            <!-- Left Column -->
                             <div class="col-lg-7">
                                 <div class="mb-4">
-                                    <label class="form-label small fw-bold text-uppercase text-muted">
-                                        Vendor Name <span class="required-dot">*</span>
-                                    </label>
+                                    <label class="form-label small fw-bold text-uppercase text-muted">Vendor Name <span class="required-dot">*</span></label>
                                     <input type="text" name="vendor_name" class="form-control form-control-lg shadow-none" 
                                            placeholder="e.g. Global Tech Solutions" 
                                            value="<?= htmlspecialchars($edit_data['vendor_name'] ?? '') ?>" required>
-                                    <div class="invalid-feedback">Please provide a vendor name.</div>
                                 </div>
-
                                 <div class="row g-3 mb-4">
                                     <div class="col-md-6">
                                         <label class="form-label small fw-bold text-uppercase text-muted">Contact Person</label>
@@ -145,27 +139,21 @@ ob_start();
                                                pattern="[0-9+ \-]{7,}" 
                                                placeholder="e.g. 92345 6587" 
                                                value="<?= htmlspecialchars($edit_data['phone_number'] ?? '') ?>">
-                                        <div class="invalid-feedback">Enter a valid phone number.</div>
                                     </div>
                                 </div>
-
                                 <div class="mb-4">
                                     <label class="form-label small fw-bold text-uppercase text-muted">Email Address</label>
                                     <input type="email" name="email" class="form-control shadow-none" 
                                            placeholder="vendor@example.com" 
                                            value="<?= htmlspecialchars($edit_data['email'] ?? '') ?>">
-                                    <div class="invalid-feedback">Please enter a valid email address.</div>
                                 </div>
                             </div>
-
-                            <!-- Right Column -->
                             <div class="col-lg-5 border-start-lg ps-lg-4">
                                 <div class="mb-4">
                                     <label class="form-label small fw-bold text-uppercase text-muted">Physical Address</label>
                                     <textarea name="address" class="form-control shadow-none" rows="5" 
                                               placeholder="Building, Street, City, Zip"><?= htmlspecialchars($edit_data['address'] ?? '') ?></textarea>
                                 </div>
-
                                 <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin'): ?>
                                 <div class="mb-4">
                                     <label class="form-label small fw-bold text-uppercase text-muted">Stock Category Assignment</label>
@@ -176,7 +164,6 @@ ob_start();
                                     </select>
                                 </div>
                                 <?php endif; ?>
-
                                 <div class="mt-5 d-flex gap-2">
                                     <button type="submit" name="save_vendor" class="btn <?= $edit_data ? 'btn-primary' : 'btn-success' ?> flex-grow-1 rounded-pill py-3 fw-bold">
                                         <i class="bi <?= $edit_data ? 'bi-arrow-repeat' : 'bi-plus-lg' ?> me-1"></i> <?= $edit_data ? "Update Vendor" : "Register Vendor" ?>
@@ -193,7 +180,6 @@ ob_start();
 </div>
 
 <script>
-// Bootstrap Validation Logic
 (function () {
   'use strict'
   var forms = document.querySelectorAll('.needs-validation')
@@ -212,12 +198,5 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
-$type = strtolower($category_type);
-
-if ($type === 'furniture') { include "../furniture_stock/furniturelayout.php"; } 
-elseif ($type === 'electrical' || $type === 'electricals') { include "../electrical_stock/electricalslayout.php"; } 
-else {
-    if (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin') { include "../vendors/vendorlayout.php"; } 
-    else { include "../divisions/divisionslayout.php"; }
-}
+include "../vendors/vendorlayout.php"; 
 ?>

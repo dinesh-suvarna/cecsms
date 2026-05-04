@@ -38,7 +38,7 @@ if (isset($_GET['id'])) {
     }
     $checkStock->close();
 
-    // 3. NEW: Check if vendor is used in FURNITURE_STOCK (The specific cause of your error)
+    // 3. NEW: Check if vendor is used in FURNITURE_STOCK 
     $checkFurniture = $conn->prepare("SELECT id FROM furniture_stock WHERE vendor_id = ? LIMIT 1");
     $checkFurniture->bind_param("i", $id);
     $checkFurniture->execute();
@@ -56,12 +56,12 @@ if (isset($_GET['id'])) {
     $stmt->bind_param("i", $id);
     
     if ($stmt->execute()) {
-        header("Location: vendor_manager.php?success=1&type=" . urlencode($type));
+        header("Location: view_vendors.php?success=1&type=" . urlencode($type));
     } else {
-        header("Location: vendor_manager.php?type=$type&error=failed");
+        header("Location: view_vendors.php?type=$type&error=failed");
     }
     $stmt->close();
 } else {
-    header("Location: vendor_manager.php");
+    header("Location: view_vendors.php");
 }
 exit();

@@ -261,7 +261,7 @@ header("Pragma: no-cache");
                     <a href="/cecsms/users/manage_users.php" class="nav-link <?= ($current_page=='manage_users.php')?'active':'' ?>">
                         <i class="bi bi-people"></i> User Management
                     </a>
-                    <a href="/cecsms/vendors/vendor_manager.php" class="nav-link <?= ($current_page=='vendor_manager.php')?'active':'' ?>">
+                    <a href="/cecsms/vendors/vendor_dashboard.php" class="nav-link <?= ($current_page=='vendor_dashboard.php')?'active':'' ?>">
                         <i class="bi bi-person-vcard-fill"></i> Vendor Management
                     </a>
                     

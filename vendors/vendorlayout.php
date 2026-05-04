@@ -64,6 +64,28 @@ $current_page = basename($_SERVER['PHP_SELF']);
             background: var(--primary-accent); color: #ffffff !important;
             box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.25);
         }
+        .nav-home-icon {
+            width: 38px;
+            height: 38px;
+            background-color: #f8fafc;
+            color: #64748b;
+            border-radius: 10px;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease-in-out;
+            border: 1px solid var(--border-color);
+            text-decoration: none;
+        }
+
+        .nav-home-icon:hover {
+            background-color: var(--primary-accent);
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+            border-color: var(--primary-accent);
+        }
 
         /* --- MAIN CONTENT --- */
         .main-wrapper { margin-left: var(--sb-width); padding: 1.5rem; min-height: 100vh; }
@@ -95,7 +117,13 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <span>Stock<span class="text-dark">Vendors</span></span>
     </a>
 
-    <div class="overflow-y-auto flex-grow-1">
+    <div id="sidebarScrollArea" class="overflow-y-auto flex-grow-1">
+    <div class="nav-group-label">General</div>
+        <div class="nav flex-column">
+            <a href="../vendors/vendor_dashboard.php" class="nav-link <?= ($current_page == 'vendor_dashboard.php') ? 'active' : '' ?>">
+                <i class="bi bi-grid-1x2"></i> Dashboard
+            </a>
+        </div>
         <div class="nav-group-label">Core Actions</div>
         <div class="nav flex-column">
             <a href="vendor_manager.php" class="nav-link <?= ($current_page == 'vendor_manager.php') ? 'active' : '' ?>">

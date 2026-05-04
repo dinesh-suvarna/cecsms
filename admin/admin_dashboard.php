@@ -162,7 +162,7 @@ $role = $_SESSION['role'] ?? '';
                 </a>
             </div>
             <div class="col-lg-4 col-md-6">
-                <a href="/cecsms/vendors/vendor_manager.php" class="elite-card accent-blue">
+                <a href="/cecsms/vendors/vendor_dashboard.php" class="elite-card accent-blue">
                     <div class="card-header-row">
                         <div class="icon-wrapper"><i class="bi bi-person-vcard"></i></div>
                         <div class="status-dot"></div>

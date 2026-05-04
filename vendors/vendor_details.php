@@ -9,9 +9,6 @@ require_once __DIR__ . "/../config/db.php";
 
 $page_title = "Categorized Vendor Directory";
 
-/**
- * Helper function to fetch all vendors and their history for a specific category
- */
 function getCategoryData($conn, $category) {
     $v_stmt = $conn->prepare("SELECT * FROM vendors WHERE category = ? ORDER BY vendor_name ASC");
     $v_stmt->bind_param("s", $category);

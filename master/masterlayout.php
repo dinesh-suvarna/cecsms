@@ -231,16 +231,6 @@ h5 {
             </a>
         </div>
 
-        <div class="nav-group-label">Inventory Management</div>
-        <div class="nav flex-column">
-            <a href="items_master.php" class="nav-link <?= ($current_page == 'items_master.php') ? 'active' : '' ?>">
-                <i class="bi bi-pc-display-horizontal"></i> Asset Registry
-            </a>
-            <a href="stock_specifications.php" class="nav-link <?= ($current_page == 'stock_specifications.php') ? 'active' : '' ?>">
-                <i class="bi bi-cpu"></i> Device Configurations
-            </a>
-        </div>
-
         <div class="nav-group-label">Organization</div>
         <div class="nav flex-column">
             <a href="institutions.php" class="nav-link <?= ($current_page == 'institutions.php') ? 'active' : '' ?>">

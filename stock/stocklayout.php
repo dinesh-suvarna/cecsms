@@ -278,6 +278,16 @@ $current_page = basename($_SERVER['PHP_SELF']);
             </a>
         </div>
 
+        <div class="nav-group-label">Inventory Management</div>
+        <div class="nav flex-column">
+            <a href="../stock/items_master.php" class="nav-link <?= ($current_page == 'items_master.php') ? 'active' : '' ?>">
+                <i class="bi bi-pc-display-horizontal"></i> Asset Registry
+            </a>
+            <a href="../stock/stock_specifications.php" class="nav-link <?= ($current_page == 'stock_specifications.php') ? 'active' : '' ?>">
+                <i class="bi bi-cpu"></i> Device Configurations
+            </a>
+        </div>
+
         <div class="nav-group-label">Inventory</div>
         <div class="nav flex-column">
             <a href="../stock/add_stock_details.php" class="nav-link <?= ($current_page == 'add_stock_details.php') ? 'active' : '' ?>">
@@ -448,9 +458,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
             </div>
         </div>
     </header>
-
+    
     <div class="animate-fade-in">
         <?php if (isset($content)) echo $content; ?>
+        <?php if (isset($main_content)) echo $main_content; ?>
+        <?php if (!isset($main_content) && isset($content)) echo $content; ?>
     </div>
 
     

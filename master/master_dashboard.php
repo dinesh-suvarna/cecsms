@@ -182,13 +182,13 @@ $avail_percent = ($total_assets > 0) ? round(($dispatched_assets / $total_assets
             <h3 class="fw-800 mb-0">Master Dashboard</h3>
             <p class="text-muted mb-0">Overview of system entities and master stock logs.</p>
         </div>
-        <span class="badge bg-white text-dark border py-2 px-3 rounded-pill shadow-sm">
+        <!-- <span class="badge bg-white text-dark border py-2 px-3 rounded-pill shadow-sm">
             <i class="bi bi-calendar3 me-2 text-primary"></i> <?= date('F Y') ?>
-        </span>
+        </span> -->
     </div>
 
-    <div class="row g-4 mb-5">
-        <div class="col-xl-3 col-sm-6">
+     <div class="row g-4 mb-5">
+     <!--   <div class="col-xl-3 col-sm-6">
             <div class="stat-widget accent-green shadow-sm">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="stat-icon"><i class="bi bi-cpu-fill"></i></div>
@@ -217,9 +217,9 @@ $avail_percent = ($total_assets > 0) ? round(($dispatched_assets / $total_assets
                 
                 <a href="items_master.php" class="stretched-link"></a>
             </div>
-        </div>
+        </div> -->
 
-        <div class="col-xl-3 col-sm-6">
+        <div class="col-xl-4 col-sm-8">
             <div class="stat-widget accent-blue shadow-sm h-100 d-flex flex-column justify-content-between">
                 
                 <div class="d-flex justify-content-between align-items-start">
@@ -250,12 +250,12 @@ $avail_percent = ($total_assets > 0) ? round(($dispatched_assets / $total_assets
             </div>
         </div>
 
-       <div class="col-xl-3 col-sm-6">
+       <div class="col-xl-4 col-sm-6">
             <div class="stat-widget accent-purple shadow-sm h-100 d-flex flex-column justify-content-between">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="stat-icon"><i class="bi bi-diagram-3-fill"></i></div>
                     <span class="badge rounded-pill bg-purple-subtle text-purple border border-purple-subtle" style="background-color: rgba(139, 92, 246, 0.1); color: #8b5cf6;">
-                        Organization
+                        Departments
                     </span>
                 </div>
                 
@@ -279,7 +279,7 @@ $avail_percent = ($total_assets > 0) ? round(($dispatched_assets / $total_assets
             </div>
         </div>
 
-        <div class="col-xl-3 col-sm-6">
+        <div class="col-xl-4 col-sm-6">
             <div class="stat-widget accent-slate shadow-sm h-100 d-flex flex-column justify-content-between">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="stat-icon"><i class="bi bi-grid-3x3-gap-fill"></i></div>
@@ -314,12 +314,12 @@ $avail_percent = ($total_assets > 0) ? round(($dispatched_assets / $total_assets
             <div class="card border-0 shadow-sm rounded-4 p-4">
                 <h6 class="fw-bold mb-4"><i class="bi bi-lightning-charge-fill text-warning me-2"></i> Quick System Setup</h6>
                 <div class="row g-3">
-                    <div class="col-md-3">
+                    <!-- <div class="col-md-3">
                         <a href="items_master.php" class="action-card d-block">
                             <i class="bi bi-plus-circle mb-2 d-block fs-4"></i>
                             Asset Registry
                         </a>
-                    </div>
+                    </div> -->
                     <div class="col-md-3">
                         <a href="institutions.php" class="action-card d-block">
                             <i class="bi bi-plus-square mb-2 d-block fs-4"></i>

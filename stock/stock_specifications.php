@@ -86,7 +86,7 @@ if(isset($_POST['update_model'])){
 }
 
 /* ---------------- DATA FETCHING ---------------- */
-$items = $conn->query("SELECT id, item_name FROM items_master WHERE status='Active' AND category='Computer' ORDER BY item_name ASC");
+$items = $conn->query("SELECT id, item_name, category FROM items_master WHERE status='Active' ORDER BY item_name ASC");
 $models = $conn->query("SELECT m.*, i.item_name FROM item_models m JOIN items_master i ON i.id = m.item_id ORDER BY i.item_name ASC, m.model_name ASC");
 
 ob_start(); 
@@ -115,10 +115,12 @@ if($msg): ?>
                 <form method="POST" id="specForm">
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted">Select Main Item</label>
-                        <select name="item_id" class="form-select rounded-3" required>
-                            <option value="">Choose Computer Item...</option>
+                        <select name="item_id" id="itemSelect" class="form-select rounded-3" required>
+                            <option value="">Choose Item...</option>
                             <?php while($row = $items->fetch_assoc()): ?>
-                                <option value="<?= $row['id'] ?>"><?= htmlspecialchars($row['item_name']) ?></option>
+                                <option value="<?= $row['id'] ?>" data-category="<?= htmlspecialchars($row['category']) ?>">
+                                    <?= htmlspecialchars($row['item_name']) ?>
+                                </option>
                             <?php endwhile; ?>
                         </select>
                     </div>
@@ -126,27 +128,30 @@ if($msg): ?>
                         <label class="form-label small fw-bold text-muted">Model Name</label>
                         <input type="text" name="model_name" class="form-control rounded-3" placeholder="e.g. Veriton M200-H510" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted">Processor</label>
-                        <input type="text" name="processor" class="form-control rounded-3" placeholder="e.g. i5-1145G7">
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-muted">RAM</label>
-                            <input type="text" name="ram" class="form-control rounded-3" placeholder="e.g. 16GB">
+                    <div id="techSpecs" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Processor</label>
+                            <input type="text" name="processor" class="form-control rounded-3" placeholder="e.g. i5-1145G7">
                         </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-muted">Storage Type</label>
-                            <select name="storage_type" class="form-select rounded-3">
-                                <option value="SSD">SSD</option>
-                                <option value="HDD">HDD</option>
-                                <option value="NVMe">NVMe</option>
-                            </select>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">RAM</label>
+                                <input type="text" name="ram" class="form-control rounded-3" placeholder="e.g. 16GB">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">Storage Type</label>
+                                <select name="storage_type" class="form-select rounded-3">
+                                    <option value="">Select Type</option>
+                                    <option value="SSD">SSD</option>
+                                    <option value="HDD">HDD</option>
+                                    <option value="NVMe">NVMe</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mb-4">
-                        <label class="form-label small fw-bold text-muted">Storage Size</label>
-                        <input type="text" name="storage_size" class="form-control rounded-3" placeholder="e.g. 512GB">
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted">Storage Size</label>
+                            <input type="text" name="storage_size" class="form-control rounded-3" placeholder="e.g. 512GB">
+                        </div>
                     </div>
                     <button type="submit" name="add_model" class="btn btn-success w-100 rounded-pill fw-bold">Save Specification</button>
                 </form>
@@ -180,7 +185,7 @@ if($msg): ?>
                             </td>
                             <td class="small"><?= $m['processor'] ?: '-' ?></td>
                             <td class="small"><?= $m['ram'] ?: '-' ?></td>
-                            <td><span class="badge bg-light text-dark border"><?= $m['storage_size'] ?> <?= $m['storage_type'] ?></span></td>
+                            <td><span class="small text-muted"><?= $m['storage_size'] ?> <?= $m['storage_type'] ?: '-' ?></span></td>
                             <td class="text-end pe-3">
                                 <button type="button" class="btn btn-sm btn-white border" onclick='openEditSpecModal(<?= json_encode($m) ?>)'>
                                     <i class="bi bi-pencil-square text-primary"></i>
@@ -230,7 +235,7 @@ $modal_html = '
                         <div class="col-6">
                             <label class="small fw-bold text-muted">Storage Type</label>
                             <select name="storage_type" id="edit_storage_type" class="form-select">
-                                <option value="SSD">SSD</option><option value="HDD">HDD</option><option value="NVMe">NVMe</option>
+                                <option value="">Select Storage Type</option><option value="SSD">SSD</option><option value="HDD">HDD</option><option value="NVMe">NVMe</option>
                             </select>
                         </div>
                     </div>
@@ -250,7 +255,7 @@ $modal_html = '
 
 $main_content = ob_get_clean();
 
-include "masterlayout.php";
+include "stocklayout.php";
 ?>
 
 <script>
@@ -277,6 +282,25 @@ document.getElementById('specSearch').addEventListener('keyup', function() {
     document.querySelectorAll('#specTable tbody tr').forEach(row => {
         row.style.display = row.innerText.toLowerCase().includes(filter) ? '' : 'none';
     });
+});
+
+document.getElementById('itemSelect').addEventListener('change', function() {
+    // Get the category attribute from the selected <option>
+    const selectedOption = this.options[this.selectedIndex];
+    const category = selectedOption.getAttribute('data-category');
+    
+    const techSpecsDiv = document.getElementById('techSpecs');
+
+    // Check if category is 'Computer' (Case-insensitive check)
+    if (category && category.toLowerCase() === 'computer') {
+        techSpecsDiv.style.display = 'block';
+        // Enable inputs so they are submitted
+        techSpecsDiv.querySelectorAll('input, select').forEach(el => el.disabled = false);
+    } else {
+        techSpecsDiv.style.display = 'none';
+        // Disable inputs so empty computer data isn't sent for non-computer items
+        techSpecsDiv.querySelectorAll('input, select').forEach(el => el.disabled = true);
+    }
 });
 
 // SweetAlert Delete Confirmation

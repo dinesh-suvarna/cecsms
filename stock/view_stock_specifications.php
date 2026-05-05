@@ -406,5 +406,5 @@ Update Model
 
 <?php
 $content = ob_get_clean();
-include "masterlayout.php";
+include "stocklayout.php";
 ?>

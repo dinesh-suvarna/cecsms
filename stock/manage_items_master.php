@@ -202,5 +202,5 @@ $modal_html = '
     </div>
 </div>';
 
-include "../master/masterlayout.php";
+include "../stock/stocklayout.php";
 ?>

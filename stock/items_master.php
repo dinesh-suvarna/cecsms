@@ -318,5 +318,5 @@ document.querySelectorAll('.delete-btn').forEach(btn => {
 
 <?php
 $main_content = ob_get_clean();
-include "../master/masterlayout.php";
+include "stocklayout.php";
 ?>

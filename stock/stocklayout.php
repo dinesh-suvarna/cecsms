@@ -460,7 +460,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </header>
     
     <div class="animate-fade-in">
-        <?php if (isset($content)) echo $content; ?>
+        <!-- <?php if (isset($content)) echo $content; ?> -->
         <?php if (isset($main_content)) echo $main_content; ?>
         <?php if (!isset($main_content) && isset($content)) echo $content; ?>
     </div>

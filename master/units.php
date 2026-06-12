@@ -137,6 +137,7 @@ ob_start();
                             <option value="room">Room</option>
                             <option value="hod cabin">HoD Cabin</option>
                             <option value="staffroom">Staffroom</option>
+                            <option value="professor cabin">Professor Cabin</option>
                             <option value="library">Library</option>
                             <option value="other">Other</option>
                         </select>

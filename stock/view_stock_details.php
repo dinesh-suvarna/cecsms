@@ -218,7 +218,8 @@ if($row['stock_type'] === 'serial'){
 
     // SERIAL ITEM → show serial number
     $serial = htmlspecialchars($row['serial_number']);
-    $displayCell = "<span class='fw-semibold text-dark'>$serial</span>";
+    $displayCell = "<span class='fw-semibold text-dark'>" . strtoupper($serial) . "</span>";
+    //$displayCell = "<span class='fw-semibold text-dark'>$serial</span>";
 
     // Status for serial
     if($row['status'] === 'dispatched'){

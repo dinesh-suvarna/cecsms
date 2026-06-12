@@ -250,6 +250,11 @@ Save Division
 
     if($result->num_rows > 0):
         while($row = $result->fetch_assoc()): 
+            // 1. Convert to Title Case
+        $div_formatted = ucwords(strtolower($row['division_name']));
+        
+        // 2. Fix the "And" lowercase exception
+        $formatted_division_name = str_replace(" And ", " and ", $div_formatted);
             if ($current_institution !== $row['institution_name']): 
                 if (!$first) echo '</tbody></table></div></div></div>'; 
                 $current_institution = $row['institution_name'];
@@ -293,7 +298,7 @@ $button_class = (!empty($search)) ? '' : 'collapsed';
             endif; 
         ?>
             <tr>
-                <td class="ps-4 fw-medium"><?= htmlspecialchars($row['division_name']) ?></td>
+                <td class="ps-4 fw-medium"><?= htmlspecialchars($formatted_division_name) ?></td>
                 <td><span class="badge bg-light text-primary border"><?= ucfirst($row['division_type']) ?></span></td>
                 <td class="text-end pe-4">
                     <div class="btn-group shadow-sm rounded-pill overflow-hidden border">

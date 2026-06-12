@@ -189,7 +189,9 @@ ob_start();
                 if($result->num_rows > 0):
                     while($row = $result->fetch_assoc()):
                         $inst = $row['institution_name'];
-                        $div  = $row['division_name'];
+                        $div_formatted  = ucwords(strtolower($row['division_name']));
+                        $div = str_replace(" And ", " and ", $div_formatted);
+                        //$div  = $row['division_name'];
                         $instId = "inst_" . md5($inst);
                         $divId = "div_" . $row['div_id'];
 

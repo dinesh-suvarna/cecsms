@@ -2,21 +2,24 @@
 require_once __DIR__ . "/../config/db.php";
 require_once "../includes/session.php";
 
+$role = $_SESSION['role'] ?? null;
+$user_institution_id = $_SESSION['institution_id'] ?? null;
 $error = "";
 $success = "";
 
-$role = $_SESSION['role'];
-$user_institution_id = $_SESSION['institution_id'] ?? null;
+// 1. Get token and decrypt it safely
+$token = $_GET['token'] ?? null;
+$division_id = $token ? decrypt_id($token) : false;
 
-// Validate ID
-if(!isset($_GET['id']) || !is_numeric($_GET['id'])){
+// 2. Security Check: If decryption fails or returns non-numeric ID
+if (!$division_id || !is_numeric($division_id)) {
     header("Location: divisions.php");
     exit;
 }
 
-$division_id = intval($_GET['id']);
+$division_id = intval($division_id);
 
-// Fetch division
+// 3. Fetch division details
 $stmt = $conn->prepare("
     SELECT * FROM divisions 
     WHERE id=? AND status='Active'
@@ -25,7 +28,7 @@ $stmt->bind_param("i", $division_id);
 $stmt->execute();
 $result = $stmt->get_result();
 
-if($result->num_rows == 0){
+if ($result->num_rows == 0) {
     header("Location: divisions.php");
     exit;
 }
@@ -34,7 +37,7 @@ $division = $result->fetch_assoc();
 $stmt->close();
 
 // Security: prevent editing other institution division
-if($role != 'SuperAdmin' && $division['institution_id'] != $user_institution_id){
+if ($role != 'SuperAdmin' && $division['institution_id'] != $user_institution_id) {
     header("Location: divisions.php");
     exit;
 }
@@ -42,14 +45,13 @@ if($role != 'SuperAdmin' && $division['institution_id'] != $user_institution_id)
 $division_name = $division['division_name'];
 $division_type = $division['division_type'];
 
-
-// ================= UPDATE =================
-if(isset($_POST['update_division'])){
+// ================= UPDATE LOGIC =================
+if (isset($_POST['update_division'])) {
 
     $division_name = ucwords(trim($_POST['division_name']));
     $division_type = $_POST['division_type'];
 
-    if(empty($division_name)){
+    if (empty($division_name)) {
         $error = "Division name is required.";
     } else {
 
@@ -70,7 +72,7 @@ if(isset($_POST['update_division'])){
         $check->execute();
         $dup = $check->get_result();
 
-        if($dup->num_rows > 0){
+        if ($dup->num_rows > 0) {
             $error = "Another division with this name already exists.";
         } else {
 
@@ -86,7 +88,7 @@ if(isset($_POST['update_division'])){
                 $division_id
             );
 
-            if($update->execute()){
+            if ($update->execute()) {
                 $success = "Division updated successfully.";
             } else {
                 $error = "Failed to update division.";
@@ -102,85 +104,87 @@ if(isset($_POST['update_division'])){
 <?php ob_start(); ?>
 
 <div class="container mt-4">
-<div class="card shadow rounded-4">
-<div class="card-body">
+    <div class="card shadow rounded-4">
+        <div class="card-body">
 
-<h5 class="mb-4">Edit Division</h5>
+            <h5 class="mb-4">Edit Division</h5>
 
-<?php if($success): ?>
-<div class="alert alert-success"><?= $success ?></div>
-<?php endif; ?>
+            <?php if ($success): ?>
+                <div class="alert alert-success"><?= $success ?></div>
+            <?php endif; ?>
 
-<?php if($error): ?>
-<div class="alert alert-danger"><?= $error ?></div>
-<?php endif; ?>
+            <?php if ($error): ?>
+                <div class="alert alert-danger"><?= $error ?></div>
+            <?php endif; ?>
 
-<form method="POST">
+            <form method="POST">
 
-<!-- Institution (Readonly) -->
-<div class="mb-3">
-    <label class="form-label">Institution</label>
-    <?php
-    $inst = $conn->prepare("SELECT institution_name FROM institutions WHERE id=?");
-    $inst->bind_param("i", $division['institution_id']);
-    $inst->execute();
-    $inst_name = $inst->get_result()->fetch_assoc();
-    ?>
-    <input type="text"
-           class="form-control"
-           value="<?= htmlspecialchars($inst_name['institution_name']) ?>"
-           readonly>
-</div>
+                <!-- Institution (Readonly) -->
+                <div class="mb-3">
+                    <label class="form-label">Institution</label>
+                    <?php
+                    $inst = $conn->prepare("SELECT institution_name FROM institutions WHERE id=?");
+                    $inst->bind_param("i", $division['institution_id']);
+                    $inst->execute();
+                    $inst_res = $inst->get_result()->fetch_assoc();
+                    $inst_name = $inst_res['institution_name'] ?? 'N/A';
+                    $inst->close();
+                    ?>
+                    <input type="text"
+                           class="form-control"
+                           value="<?= htmlspecialchars($inst_name) ?>"
+                           readonly>
+                </div>
 
-<!-- Division Name -->
-<div class="mb-3">
-    <label class="form-label">Division Name</label>
-    <input type="text"
-           name="division_name"
-           value="<?= htmlspecialchars($division_name) ?>"
-           class="form-control"
-           required>
-</div>
+                <!-- Division Name -->
+                <div class="mb-3">
+                    <label class="form-label">Division Name</label>
+                    <input type="text"
+                           name="division_name"
+                           value="<?= htmlspecialchars($division_name) ?>"
+                           class="form-control"
+                           required>
+                </div>
 
-<!-- Division Type -->
-<div class="mb-3">
-    <label class="form-label">Division Type</label>
-    <select name="division_type" class="form-select" required>
-        <option value="academic" 
-            <?= $division_type == 'academic' ? 'selected' : '' ?>>
-            Academic
-        </option>
-        <option value="administrative" 
-            <?= $division_type == 'administrative' ? 'selected' : '' ?>>
-            Administrative
-        </option>
-        <option value="support" 
-            <?= $division_type == 'support' ? 'selected' : '' ?>>
-            Support
-        </option>
-        <option value="other" 
-            <?= $division_type == 'other' ? 'selected' : '' ?>>
-            Other
-        </option>
-    </select>
-</div>
+                <!-- Division Type -->
+                <div class="mb-3">
+                    <label class="form-label">Division Type</label>
+                    <select name="division_type" class="form-select" required>
+                        <option value="academic" 
+                            <?= $division_type == 'academic' ? 'selected' : '' ?>>
+                            Academic
+                        </option>
+                        <option value="administrative" 
+                            <?= $division_type == 'administrative' ? 'selected' : '' ?>>
+                            Administrative
+                        </option>
+                        <option value="support" 
+                            <?= $division_type == 'support' ? 'selected' : '' ?>>
+                            Support
+                        </option>
+                        <option value="other" 
+                            <?= $division_type == 'other' ? 'selected' : '' ?>>
+                            Other
+                        </option>
+                    </select>
+                </div>
 
-<div class="d-flex gap-2">
-    <button type="submit" 
-            name="update_division" 
-            class="btn btn-success">
-        Update
-    </button>
+                <div class="d-flex gap-2">
+                    <button type="submit" 
+                            name="update_division" 
+                            class="btn btn-success">
+                        Update
+                    </button>
 
-    <a href="divisions.php" class="btn btn-secondary">
-        Back
-    </a>
-</div>
+                    <a href="divisions.php" class="btn btn-secondary">
+                        Back
+                    </a>
+                </div>
 
-</form>
+            </form>
 
-</div>
-</div>
+        </div>
+    </div>
 </div>
 
 <?php

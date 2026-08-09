@@ -322,7 +322,7 @@ ob_start();
                 <td class="text-end pe-4">
                     <div class="btn-group shadow-sm rounded-pill overflow-hidden border bg-white">
                         <?php if ($row['status'] == 'Active'): ?>
-                            <a href="edit_division.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-light text-primary border-0 px-3" title="Edit">
+                            <a href="<?= e_url('edit_division.php', $row['id']) ?>" class="btn btn-sm btn-light text-primary border-0 px-3" title="Edit">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
                             <button onclick="deactivateDivision(<?= $row['id'] ?>)" class="btn btn-sm btn-light text-danger border-0 px-3" title="Deactivate">

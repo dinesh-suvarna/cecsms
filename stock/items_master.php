@@ -5,8 +5,8 @@ require_once "../admin/auth.php";
 
 /* ---------- NOTIFY ---------- */
 if (!function_exists('notify')) {
-    function notify($type, $msg){
-        $_SESSION['swal_type'] = $type;
+    function notify(string $type, string $msg): void {
+        $_SESSION['swal_type'] = ($type === 'danger') ? 'error' : $type; 
         $_SESSION['swal_msg']  = $msg;
     }
 }

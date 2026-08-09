@@ -6,6 +6,7 @@
 # --- Database & Security ---
 # Ignore actual database config (contains your DB_ROOT_PASS)
 config/db.php
+config/config.local.php
 .env
 .env.local
 .env.sample.php

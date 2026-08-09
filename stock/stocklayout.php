@@ -24,74 +24,73 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
-        :root {
-            --sb-width: 290px;
-            --primary-accent: #07116e;
-            --bg-body: #f8fafc;
-            --sidebar-bg: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-        }
+    :root {
+        --sb-width: 250px; /* Reduced sidebar width */
+        --primary-accent: #07116e;
+        --bg-body: #f8fafc;
+        --sidebar-bg: #ffffff;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --border-color: #e2e8f0;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            overflow-x: hidden;
-        }
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-body);
+        color: var(--text-main);
+        overflow-x: hidden;
+    }
 
-        /* --- SIDEBAR --- */
-        #sidebar {
-            width: var(--sb-width);
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background: var(--sidebar-bg);
-            border-right: 1px solid var(--border-color);
-            transition: transform 0.3s ease-in-out;
-            z-index: 1030; 
-            display: flex;
-            flex-direction: column;
-        }
+    /* --- SIDEBAR --- */
+    #sidebar {
+        width: var(--sb-width);
+        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        background: var(--sidebar-bg);
+        border-right: 1px solid var(--border-color);
+        transition: transform 0.3s ease-in-out;
+        z-index: 1030; 
+        display: flex;
+        flex-direction: column;
+    }
 
-        .sidebar-brand {
-            padding: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 800;
-            font-size: 1.35rem;
-            color: var(--primary-accent);
-            text-decoration: none;
-        }
+    .sidebar-brand {
+        padding: 1.25rem 1rem; /* Adjusted to fit narrower sidebar */
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+        font-size: 1.25rem;
+        color: var(--primary-accent);
+        text-decoration: none;
+    }
 
-        .nav-group-label {
-            padding: 1.5rem 1.5rem 0.5rem;
-            font-size: 0.78rem;
-            opacity: 0.85;
-            letter-spacing: 0.1rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08rem;
-            font-weight: 700;
-            color: var(--text-muted);
-        }
+    .nav-group-label {
+        padding: 1.25rem 1rem 0.5rem;
+        font-size: 0.75rem;
+        opacity: 0.85;
+        letter-spacing: 0.08rem;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: var(--text-muted);
+    }
 
-        #sidebar .nav-link {
-            margin: 0.2rem 1rem;
-            padding: 0.85rem 1.2rem;
-            color: var(--text-muted);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1rem;   /* Bigger */
-            font-weight: 600;  /* Slightly bold */
-            transition: all 0.2s;
-            text-decoration: none;
-        }
+    #sidebar .nav-link {
+        margin: 0.2rem 0.5rem; /* Reduced horizontal margin */
+        padding: 0.75rem 1rem;
+        color: var(--text-muted);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
 
         #sidebar .nav-link:hover {
             background: #f1f5f9;
@@ -116,14 +115,14 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         /* --- MAIN CONTENT --- */
         .main-wrapper {
-            margin-left: var(--sb-width);
-            min-height: 100vh;
-            padding: 1.5rem;
-            font-size: 0.98rem;
-            transition: margin 0.3s ease-in-out;
-            position: relative;
-            z-index: 1;
-        }
+        margin-left: var(--sb-width);
+        min-height: 100vh;
+        padding: 1rem 1.25rem; /* Reduced padding on main content */
+        font-size: 0.98rem;
+        transition: margin 0.3s ease-in-out;
+        position: relative;
+        z-index: 1;
+    }
 
         .top-navbar {
             background: rgba(255, 255, 255, 0.9);
@@ -460,10 +459,21 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </header>
     
     <div class="animate-fade-in">
-        <!-- <?php if (isset($content)) echo $content; ?> -->
-        <?php if (isset($main_content)) echo $main_content; ?>
-        <?php if (!isset($main_content) && isset($content)) echo $content; ?>
+        <?php 
+        if (isset($main_content)) {
+            echo $main_content;
+        } elseif (isset($content)) {
+            echo $content;
+        }
+        ?>
     </div>
+
+    <?php 
+    // Render modals or extra overlay scripts OUTSIDE animation wrappers
+    if (isset($modal_html)) {
+        echo $modal_html;
+    } 
+    ?>
 
     
 </main>

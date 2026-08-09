@@ -3,12 +3,14 @@ require_once __DIR__ . "/../config/db.php";
 $page_title = "View Stock Details";
 $page_icon  = "bi-clipboard-data";
 
-/* ================== FETCH STOCK WITH DISPATCHED QUANTITY ================== */
+/* ================== FETCH DATA WITH DISPATCH MATH ================== */
+// Uses im.category directly from items_master instead of joining a non-existent categories table
 $query = "
 SELECT 
     sd.id,
     sd.quantity AS total_quantity,
     im.item_name,
+    IFNULL(NULLIF(im.category, ''), 'Uncategorized') AS category_name,
     sd.serial_number,
     sd.bill_no,
     sd.bill_date,
@@ -17,11 +19,9 @@ SELECT
     sd.amount,
     sd.status,
     im.stock_type,
-    /* Correlated subquery for accurate math */
     IFNULL((SELECT SUM(quantity - IFNULL(returned_quantity,0)) 
             FROM dispatch_details 
             WHERE stock_detail_id = sd.id), 0) AS dispatched_qty,
-
     (
         SELECT dd.dispatch_id 
         FROM dispatch_details dd
@@ -29,504 +29,541 @@ SELECT
         ORDER BY dd.dispatch_id DESC
         LIMIT 1
     ) AS last_dispatch_id
-
 FROM stock_details sd
 LEFT JOIN items_master im ON sd.stock_item_id = im.id
 LEFT JOIN vendors v ON sd.vendor_id = v.id
-ORDER BY im.item_name ASC, sd.id DESC
+ORDER BY category_name ASC, im.item_name ASC, sd.bill_date DESC, sd.id DESC
 ";
 
 $result = $conn->query($query);
 
-/* ================== GROUP STOCK BY ITEM ================== */
+/* ================== 3-TIER GROUPING ================== */
+// Hierarchy: Category Name -> Item Name -> Invoice Group (Bill No + Vendor) -> Rows
 $grouped = [];
 while($row = $result->fetch_assoc()){
-    $grouped[$row['item_name']][] = $row;
+    $catName    = !empty($row['category_name']) ? $row['category_name'] : 'Uncategorized';
+    $itemName   = $row['item_name'] ?? 'Uncategorized Item';
+    $billNo     = !empty($row['bill_no']) ? $row['bill_no'] : 'N/A';
+    $vendorName = !empty($row['vendor_name']) ? $row['vendor_name'] : 'Unknown Vendor';
+    
+    $invoiceKey = md5($billNo . '_' . $vendorName . '_' . $row['bill_date']);
+    
+    $grouped[$catName][$itemName][$invoiceKey]['meta'] = [
+        'bill_no'     => $billNo,
+        'vendor_name' => $vendorName,
+        'bill_date'   => $row['bill_date'],
+        'po_number'   => $row['po_number']
+    ];
+    $grouped[$catName][$itemName][$invoiceKey]['items'][] = $row;
 }
 
 ob_start();
 ?>
 
 <style>
-.table thead th {
-    position: sticky;
-    top: 0;
-    background: #ffffff;
-    z-index: 2;
-}
-.highlight-match {
-    background-color: #ffe69c;
-    padding: 2px 4px;
-    border-radius: 4px;
-    font-weight: 600;
+:root {
+    --saas-border: #e2e8f0;
+    --saas-bg: #f8fafc;
+    --saas-text-muted: #64748b;
 }
 
-.card {transition: 0.2s ease-in-out;}
-.card:hover {box-shadow: 0 0.5rem 1rem rgba(0,0,0,.08);}
-.dispatched-row {background-color: #fdf2f2; border-left: 3px solid #dc3545;}
-.group-header {cursor: pointer; background: #ffffff;}
-.group-header:hover {background: #f8f9fa;}
-.search-box {max-width: 250px;}
-.table td, .table th {white-space: nowrap; font-size: 13px;}
-.table td.serial-col {max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
-.table td.date-col {font-size: 12px; color: #6c757d;}
-.badge {font-size: 11px; padding: 5px 8px;}
+.saas-card {
+    background: #ffffff;
+    border: 1px solid var(--saas-border);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.saas-toolbar {
+    background: #ffffff;
+    border: 1px solid var(--saas-border);
+    border-radius: 10px;
+    padding: 8px 14px;
+}
+
+/* Category Outer Cards */
+.cat-accordion-card {
+    border: 1px solid var(--saas-border) !important;
+    border-radius: 12px !important;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.cat-accordion-btn {
+    background: #ffffff !important;
+    padding: 1rem 1.25rem;
+    border: none;
+    box-shadow: none !important;
+}
+
+.cat-accordion-btn:not(.collapsed) {
+    background: #ffffff !important;
+    border-bottom: 1px solid var(--saas-border);
+}
+
+.folder-icon-box {
+    width: 36px;
+    height: 36px;
+    background-color: #e0e7ff;
+    color: #4f46e5;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Item Nested Cards */
+.item-accordion-card {
+    border: 1px solid var(--saas-border) !important;
+    border-radius: 8px !important;
+    margin-bottom: 0.5rem;
+    background: #ffffff;
+}
+
+.item-accordion-btn {
+    padding: 0.75rem 1rem;
+    background: #ffffff !important;
+}
+
+/* Sub-Group Invoice Block */
+.invoice-block {
+    border: 1px solid #edf2f7;
+    border-radius: 8px;
+    background: #ffffff;
+    margin-bottom: 0.75rem;
+}
+
+.invoice-header {
+    background-color: #f1f5f9;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.78rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.saas-subtable {
+    margin-bottom: 0;
+    font-size: 0.82rem;
+}
+
+.saas-subtable thead th {
+    background-color: #ffffff;
+    color: var(--saas-text-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--saas-border);
+    padding: 0.45rem 0.85rem;
+}
+
+.saas-subtable td {
+    padding: 0.55rem 0.85rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.action-btn-saas {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    border: 1px solid transparent;
+    background: transparent;
+    transition: all 0.15s ease;
+}
+
+.action-btn-saas:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #cbd5e1;
+}
 </style>
 
-<div class="container-fluid mt-4">
-<div class="card border-0 shadow-sm rounded-4">
-<div class="card-body">
-
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <h5 class="fw-semibold mb-0">Stock Details</h5>
-
-    <div class="d-flex gap-2">
-        <select id="statusFilter" class="form-select form-select-sm shadow-sm">
-            <option value="all">All</option>
-            <option value="available">Available</option>
-            <option value="partial">Partially Dispatched</option>
-            <option value="dispatched">Dispatched</option>
-            <option value="disposed">Scrapped / Disposed</option>
-        </select>
-
-        <input type="text" id="searchInput" 
-               class="form-control form-control-sm search-box shadow-sm"
-               placeholder="Search item...">
+<!-- PAGE HEADER -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+    <div>
+        <h4 class="fw-bold m-0 text-dark">
+            <i class="<?= $page_icon ?> text-primary me-2"></i><?= $page_title ?>
+        </h4>
+        <p class="text-muted small m-0">Inventory registry grouped by category, item catalog, and procurement invoice.</p>
     </div>
 </div>
 
-<div class="table-responsive">
-<table class="table table-sm table-hover align-middle mb-0">
-<thead class="border-bottom">
-<tr>
-    <th>Sl.No</th>
-    <th>Item</th>
-    <th>Serial No / Remaining</th>
-    <th>Quantity</th>
-    <th>Bill No</th>
-    <th>Bill Date</th>
-    <th>PO</th>
-    <th>Vendor</th>
-    <th>Amount</th>
-    <th>Status</th>
-    <th>Action</th>
-</tr>
-</thead>
-<tbody>
-
-<?php
-
-$sl = 1;
-
-foreach($grouped as $item_name => $stocks){
-    $sl = 1;
-    $group_id = "group_" . md5($item_name);
-
-    $totalQty = 0;
-    $totalRemaining = 0;
-
-    foreach($stocks as $s){
-        if($s['stock_type'] === 'serial'){
-            $totalQty += 1;
-            // Serial items rely on the status column
-            if($s['status'] !== 'dispatched'){
-                $totalRemaining += 1;
-            }
-        } else {
-            // Bulk items rely on the quantity math
-            $t = (int)$s['total_quantity'];
-            $totalQty += $t;
-            
-            $rem = $t - (int)$s['dispatched_qty'];
-            $totalRemaining += max(0, $rem); // Prevent negative numbers
-        }
-    }
-    
-    echo "
-    <tr class='group-header border-top' data-group='$group_id'>
-        <td colspan='11' class='py-2'>
-            <div class='d-flex justify-content-between align-items-center'>
-                <div>
-                    <i class='bi bi-chevron-right me-2 toggle-icon text-muted'></i>
-                    <strong>".htmlspecialchars($item_name)."</strong>
-                </div>
-                <span class='badge bg-light text-dark border'>
-                    $totalQty Units ($totalRemaining Remaining)
-                </span>
+<!-- SEARCH & FILTER TOOLBAR -->
+<div class="saas-toolbar mb-3">
+    <div class="row g-2 align-items-center">
+        <div class="col-md-4 col-sm-6">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-transparent border-0 pe-1"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="searchInput" class="form-control border-0 bg-transparent shadow-none" placeholder="Search serial, bill, PO, or vendor...">
             </div>
-        </td>
-    </tr>
-    ";
-    // Sort $stocks: remaining first, dispatched last
-    usort($stocks, function($a, $b) {
-        $remainingA = ((int)$a['total_quantity'] - (int)$a['dispatched_qty']);
-        $remainingB = ((int)$b['total_quantity'] - (int)$b['dispatched_qty']);
-
-        // Serial items: if dispatched, consider remaining=0
-        if($a['stock_type'] === 'serial' && $a['status'] === 'dispatched') $remainingA = 0;
-        if($b['stock_type'] === 'serial' && $b['status'] === 'dispatched') $remainingB = 0;
-
-        // Sort descending: remaining first
-        return $remainingB <=> $remainingA;
-    });
-
-    foreach($stocks as $row){
-
-    $row_class = ($row['stock_type'] === 'serial' && $row['status'] === 'dispatched') ? "dispatched-row" : "";
-
-    
-//     
-    // 1. Calculate the raw difference for bulk items
-$calcRemaining = (int)$row['total_quantity'] - (int)$row['dispatched_qty'];
-
-// 2. Comprehensive Status Evaluation Context
-if($row['stock_type'] === 'serial') {
-    if($row['status'] === 'dispatched') {
-        $remainingQty = 0;
-        $dynamicStatus = "dispatched";
-    } elseif($row['status'] === 'disposed') {
-        $remainingQty = 0;
-        $dynamicStatus = "disposed"; // Capture decommissioned state
-    } elseif($row['status'] === 'maintenance') {
-        $remainingQty = 0;
-        $dynamicStatus = "maintenance";
-    } else {
-        $remainingQty = 1;
-        $dynamicStatus = "available";
-    }
-} else {
-    // Bulk items rule evaluation
-    if($row['status'] === 'disposed') {
-        $remainingQty = 0;
-        $dynamicStatus = "disposed";
-    } else {
-        $remainingQty = max(0, $calcRemaining); 
-        $dispatchedQty = (int)$row['dispatched_qty'];
-
-        if($remainingQty == 0){
-            $dynamicStatus = "dispatched";
-        } elseif($dispatchedQty > 0){
-            $dynamicStatus = "partial";
-        } else {
-            $dynamicStatus = "available";
-        }
-    }
-}
-    echo "<tr id='row-".(int)$row['id']."' class='stock-row $row_class group-row $group_id' 
-      data-status='$dynamicStatus' 
-      style='display:none;'>";
-
-    // Empty first column (for group alignment)
-    echo "<td class='text-muted small'>$sl</td>";
-    $sl++;
-    echo"<td></td>";
-
-   
-/* ================= SERIAL / NON-SERIAL DISPLAY ================= */
-
-$displayCell = "";
-$statusBadge  = "";
-$stockId      = (int)$row['id'];
-
-if($row['stock_type'] === 'serial'){
-
-    // SERIAL ITEM → show serial number
-    $serial = htmlspecialchars($row['serial_number']);
-    $displayCell = "<span class='fw-semibold text-dark'>" . strtoupper($serial) . "</span>";
-    //$displayCell = "<span class='fw-semibold text-dark'>$serial</span>";
-
-    // Status for serial
-    // if($row['status'] === 'dispatched'){
-    //     $statusBadge = "<a href='dispatch_report.php?stock_id=$stockId&dispatch_id={$row['last_dispatch_id']}' 
-    //                         class='badge bg-danger text-decoration-none'>
-    //                         <i class='bi bi-truck me-1'></i> Dispatched
-    //                     </a>";
-    // } else {
-    //     $statusBadge = "<span class='badge bg-success'>
-    //                         <i class='bi bi-check-circle me-1'></i> Available
-    //                     </span>";
-    // }
-        if($row['status'] === 'dispatched'){
-    $statusBadge = "<a href='dispatch_report.php?stock_id=$stockId&dispatch_id={$row['last_dispatch_id']}' class='badge bg-danger text-decoration-none'><i class='bi bi-truck me-1'></i> Dispatched</a>";
-} elseif($row['status'] === 'disposed') {
-    // Elegant Decommission indicator
-    $statusBadge = "<span class='badge bg-dark'><i class='bi bi-trash3 me-1'></i> Decommissioned</span>";
-} elseif($row['status'] === 'maintenance') {
-    $statusBadge = "<span class='badge bg-warning text-dark'><i class='bi bi-tools me-1'></i> In Repair</span>";
-} else {
-    $statusBadge = "<span class='badge bg-success'><i class='bi bi-check-circle me-1'></i> Available</span>";
-}
-
-} else {
-
-    
-    // NON-SERIAL ITEM → use the safe remainingQty calculated at the start of the loop
-$dispatchedQty = (int)$row['dispatched_qty'];
-
-$displayCell = "<span class='fw-semibold text-primary'>
-                    $remainingQty Remaining
-                </span>";
-
-    $displayCell = "<span class='fw-semibold text-primary'>
-                        $remainingQty Remaining
-                    </span>";
-
-    // Status for bulk
-    if($dispatchedQty > 0 && $remainingQty > 0){
-        $statusBadge = "<a href='dispatch_report.php?stock_id=$stockId' 
-                            class='badge bg-warning text-dark text-decoration-none'>
-                            Partially Dispatched ($dispatchedQty)
-                        </a>";
-    } elseif($remainingQty == 0){
-        $statusBadge = "<a href='dispatch_report.php?stock_id=$stockId' 
-                            class='badge bg-danger text-decoration-none'>
-                            Fully Dispatched ($dispatchedQty)
-                        </a>";
-    } else {
-        $statusBadge = "<span class='badge bg-success'>
-                            <i class='bi bi-check-circle me-1'></i> Available
-                        </span>";
-    }
-}
-
-
-echo "<td class='serial-col'>$displayCell</td>";
-    /* ================= OTHER COLUMNS ================= */
-    echo "<td>".htmlspecialchars($row['total_quantity'])."</td>";
-    echo "<td>".htmlspecialchars($row['bill_no'])."</td>";
-    echo "<td class='date-col'>".htmlspecialchars($row['bill_date'])."</td>";
-    echo "<td>".htmlspecialchars($row['po_number'])."</td>";
-    echo "<td>".htmlspecialchars($row['vendor_name'])."</td>";
-    echo "<td>₹ ".number_format((float)$row['amount'],2)."</td>";
-
-    echo "<td>$statusBadge</td>";
-
-    echo "<td>";
-
-/* EDIT BUTTON */
-echo "<a href='edit_stock.php?id=".htmlspecialchars($row['id'])."' 
-        class='btn btn-sm btn-outline-primary me-1'
-        title='Edit'>
-        <i class='bi bi-pencil-square'></i>
-      </a>";
-
-/* E-WASTE BUTTON (Condition Based) */
-if($dynamicStatus === 'dispatched'){
-    echo "<a href='#'
-            class='btn btn-sm btn-outline-success'
-            title='Move to E-Waste'>
-            <i class='bi bi-recycle'></i>
-          </a>";
-}
-
-echo "</td>";
-
-    
-    echo "</tr>";
-    }
-}
-?>
-
-</tbody>
-</table>
+        </div>
+       <div class="col-md-3 col-sm-6 ms-auto">
+            <select id="statusFilter" class="form-select form-select-sm shadow-none">
+                <option value="all">All Statuses</option>
+                <option value="available">Available</option>
+                <option value="partial">Partially Dispatched</option>
+                <option value="dispatched">Dispatched</option>
+                <option value="maintenance">Under Repair / Maintenance</option>
+                <option value="disposed">Scrapped / Disposed</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button id="resetSearch" class="btn btn-sm btn-light border text-secondary px-2.5" title="Clear Filters">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>
 </div>
 
-</div>
-</div>
+<!-- CATEGORY ACCORDION ROOT -->
+<div id="categoryRootAccordion">
+    <?php if (!empty($grouped)): ?>
+        <?php foreach ($grouped as $catName => $itemsList): 
+            $catId = "cat_" . md5($catName);
+            
+            // Calculate Total Units inside Category
+            $catTotalQty = 0;
+            foreach ($itemsList as $itemName => $invoices) {
+                foreach ($invoices as $invData) {
+                    foreach ($invData['items'] as $s) {
+                        $catTotalQty += ($s['stock_type'] === 'serial') ? 1 : (int)$s['total_quantity'];
+                    }
+                }
+            }
+        ?>
+            <!-- CATEGORY CARD -->
+            <div class="accordion-item cat-accordion-card">
+                <h2 class="accordion-header">
+                    <button class="accordion-button cat-accordion-btn collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $catId ?>">
+                        <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="folder-icon-box">
+                                    <i class="bi bi-folder-fill fs-5"></i>
+                                </div>
+                                <span class="fw-bold text-dark fs-6"><?= htmlspecialchars($catName) ?></span>
+                            </div>
+                            <div>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 fw-semibold">
+                                    <?= $catTotalQty ?> Items
+                                </span>
+                            </div>
+                        </div>
+                    </button>
+                </h2>
+
+                <div id="<?= $catId ?>" class="accordion-collapse collapse">
+                    <div class="accordion-body p-3 bg-light">
+                        
+                        <!-- NESTED ITEM ACCORDION -->
+                        <div id="itemAccordion_<?= $catId ?>">
+                            <?php foreach ($itemsList as $itemName => $invoices): 
+                                $itemId = "item_" . md5($catName . '_' . $itemName);
+                                
+                                $itemTotalQty = 0;
+                                $itemTotalRemaining = 0;
+                                foreach ($invoices as $invKey => $invData) {
+                                    foreach ($invData['items'] as $s) {
+                                        if ($s['stock_type'] === 'serial') {
+                                            $itemTotalQty += 1;
+                                            if ($s['status'] !== 'dispatched' && $s['status'] !== 'disposed') {
+                                                $itemTotalRemaining += 1;
+                                            }
+                                        } else {
+                                            $t = (int)$s['total_quantity'];
+                                            $itemTotalQty += $t;
+                                            $rem = $t - (int)$s['dispatched_qty'];
+                                            $itemTotalRemaining += max(0, $rem);
+                                        }
+                                    }
+                                }
+                            ?>
+                                <div class="accordion-item item-accordion-card">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button item-accordion-btn collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $itemId ?>">
+                                            <div class="d-flex justify-content-between align-items-center w-100 me-2">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <i class="bi bi-box-seam text-secondary"></i>
+                                                    <span class="fw-semibold text-dark"><?= htmlspecialchars($itemName) ?></span>
+                                                </div>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-light text-dark border rounded-pill px-2">
+                                                        <?= $itemTotalQty ?> Total
+                                                    </span>
+                                                    <span class="badge <?= $itemTotalRemaining > 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary' ?> rounded-pill px-2">
+                                                        <?= $itemTotalRemaining ?> Available
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </h2>
+
+                                    <div id="<?= $itemId ?>" class="accordion-collapse collapse">
+                                        <div class="accordion-body p-3 bg-white">
+                                            
+                                            <?php foreach ($invoices as $invKey => $invData): 
+                                                $meta = $invData['meta'];
+                                                $items = $invData['items'];
+                                            ?>
+                                                <!-- INVOICE SUB-GROUP CARD -->
+                                                <div class="invoice-block shadow-sm invoice-card-item">
+                                                    <div class="invoice-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                                        <div class="d-flex flex-wrap align-items-center gap-3">
+                                                            <span><i class="bi bi-file-earmark-text text-secondary me-1"></i><strong>Bill:</strong> <?= htmlspecialchars($meta['bill_no']) ?></span>
+                                                            <span><i class="bi bi-calendar3 text-secondary me-1"></i><strong>Date:</strong> <?= htmlspecialchars($meta['bill_date']) ?></span>
+                                                            <span><i class="bi bi-building text-secondary me-1"></i><strong>Vendor:</strong> <?= htmlspecialchars($meta['vendor_name']) ?></span>
+                                                            <?php if (!empty($meta['po_number'])): ?>
+                                                                <span><i class="bi bi-receipt text-secondary me-1"></i><strong>PO:</strong> <?= htmlspecialchars($meta['po_number']) ?></span>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                        <span class="badge bg-white text-dark border">
+                                                            <?= count($items) ?> Batch Record(s)
+                                                        </span>
+                                                    </div>
+
+                                                    <!-- SUB-TABLE -->
+                                                    <div class="table-responsive">
+                                                        <table class="table saas-subtable align-middle">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th style="width: 50px;">#</th>
+                                                                    <th>Serial Number / Tracking</th>
+                                                                    <th class="text-center">Total Qty</th>
+                                                                    <th class="text-center">Dispatched</th>
+                                                                    <th class="text-center">Remaining</th>
+                                                                    <th class="text-end">Unit Cost</th>
+                                                                    <th class="text-center">Status</th>
+                                                                    <th class="text-end pe-3">Actions</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <?php 
+                                                                $subSl = 1;
+                                                                foreach ($items as $row): 
+                                                                    $stockId = (int)$row['id'];
+                                                                    $calcRemaining = (int)$row['total_quantity'] - (int)$row['dispatched_qty'];
+                                                                    
+                                                                    if ($row['stock_type'] === 'serial') {
+                                                                        if ($row['status'] === 'dispatched') {
+                                                                            $remainingQty = 0;
+                                                                            $dynamicStatus = "dispatched";
+                                                                        } elseif ($row['status'] === 'disposed') {
+                                                                            $remainingQty = 0;
+                                                                            $dynamicStatus = "disposed";
+                                                                        } elseif ($row['status'] === 'maintenance') {
+                                                                            $remainingQty = 0;
+                                                                            $dynamicStatus = "maintenance";
+                                                                        } else {
+                                                                            $remainingQty = 1;
+                                                                            $dynamicStatus = "available";
+                                                                        }
+                                                                    } else {
+                                                                        if ($row['status'] === 'disposed') {
+                                                                            $remainingQty = 0;
+                                                                            $dynamicStatus = "disposed";
+                                                                        } else {
+                                                                            $remainingQty = max(0, $calcRemaining);
+                                                                            $dispatchedQty = (int)$row['dispatched_qty'];
+
+                                                                            if ($remainingQty == 0) {
+                                                                                $dynamicStatus = "dispatched";
+                                                                            } elseif ($dispatchedQty > 0) {
+                                                                                $dynamicStatus = "partial";
+                                                                            } else {
+                                                                                $dynamicStatus = "available";
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                ?>
+                                                                    <tr id="row-<?= $stockId ?>" class="unit-data-row" data-status="<?= $dynamicStatus ?>">
+                                                                        <td class="text-muted small"><?= $subSl++ ?></td>
+                                                                        <td class="fw-semibold text-dark">
+                                                                            <?php if ($row['stock_type'] === 'serial'): ?>
+                                                                                <span class="text-uppercase"><?= htmlspecialchars($row['serial_number']) ?></span>
+                                                                            <?php else: ?>
+                                                                                <span class="text-muted italic">Non-Serialized (Bulk)</span>
+                                                                            <?php endif; ?>
+                                                                        </td>
+                                                                        <td class="text-center fw-semibold"><?= number_format($row['total_quantity']) ?></td>
+                                                                        <td class="text-center text-danger fw-semibold"><?= number_format($row['dispatched_qty']) ?></td>
+                                                                        <td class="text-center text-success fw-semibold"><?= number_format($remainingQty) ?></td>
+                                                                        <td class="text-end">₹<?= number_format((float)$row['amount'], 2) ?></td>
+                                                                        <td class="text-center">
+                                                                            <?php if ($dynamicStatus === 'dispatched'): ?>
+                                                                                <a href="dispatch_report.php?stock_id=<?= $stockId ?>&dispatch_id=<?= $row['last_dispatch_id'] ?>" class="badge bg-danger text-decoration-none">
+                                                                                    <i class="bi bi-truck me-1"></i> Dispatched
+                                                                                </a>
+                                                                            <?php elseif ($dynamicStatus === 'partial'): ?>
+                                                                                <a href="dispatch_report.php?stock_id=<?= $stockId ?>" class="badge bg-warning text-dark text-decoration-none">
+                                                                                    Partially Dispatched (<?= $row['dispatched_qty'] ?>)
+                                                                                </a>
+                                                                            <?php elseif ($dynamicStatus === 'disposed'): ?>
+                                                                                <span class="badge bg-dark"><i class="bi bi-trash3 me-1"></i> Scrapped</span>
+                                                                            <?php elseif ($dynamicStatus === 'maintenance'): ?>
+                                                                                <span class="badge bg-warning text-dark"><i class="bi bi-tools me-1"></i> Repair</span>
+                                                                            <?php else: ?>
+                                                                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Available</span>
+                                                                            <?php endif; ?>
+                                                                        </td>
+                                                                        <td class="text-end pe-3">
+                                                                            <div class="d-inline-flex gap-1">
+                                                                                <a href="edit_stock.php?id=<?= $stockId ?>" class="action-btn-saas" title="Edit Record">
+                                                                                    <i class="bi bi-pencil-square"></i>
+                                                                                </a>
+                                                                                <?php if ($dynamicStatus === 'dispatched'): ?>
+                                                                                    <a href="#" class="action-btn-saas text-success" title="Move to E-Waste">
+                                                                                        <i class="bi bi-recycle"></i>
+                                                                                    </a>
+                                                                                <?php endif; ?>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                <?php endforeach; ?>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <div class="saas-card p-4 text-center text-muted">
+            <i class="bi bi-inbox fs-3 d-block mb-1 opacity-50"></i>
+            <p class="mb-0 small fw-medium">No stock records found.</p>
+        </div>
+    <?php endif; ?>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-// AUTO-EXPAND GROUP ON PAGE LOAD (If ID is passed in URL)
-// 1. HELPER: Function to expand a specific group and force visibility
-function expandGroup(groupId) {
-    const header = document.querySelector(`.group-header[data-group="${groupId}"]`);
-    const rows = document.querySelectorAll('.' + groupId);
-    
-    if (header) {
-        header.style.display = "table-row";
-        const icon = header.querySelector('.toggle-icon');
-        if (icon) icon.classList.replace('bi-chevron-right', 'bi-chevron-down');
+$(document).ready(function() {
+
+    function applyFilters() {
+        const filterVal = $('#statusFilter').val();
+        const query = $('#searchInput').val().trim().toLowerCase();
+        const isFiltering = (filterVal !== 'all' || query !== "");
+
+        // Step 1: Filter individual rows
+        $('.unit-data-row').each(function() {
+            const $row = $(this);
+            const rowStatus = $row.attr('data-status');
+            
+            // Extract printable text from the row and its immediate invoice header
+            const rowText = $row.text().toLowerCase();
+            const $invoiceHeader = $row.closest('.invoice-card-item').find('.invoice-header');
+            const invoiceText = $invoiceHeader.length ? $invoiceHeader.text().toLowerCase() : '';
+
+            // Check conditions
+            const matchesStatus = (filterVal === 'all' || rowStatus === filterVal);
+            const matchesSearch = (query === "" || rowText.includes(query) || invoiceText.includes(query));
+
+            if (matchesStatus && matchesSearch) {
+                $row.removeClass('d-none').show();
+            } else {
+                $row.addClass('d-none').hide();
+            }
+        });
+
+        // Step 2: Filter Invoice Blocks based on visible rows
+        $('.invoice-card-item').each(function() {
+            const visibleRows = $(this).find('.unit-data-row:not(.d-none)').length;
+            if (visibleRows > 0) {
+                $(this).removeClass('d-none').show();
+            } else {
+                $(this).addClass('d-none').hide();
+            }
+        });
+
+        // Step 3: Filter Item Accordion Cards & Control Collapse States
+        $('.item-accordion-card').each(function() {
+            const $itemCard = $(this);
+            const visibleInvoices = $itemCard.find('.invoice-card-item:not(.d-none)').length;
+            const $collapseElem = $itemCard.find('.accordion-collapse');
+            
+            if (visibleInvoices > 0) {
+                $itemCard.removeClass('d-none').show();
+                
+                // Expand if user is actively filtering, otherwise let user control collapse state
+                if (isFiltering) {
+                    $collapseElem.addClass('show').css('display', '');
+                }
+            } else {
+                $itemCard.addClass('d-none').hide();
+            }
+
+            if (!isFiltering) {
+                $collapseElem.removeClass('show').css('display', '');
+            }
+        });
+
+        // Step 4: Filter Category Accordion Cards & Control Collapse States
+        $('.cat-accordion-card').each(function() {
+            const $catCard = $(this);
+            const visibleItems = $catCard.find('.item-accordion-card:not(.d-none)').length;
+            const $collapseElem = $catCard.find('> .accordion-collapse');
+
+            if (visibleItems > 0) {
+                $catCard.removeClass('d-none').show();
+
+                if (isFiltering) {
+                    $collapseElem.addClass('show').css('display', '');
+                }
+            } else {
+                $catCard.addClass('d-none').hide();
+            }
+
+            if (!isFiltering) {
+                $collapseElem.removeClass('show').css('display', '');
+            }
+        });
     }
 
-    rows.forEach(row => {
-        // Use setProperty with 'important' to override the default 'display:none'
-        row.style.setProperty("display", "table-row", "important");
-    });
-}
+    // Event Listeners
+    $('#statusFilter').on('change', applyFilters);
+    $('#searchInput').on('input', applyFilters);
 
-// 2. MAIN LOAD LOGIC
-window.addEventListener('load', function() {
+    // Reset Button Handler
+    $('#resetSearch').on('click', function() {
+        $('#searchInput').val('');
+        $('#statusFilter').val('all');
+        applyFilters();
+    });
+
+    // Deep-Link Highlight Handler
     const urlParams = new URLSearchParams(window.location.search);
     const highlightId = urlParams.get('highlight_id');
 
     if (highlightId) {
-        // Wait 300ms to ensure the table is fully rendered
         setTimeout(() => {
-            const targetRow = document.getElementById('row-' + highlightId);
-            
-            if (targetRow) {
-                // Find the group class (e.g., group_eb8...)
-                const groupClass = Array.from(targetRow.classList).find(c => 
-                    c.startsWith('group_') && c !== 'group-row'
-                );
+            const $targetRow = $('#row-' + highlightId);
+            if ($targetRow.length) {
+                // Expand all parent accordions up the DOM tree
+                $targetRow.parents('.accordion-collapse').addClass('show').css('display', '');
                 
-                if (groupClass) {
-                    // Force the accordion/group open
-                    expandGroup(groupClass);
-
-                    // Scroll the specific row into view
-                    targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    
-                    // Visual Highlight
-                    targetRow.style.setProperty("background-color", "#fff3cd", "important");
-                    targetRow.style.outline = "2px solid #ffc107";
-                    
-                    // Fade out highlight after 3 seconds
-                    setTimeout(() => {
-                        targetRow.style.transition = 'all 2s ease';
-                        targetRow.style.backgroundColor = '';
-                        targetRow.style.outline = "none";
-                    }, 3000);
-                }
+                // Smooth scroll to target row
+                $targetRow[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                $targetRow.css({'background-color': '#fff3cd', 'outline': '2px solid #ffc107'});
+                
+                setTimeout(() => {
+                    $targetRow.css({'transition': 'all 2s ease', 'background-color': '', 'outline': 'none'});
+                }, 3000);
             }
-        }, 300); 
+        }, 300);
     }
 });
-// FILTER
-document.getElementById('statusFilter').addEventListener('change', function() {
-    let value = this.value;
-    document.querySelectorAll('.stock-row').forEach(row => {
-        row.style.display = (value === 'all' || row.dataset.status === value) ? "table-row" : "none";
-    });
-    document.querySelectorAll('.group-header').forEach(header => {
-        header.querySelector('.toggle-icon').classList.replace('bi-chevron-right','bi-chevron-down');
-    });
-});
-
-
-// SEARCH (Search inside rows like serial, vendor, bill, etc.)
-document.getElementById('searchInput').addEventListener('keyup', function(){
-    let filter = this.value.toLowerCase().trim();
-
-    // Remove old highlights
-    document.querySelectorAll('.highlight-match').forEach(el => {
-        el.outerHTML = el.innerHTML;
-    });
-
-    let firstMatch = null;
-
-    // If search box is empty → collapse everything
-    if(filter === ""){
-        document.querySelectorAll('.stock-row').forEach(row => {
-            row.style.display = "none";
-        });
-
-        document.querySelectorAll('.group-header').forEach(header => {
-            header.style.display = "table-row";
-            header.querySelector('.toggle-icon')
-                  .classList.remove('bi-chevron-down');
-            header.querySelector('.toggle-icon')
-                  .classList.add('bi-chevron-right');
-        });
-
-        return;
-    }
-
-    document.querySelectorAll('.group-header').forEach(header => {
-
-        let group = header.getAttribute('data-group');
-        let rows = document.querySelectorAll('.' + group);
-        let matchFound = false;
-
-        rows.forEach(row => {
-            let rowText = row.innerText.toLowerCase();
-
-            if(rowText.includes(filter)){
-                row.style.display = "table-row";
-                matchFound = true;
-
-                highlightText(row, filter);
-
-                if(!firstMatch){
-                    firstMatch = row;
-                }
-
-            } else {
-                row.style.display = "none";
-            }
-        });
-
-        if(matchFound){
-            header.style.display = "table-row";
-            header.querySelector('.toggle-icon')
-                  .classList.remove('bi-chevron-right');
-            header.querySelector('.toggle-icon')
-                  .classList.add('bi-chevron-down');
-        } else {
-            header.style.display = "none";
-        }
-    });
-
-    // Auto scroll to first match
-    if(firstMatch){
-        firstMatch.scrollIntoView({
-            behavior: "smooth",
-            block: "center"
-        });
-    }
-});
-
-/* ================= HIGHLIGHT FUNCTION ================= */
-function highlightText(element, text) {
-    let regex = new RegExp(text, "gi");
-
-    element.querySelectorAll("td").forEach(td => {
-
-        td.childNodes.forEach(node => {
-
-            if (node.nodeType === 3) { // TEXT NODE ONLY
-
-                let content = node.nodeValue;
-                if (regex.test(content)) {
-
-                    let span = document.createElement("span");
-                    span.innerHTML = content.replace(regex,
-                        match => `<span class="highlight-match">${match}</span>`
-                    );
-
-                    td.replaceChild(span, node);
-                }
-            }
-
-        });
-
-    });
-}
-
-
-
-// GROUP EXPAND / COLLAPSE
-document.querySelectorAll('.group-header').forEach(header => {
-    header.addEventListener('click', function(){
-        let group = this.getAttribute('data-group');
-        let rows = document.querySelectorAll('.' + group);
-        let icon = this.querySelector('.toggle-icon');
-
-        rows.forEach(row => {
-            if(row.style.display === "none"){
-                row.style.display = "table-row";
-                icon.classList.remove('bi-chevron-right');
-                icon.classList.add('bi-chevron-down');
-            } else {
-                row.style.display = "none";
-                icon.classList.remove('bi-chevron-down');
-                icon.classList.add('bi-chevron-right');
-            }
-        });
-    });
-});
-
-
 </script>
 
 <?php

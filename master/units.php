@@ -96,7 +96,7 @@ ob_start();
 :root {
     --saas-border: #e2e8f0;
     --saas-bg-subtle: #f8fafc;
-    --saas-primary: #4f46e5;
+    --saas-primary: #0d6efd;
     --saas-primary-light: #eeef2e;
     --saas-text-dark: #0f172a;
     --saas-text-muted: #64748b;

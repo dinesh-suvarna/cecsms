@@ -3,7 +3,6 @@ $page_title = "Add Stock Details";
 $page_icon  = "bi-receipt";
 require_once __DIR__ . "/../config/db.php";
 
-
 /* Fetch Items from item_master */
 $items = $conn->query("SELECT id, item_name, stock_type FROM items_master ORDER BY item_name ASC");
 
@@ -32,6 +31,20 @@ if(isset($_POST['submit'])){
     $amount   = !empty($_POST['amount']) ? (float)$_POST['amount'] : null;
     $warranty = $_POST['warranty_upto'] ?: null;
 
+    // Repopulate form fields in case of validation fallback
+    $oldQty = $qty;
+    $oldItem = $item_id;
+    $oldBill = $bill_no;
+    $oldPO = $po_no;
+    $oldVendor = $vendor;
+    $oldAmount = $amount;
+    $oldWarranty = $warranty;
+    $oldSerials = $_POST['serial_number'] ?? [];
+
+    // FIX: Initialize variables early to prevent 'Undefined Variable' warnings
+    $filledSerials = []; 
+    $stockType = 'non_serial'; 
+
     // Basic validation
     if($qty <= 0){
         $errorMsg = "Quantity must be greater than 0.";
@@ -42,7 +55,6 @@ if(isset($_POST['submit'])){
     }
 
     if(empty($errorMsg)){
-
         // Fetch item and stock type
         $stmtType = $conn->prepare("SELECT stock_type FROM items_master WHERE id = ?");
         $stmtType->bind_param("i", $item_id);
@@ -59,7 +71,6 @@ if(isset($_POST['submit'])){
     }
 
     if(empty($errorMsg)){
-
         // Check if item has models
         $stmtCheckModel = $conn->prepare("
             SELECT COUNT(*) 
@@ -96,10 +107,14 @@ if(isset($_POST['submit'])){
     }
 
     if(empty($errorMsg)){
-
-        // Serial number validation
+        // Serial number validation processing
         $serials = $_POST['serial_number'] ?? [];
-        $serials = array_map('trim', $serials);
+        
+        // Convert all input values to UPPERCASE and trim whitespace
+        $serials = array_map(function($val) {
+            return strtoupper(trim($val));
+        }, $serials);
+        
         $filledSerials = array_filter($serials);
 
         // Serialized items: quantity must match serials
@@ -194,7 +209,6 @@ if(isset($_POST['submit'])){
     }
 }
 
-
 ob_start();
 ?>
 
@@ -219,35 +233,39 @@ ob_start();
         <label>Item Name</label>
         <select name="item_master_id" id="itemSelect" class="form-select" required>
         <option value="">Select Item</option>
-        <?php while($row = $items->fetch_assoc()): ?>
+        <?php 
+        // Reset dynamic item pointer back to starting point before building choices
+        $items->data_seek(0); 
+        while($row = $items->fetch_assoc()): 
+        ?>
             <option value="<?= $row['id'] ?>"
                     data-type="<?= $row['stock_type'] ?>"
-                    <?= ($row['id']==$oldItem)?'selected':'' ?>>
+                    <?= ($row['id'] == $oldItem) ? 'selected' : '' ?>>
                 <?= htmlspecialchars($row['item_name']) ?>
             </option>
         <?php endwhile; ?>
         </select>
-        </div>
+    </div>
+    
     <div class="col-md-6 mb-3">
     <label>Model</label>
-    <select name="model_id" id="modelSelect" class="form-select"  >
+    <select name="model_id" id="modelSelect" class="form-select">
     <option value="">Select Model</option>
-
     <?php
         $modelQuery = $conn->query("
-        SELECT id, model_name, item_id
-        FROM item_models
-        WHERE status='Active'
-        ORDER BY model_name
-    ");
+            SELECT id, model_name, item_id
+            FROM item_models
+            WHERE status='Active'
+            ORDER BY model_name
+        ");
 
-    while($model = $modelQuery->fetch_assoc()){
-        echo "<option value='{$model['id']}' data-item='{$model['item_id']}'>
-        {$model['model_name']}
-        </option>";
-    }
+        while($model = $modelQuery->fetch_assoc()){
+            $selected = ($model['id'] == $model_id) ? 'selected' : '';
+            echo "<option value='{$model['id']}' data-item='{$model['item_id']}' {$selected}>
+            {$model['model_name']}
+            </option>";
+        }
     ?>
-
     </select>
     </div>
 
@@ -264,7 +282,7 @@ ob_start();
             ?>
                 <div class="mb-3">
                     <label>Serial Number <?= $i+1 ?></label>
-                    <input type="text" name="serial_number[]" class="form-control" value="<?= htmlspecialchars($serial) ?>" required autocomplete="off">
+                    <input type="text" name="serial_number[]" class="form-control text-uppercase" value="<?= htmlspecialchars($serial) ?>" required autocomplete="off">
                 </div>
             <?php }} ?>
         </div>
@@ -277,7 +295,7 @@ ob_start();
 
     <div class="col-md-6 mb-3">
         <label>Bill Date</label>
-        <input type="date" name="bill_date" class="form-control" value="<?= htmlspecialchars($bill_dt ?? '') ?>">
+        <input type="date" name="bill_date" class="form-control" value="<?= htmlspecialchars($oldWarranty ? $bill_dt : '') ?>">
     </div>
 
     <div class="col-md-6 mb-3">
@@ -289,8 +307,11 @@ ob_start();
         <label>Vendor</label>
         <select name="vendor_id" class="form-select">
             <option value="">Select Vendor</option>
-            <?php while($row = $vendors->fetch_assoc()): ?>
-                <option value="<?= $row['id'] ?>" <?= ($row['id']==$oldVendor)?'selected':'' ?>>
+            <?php 
+            $vendors->data_seek(0);
+            while($row = $vendors->fetch_assoc()): 
+            ?>
+                <option value="<?= $row['id'] ?>" <?= ($row['id'] == $oldVendor) ? 'selected' : '' ?>>
                     <?= htmlspecialchars($row['vendor_name']) ?>
                 </option>
             <?php endwhile; ?>
@@ -309,7 +330,7 @@ ob_start();
 
 </div>
 
-<button type="submit" name="submit" class="btn btn-success rounded-pill">
+<button type="submit" name="submit" class="btn btn-primary rounded-pill px-4">
     Save Stock Details
 </button>
 
@@ -325,72 +346,75 @@ const modelSelect = document.getElementById("modelSelect");
 const qtyInput = document.getElementById("quantityInput");
 const serialContainer = document.getElementById("serialContainer");
 
+function filterModels() {
+    let item = itemSelect.value;
+    let hasModel = false;
+
+    for(let option of modelSelect.options){
+        if(option.dataset.item === item){
+            option.style.display = "block";
+            hasModel = true;
+        }
+        else if(option.value === ""){
+            option.style.display = "block";
+        }
+        else{
+            option.style.display = "none";
+        }
+    }
+
+    /* Make model required only if item has model */
+    if(hasModel){
+        modelSelect.setAttribute("required","required");
+        modelSelect.removeAttribute("disabled");
+    }else{
+        modelSelect.removeAttribute("required");
+        modelSelect.setAttribute("disabled","disabled");
+        modelSelect.value = "";
+    }
+}
+
 itemSelect.addEventListener("change", function(){
-
-let item = this.value;
-let hasModel = false;
-
-for(let option of modelSelect.options){
-
-    if(option.dataset.item === item){
-        option.style.display = "block";
-        hasModel = true;
-    }
-    else if(option.value === ""){
-        option.style.display = "block";
-    }
-    else{
-        option.style.display = "none";
-    }
-}
-
-modelSelect.value = "";
-
-/* Make model required only if item has model */
-if(hasModel){
-    modelSelect.setAttribute("required","required");
-}else{
-    modelSelect.removeAttribute("required");
-}
-
-if(hasModel){
-    modelSelect.removeAttribute("disabled");
-}else{
-    modelSelect.setAttribute("disabled","disabled");
-}
-
+    filterModels();
+    updateSerialFields();
 });
 
-function updateSerialFields() {
+qtyInput.addEventListener("input", updateSerialFields);
 
+function updateSerialFields() {
     const selectedOption = itemSelect.options[itemSelect.selectedIndex];
+    if(!selectedOption) return;
+    
     const stockType = selectedOption.getAttribute("data-type");
     const qty = parseInt(qtyInput.value);
+
+    // If there is post data rendered by PHP on validation error, preserve it initially
+    if(qty === document.querySelectorAll('#serialContainer input').length) return;
 
     serialContainer.innerHTML = "";
 
     if(stockType === "serial" && qty > 0){
-
         for(let i = 1; i <= qty; i++){
             serialContainer.innerHTML += `
                 <div class="mb-3">
                     <label>Serial Number ${i}</label>
                     <input type="text"
                            name="serial_number[]"
-                           class="form-control"
+                           class="form-control text-uppercase"
                            required
                            autocomplete="off">
                 </div>
             `;
         }
-
     }
 }
 
-itemSelect.addEventListener("change", updateSerialFields);
-qtyInput.addEventListener("input", updateSerialFields);
-
-
+// Run layout sync rules on page mount to preserve user input states
+window.addEventListener('DOMContentLoaded', () => {
+    if(itemSelect.value) {
+        filterModels();
+    }
+});
 </script>
 
 <?php

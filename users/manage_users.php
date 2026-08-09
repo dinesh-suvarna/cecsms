@@ -142,8 +142,8 @@ ob_start();
 
 <style>
     :root {
-        --emerald-600: #059669;
-        --emerald-700: #047857;
+        --emerald-600: #0d6efd;
+        --emerald-700: #040505;
         --emerald-50: #ecfdf5;
         --emerald-100: #d1fae5;
     }

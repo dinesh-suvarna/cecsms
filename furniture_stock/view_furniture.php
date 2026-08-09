@@ -85,7 +85,7 @@ ob_start();
             <button onclick="window.print()" class="btn btn-outline-dark rounded-pill px-3 shadow-sm">
                 <i class="bi bi-printer me-1"></i> Print
             </button>
-            <a href="add_furniture.php" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+            <a href="add_furniture.php" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
                 <i class="bi bi-plus-lg me-2"></i> Add New Stock
             </a>
         </div>

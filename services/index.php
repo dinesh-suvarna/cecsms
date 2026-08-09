@@ -55,7 +55,7 @@ ob_start();
                         <input type="text" name="bill_no" class="form-control border-0 shadow-none fs-6"
                                placeholder="Enter Bill Number (e.g. 2024/001)..."
                                value="<?= isset($_GET['bill_no']) ? htmlspecialchars($_GET['bill_no']) : '' ?>">
-                        <button class="btn btn-success px-4 fw-bold border-0" style="background-color: #10b981;">
+                        <button class="btn btn-primary px-4 fw-bold border-0" style="background-color: #0d6efd;">
                             Search
                         </button>
                     </div>
@@ -68,7 +68,7 @@ ob_start();
     <div class="col-12">
         <?php if ($search_result !== null): ?>
             <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden animate-fade-in">
-                <div class="bg-success p-1" style="height: 4px; background-color: #10b981 !important;"></div>
+                <div class="bg-success p-1" style="height: 4px; background-color: #0d6efd !important;"></div>
                 
                 <div class="card-header bg-transparent border-0 pt-4 px-4">
                     <div class="d-flex align-items-center justify-content-between">
@@ -197,7 +197,7 @@ ob_start();
     <div class="col-md-6 col-xl-4">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-<div class="card border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); transition: transform 0.2s;">
+<div class="card border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #0d6efd 0%, #059669 100%); transition: transform 0.2s;">
     <div class="card-body p-4 d-flex flex-column justify-content-center align-items-center text-center text-white">
         
         <div class="d-flex align-items-center justify-content-center bg-white bg-opacity-25 rounded-4 mb-3" style="width: 65px; height: 65px;">
@@ -210,7 +210,7 @@ ob_start();
             Log maintenance for Computers, Printers, UPS units, or other IT peripherals.
         </p>
 
-        <a href="add_service.php" class="btn btn-white btn-lg rounded-pill px-4 fw-800 text-success shadow-sm w-100" 
+        <a href="add_service.php" class="btn btn-white btn-lg rounded-pill px-4 fw-800 text-primary shadow-sm w-100" 
            style="background: #fff; font-size: 13px; border: none;">
             <i class="bi bi-plus-circle-fill me-2"></i> ADD SERVICE RECORD
         </a>

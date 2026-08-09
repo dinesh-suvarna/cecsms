@@ -161,7 +161,7 @@ ob_start();
                             <label class="small fw-bold text-muted text-uppercase">Item Code</label>
                             <input type="text" name="item_code" id="item_code" class="form-control rounded-3 border-light-subtle" placeholder="e.g. CHR-01" required>
                         </div>
-                        <button type="submit" name="save_type" id="submitBtn" class="btn text-white w-100 rounded-pill py-2 fw-bold" style="background-color: #10b981;">
+                        <button type="submit" name="save_type" id="submitBtn" class="btn text-white w-100 rounded-pill py-2 fw-bold" style="background-color: #0d6efd;">
                             <i class="bi bi-check-circle me-2"></i> Save to Registry
                         </button>
                         <button type="button" onclick="resetForm()" class="btn btn-danger w-100 rounded-pill mt-2 d-none" id="cancelBtn">

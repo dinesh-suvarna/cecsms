@@ -41,7 +41,7 @@ $pending_count = $notif_res->num_rows;
     <style>
         :root {
             --sb-width: 290px;
-            --primary-accent: #10b981;
+            --primary-accent: #07116e;
             --bg-body: #f8fafc;
             --sidebar-bg: #ffffff;
             --text-main: #1e293b;

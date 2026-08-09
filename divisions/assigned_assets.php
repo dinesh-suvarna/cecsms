@@ -123,7 +123,7 @@ $query = "
 ";
 
 if ($role !== 'SuperAdmin') { $query .= " AND dm.division_id = $division_id"; }
-$query .= " ORDER BY u.unit_name ASC, im.item_name ASC, da.assigned_at DESC";
+$query .= " ORDER BY u.unit_code ASC, im.item_name ASC, da.division_asset_id ASC";
 
 $result = $conn->query($query);
 $units = [];

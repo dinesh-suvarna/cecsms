@@ -68,7 +68,7 @@ ob_start();
     
     /* Tabs Styling */
     .nav-pills .nav-link { color: #64748b; font-weight: 600; border-radius: 12px; padding: 12px 24px; border: 1px solid transparent; transition: all 0.2s; }
-    .nav-pills .nav-link.active { background: #0f172a; color: white; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); }
+    .nav-pills .nav-link.active { background: #0d6efd; color: white; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); }
     .nav-pills .nav-link:hover:not(.active) { background: #f1f5f9; border-color: #e2e8f0; }
 
     /* Accordion Styling */

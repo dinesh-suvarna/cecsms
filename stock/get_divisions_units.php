@@ -31,8 +31,9 @@ if(isset($_GET['institution_id'])){
         // Fetch units for first division (if any)
         if(!empty($response['divisions'])){
             $first_division_id = $response['divisions'][0]['id'];
+            // Added unit_code to SELECT
             $units = $conn->query("
-                SELECT id, unit_name
+                SELECT id, unit_code, unit_name
                 FROM units
                 WHERE division_id=$first_division_id AND status='Active'
                 ORDER BY unit_name ASC
@@ -40,6 +41,7 @@ if(isset($_GET['institution_id'])){
             while($row = $units->fetch_assoc()){
                 $response['units'][] = [
                     "id" => $row['id'],
+                    "code" => $row['unit_code'], 
                     "name" => $row['unit_name']
                 ];
             }
@@ -53,8 +55,9 @@ if(isset($_GET['division_id'])){
     $response['units'] = []; // reset
 
     if($division_id > 0){
+        // Added unit_code to SELECT
         $units = $conn->query("
-            SELECT id, unit_name
+            SELECT id, unit_code, unit_name
             FROM units
             WHERE division_id=$division_id AND status='Active'
             ORDER BY unit_name ASC
@@ -62,6 +65,7 @@ if(isset($_GET['division_id'])){
         while($row = $units->fetch_assoc()){
             $response['units'][] = [
                 "id" => $row['id'],
+                "code" => $row['unit_code'], 
                 "name" => $row['unit_name']
             ];
         }

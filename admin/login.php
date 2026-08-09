@@ -131,27 +131,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             --text-muted: #64748b;    /* Slate 500 */
         }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-subtle);
-            color: var(--text-main);
-            height: 100vh;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+       body{
+        min-height:100vh;
+        padding:20px;
+        margin:0;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background:#f8fafc;
+    }
 
-        .login-container {
-            display: flex;
-            width: 100%;
-            max-width: 1100px;
-            height: 680px;
-            background: #fff;
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.12);
-        }
+    .login-container{
+        width:100%;
+        max-width:1100px;
+        min-height:650px;
+        max-height:calc(100vh - 40px);
+        overflow-y:auto;
+        overflow-x:hidden;
+        display:flex;
+        border-radius:24px;
+    }
 
         /* --- LEFT SIDE: INSTITUTIONAL BRANDING --- */
         .login-sidebar {
@@ -175,25 +174,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         .sidebar-content { position: relative; z-index: 1; }
         
-        .brand-icon {
-            width: 80px;
-            height: 80px;
-            background: white; 
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 28px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
-            overflow: hidden; 
-            padding: 0;      
-        }
+    .brand-logo{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    padding: 15px 20px;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.12);
+    /* margin-bottom: 30px; */
+    }
 
-        .custom-logo {
-            width: 100%;
-            height: 100%;
-            object-fit: cover; 
-        }
+    .custom-logo{
+        max-width: 420px;
+        width: 100%;
+        height: auto;
+    }
 
         .asset-icon-box {
             background-color: rgba(99, 102, 241, 0.15);
@@ -264,10 +260,47 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; z-index: 1000;
         }
 
-        @media (max-width: 992px) {
-            .login-container { max-width: 450px; height: auto; margin: 20px; flex-direction: column; }
-            .login-sidebar { display: none; }
-            .login-form-area { padding: 40px; }
+        @media (max-width:992px){
+
+            .login-container{
+                flex-direction:column;
+                min-height:auto;
+                max-height:none;
+            }
+
+            .login-sidebar{
+                display:none;
+            }
+
+            .login-form-area{
+                padding:30px;
+            }
+
+            .custom-logo{
+            max-width:300px;
+            margin:0 auto;
+            }
+
+            .brand-logo{
+                text-align:center;
+            }
+
+        }
+
+        @media (max-width:576px){
+
+            body{
+                padding:10px;
+            }
+
+            .login-form-area{
+                padding:20px;
+            }
+
+            .custom-logo{
+                max-width:220px;
+            }
+
         }
     </style>
 </head>
@@ -283,8 +316,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <div class="login-container">
     <div class="login-sidebar">
         <div class="sidebar-content">
-            <div class="brand-icon">
-    <img src="../admin/assets/logo.png" alt="Institution Logo" class="custom-logo">
+            <div class="brand-logo">
+    <img src="../admin/assets/logoc.png" alt="Institution Logo" class="custom-logo">
 </div>
             
             <h2 class="display-6 fw-bold">

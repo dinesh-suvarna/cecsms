@@ -1,7 +1,14 @@
 <?php
+require_once "../admin/auth.php"; 
 require_once __DIR__ . "/../config/db.php";
+$role = $_SESSION["role"] ?? 'User'; 
+if (!isset($page_title)) $page_title = "E-Waste Lifecycle Dashboard";
 
-if (!isset($page_title)) $page_title = "Stock Dashboard";
+// --- CACHE CONTROL ---
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
 <!DOCTYPE html>
@@ -9,7 +16,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= htmlspecialchars($page_title) ?> | ComputerStock Admin</title>
+    <title><?= htmlspecialchars($page_title) ?> | StockFlow Admin</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -19,7 +26,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <style>
         :root {
             --sb-width: 290px;
-            --primary-accent: #07116e;
+            --primary-accent: #10b981;
             --bg-body: #f8fafc;
             --sidebar-bg: #ffffff;
             --text-main: #1e293b;
@@ -67,7 +74,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
             opacity: 0.85;
             letter-spacing: 0.1rem;
             text-transform: uppercase;
-            letter-spacing: 0.08rem;
             font-weight: 700;
             color: var(--text-muted);
         }
@@ -80,8 +86,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
             display: flex;
             align-items: center;
             gap: 12px;
-            font-size: 1rem;   /* Bigger */
-            font-weight: 600;  /* Slightly bold */
+            font-size: 1rem;
+            font-weight: 600;
             transition: all 0.2s;
             text-decoration: none;
         }
@@ -100,22 +106,16 @@ $current_page = basename($_SERVER['PHP_SELF']);
             font-weight: 700;
         }
 
-        .collapse .nav-link {
-            margin-left: 2.5rem !important;
-            font-size: 0.95rem !important;  
-            padding: 0.6rem 1rem !important;
-            font-weight: 500;
-        }
-
-        /* --- MAIN CONTENT --- */
+        /* --- MAIN CONTENT FIXED STRUCTURAL MATH --- */
         .main-wrapper {
             margin-left: var(--sb-width);
             min-height: 100vh;
             padding: 1.5rem;
             font-size: 0.98rem;
-            transition: margin 0.3s ease-in-out;
+            transition: margin-left 0.3s ease-in-out;
             position: relative;
             z-index: 1;
+            width: calc(100% - var(--sb-width)); /* Prevents running off screen edge on medium desktop layouts */
         }
 
         .top-navbar {
@@ -153,19 +153,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
             border-color: var(--primary-accent);
         }
 
-        
-
         #sidebar .nav-link i {
             font-size: 1.1rem;
-        }
-
-        .nav-link[aria-expanded="true"] .bi-chevron-down {
-            transform: rotate(180deg);
-            transition: transform 0.3s ease;
-        }
-
-        .nav-link .bi-chevron-down {
-            transition: transform 0.3s ease;
         }
 
         .user-profile {
@@ -177,6 +166,28 @@ $current_page = basename($_SERVER['PHP_SELF']);
             border: 1px solid var(--border-color);
             background: #fff;
             cursor: pointer;
+        }
+
+        /* --- GLOBAL UI RESET --- */
+        *, 
+        *:focus, 
+        *:active, 
+        *:focus-visible,
+        .form-control, 
+        .form-select, 
+        .btn, 
+        .input-group,
+        .input-group-text {
+            outline: none !important;
+            box-shadow: none !important; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        .form-control:focus, 
+        .form-select:focus {
+            border-color: var(--primary-accent) !important;
+            background-color: #fff !important;
+            box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.1) !important;
         }
 
         /* --- UI UTILITIES --- */
@@ -193,60 +204,48 @@ $current_page = basename($_SERVER['PHP_SELF']);
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* RESPONSIVE EDGE CORRECTIONS */
         @media (max-width: 992px) {
             #sidebar { transform: translateX(-100%); z-index: 2000; }
-            .main-wrapper { margin-left: 0; }
+            .main-wrapper { 
+                margin-left: 0; 
+                width: 100%; /* Resets width boundary on mobile/tablet viewports */
+            }
             #sidebar.show { transform: translateX(0); }
         }
-    
-h5 {
-    line-height: 1.2;
-}
-.modal {
-    z-index: 1065 !important;
-}
-.modal-backdrop {
-    z-index: 1060 !important;
-}
-.dropdown-menu {
-    z-index: 2000 !important;
-}
     </style>
 </head>
 <body>
 
 <nav id="sidebar">
-    <a href="master_dashboard.php" class="sidebar-brand">
-        <div class="bg-primary text-white rounded-3 px-2 py-1 shadow-sm">
-            <i class="bi bi-box-seam"></i>
+    <a href="ewaste_dashboard.php" class="sidebar-brand">
+        <div class="bg-success text-white rounded-3 px-2 py-1 shadow-sm">
+            <i class="bi bi-recycle"></i>
         </div>
-        <span>Master<span class="text-dark">Stock</span></span>
+        <span>Stock<span class="text-dark">Flow</span></span>
     </a>
 
     <div class="overflow-y-auto flex-grow-1">
-        <div class="nav-group-label">Overview</div>
+        <div class="nav-group-label">General Hub</div>
         <div class="nav flex-column">
-            <a href="master_dashboard.php" class="nav-link <?= ($current_page == 'master_dashboard.php') ? 'active' : '' ?>">
-                <i class="bi bi-grid-1x2"></i> Dashboard
+            <a href="../stock/dashboard.php" class="nav-link">
+                <i class="bi bi-arrow-left-circle-fill text-muted"></i> Back to Stock
+            </a>
+            <a href="ewaste_dashboard.php" class="nav-link <?= ($current_page == 'ewaste_dashboard.php') ? 'active' : '' ?>">
+                <i class="bi bi-grid-1x2"></i> E-Waste Analytics
             </a>
         </div>
 
-        <div class="nav-group-label">Organization</div>
+        <div class="nav-group-label">Lifecycle Operations</div>
         <div class="nav flex-column">
-            <a href="institutions.php" class="nav-link <?= ($current_page == 'institutions.php') ? 'active' : '' ?>">
-                <i class="bi bi-building"></i> Institutions
-            </a>
-            <a href="divisions.php" class="nav-link <?= ($current_page == 'divisions.php') ? 'active' : '' ?>">
-                <i class="bi bi-diagram-3 "></i> Departments
-            </a>
-            <a href="units.php" class="nav-link <?= ($current_page == 'units.php') ? 'active' : '' ?>">
-                <i class="bi bi-collection"></i> Labs & Facilities
+            <a href="ewaste_registry.php" class="nav-link <?= ($current_page == 'ewaste_registry.php') ? 'active' : '' ?>">
+                <i class="bi bi-table"></i> Processing Ledger
             </a>
         </div>
     </div>
 
     <div class="p-3 border-top mt-auto">
-        <a href="../admin/logout.php" class="btn btn-outline-danger w-100 rounded-pill btn-sm fw-bold">
+        <a href="../logout.php" class="btn btn-outline-danger w-100 rounded-pill btn-sm fw-bold">
             <i class="bi bi-power me-2"></i> Logout
         </a>
     </div>
@@ -255,29 +254,26 @@ h5 {
 <main class="main-wrapper">
     <header class="top-navbar">
         <div class="d-flex align-items-center gap-3">
-    <button class="btn btn-light d-lg-none border-0 shadow-sm rounded-3" id="menuToggle">
-        <i class="bi bi-list fs-5"></i>
-    </button>
-    
-    <a href="/cecsms/index.php" 
-       class="nav-home-icon d-flex align-items-center justify-content-center text-decoration-none" 
-       title="Go to Dashboard">
-        <i class="bi bi-house-door"></i>
-    </a>
+            <button class="btn btn-light d-lg-none border-0 shadow-sm rounded-3" id="menuToggle">
+                <i class="bi bi-list fs-5"></i>
+            </button>
+            
+            <a href="/cecsms/index.php" class="nav-home-icon d-flex align-items-center justify-content-center text-decoration-none" title="Go to Dashboard">
+                <i class="bi bi-house-door"></i>
+            </a>
 
-    <div>
-        <h5 class="mb-0 fw-bold text-dark lh-1 mb-1"><?= htmlspecialchars($page_title) ?></h5>
-        <p class="text-muted mb-0 d-none d-md-block" style="font-size: 11px; letter-spacing: 0.02rem;">
-            Manage your digital assets and infrastructure.
-        </p>
-    </div>
-</div>
-
-
+            <div>
+                <h5 class="mb-0 fw-bold text-dark lh-1 mb-1"><?= htmlspecialchars($page_title) ?></h5>
+                <p class="text-muted mb-0 d-none d-md-block" style="font-size: 11px; letter-spacing: 0.02rem;">
+                    Manage your sustainability lifecycles and electronic decommissioning routing pipelines.
+                </p>
+            </div>
+        </div>
 
         <div class="d-flex align-items-center gap-3">
             <div class="dropdown me-2">
             <?php 
+            // Notification handler targeting active e-waste lifecycle updates
             $notif_query = "SELECT 
                                 da.status, 
                                 d.division_name, 
@@ -290,15 +286,12 @@ h5 {
                             JOIN dispatch_details dd ON da.dispatch_detail_id = dd.id
                             JOIN dispatch_master dm ON dd.dispatch_id = dm.id
                             JOIN divisions d ON dm.division_id = d.id
-                            -- Get the latest log entry for this asset to show the remarks/notes
-                            LEFT JOIN asset_logs al ON sd.id = al.asset_id 
-                                AND al.action_type = da.status
+                            LEFT JOIN asset_logs al ON sd.id = al.asset_id AND al.action_type = da.status
                             WHERE da.status IN ('return_requested', 'repair_requested', 'dispose_requested')
-                            GROUP BY da.id -- Ensure unique asset rows
+                            GROUP BY da.id 
                             ORDER BY al.created_at DESC LIMIT 5";
                             
             $notif_res = $conn->query($notif_query);
-            
             
             $count_query = "SELECT COUNT(*) as total FROM division_assets WHERE status IN ('return_requested', 'repair_requested', 'dispose_requested')";
             $count_res = $conn->query($count_query);
@@ -391,25 +384,27 @@ h5 {
             </div>
         </div>
     </header>
-
+    
     <div class="animate-fade-in">
         <?php if (isset($main_content)) echo $main_content; ?>
         <?php if (!isset($main_content) && isset($content)) echo $content; ?>
     </div>
 </main>
 
-<?php if (isset($modal_html)) echo $modal_html; ?>
+<?php if(isset($modal_html)) echo $modal_html; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Sidebar logic & Scroll to active
+    // Sidebar Mobile Toggle Engagement
     const menuToggle = document.getElementById('menuToggle');
     const sidebar = document.getElementById('sidebar');
+    if(menuToggle) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('show');
+        });
+    }
 
-    menuToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('show');
-    });
-
+    // Smooth-scroll focus engine to selected active links
     document.addEventListener("DOMContentLoaded", function() {
         const sidebarContainer = document.querySelector('.overflow-y-auto');
         const activeLink = document.querySelector('#sidebar .nav-link.active');
@@ -420,8 +415,11 @@ h5 {
             }, 100);
         }
     });
-    
-</script>
 
+    window.onpageshow = function(event) {
+        if (event.persisted) { window.location.reload(); }
+    };
+</script>
+<?php include "../includes/notify.php"; ?>
 </body>
 </html>

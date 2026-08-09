@@ -327,7 +327,7 @@ ob_start();
                         </div>
                         <div class="pt-3 border-top d-flex justify-content-between align-items-center">
                             <span class="small fw-bold text-muted" id="itemCounter">0 items selected</span>
-                            <button type="submit" name="submit" class="btn btn-success rounded-pill px-5 shadow fw-bold">Confirm Dispatch</button>
+                            <button type="submit" name="submit" class="btn btn-primary rounded-pill px-5 shadow fw-bold">Confirm Dispatch</button>
                         </div>
                     </div>
                 </div>
@@ -387,14 +387,14 @@ institutionSelect.addEventListener("change", function(){
         divisionSelect.innerHTML = '<option value="">Select Division</option>';
         data.divisions.forEach(div => { divisionSelect.innerHTML += `<option value="${div.id}">${div.name}</option>`; });
         unitSelect.innerHTML = '<option value="">Select Unit</option>';
-        data.units.forEach(unit => { unitSelect.innerHTML += `<option value="${unit.id}">${unit.name}</option>`; });
+        data.units.forEach(unit => { unitSelect.innerHTML += `<option value="${unit.id}">${unit.code}->${unit.name}</option>`; });
     });
 });
 
 divisionSelect.addEventListener("change", function(){
     fetch("get_divisions_units.php?division_id=" + this.value).then(res => res.json()).then(data => {
         unitSelect.innerHTML = '<option value="">Select Unit</option>';
-        data.units.forEach(unit => { unitSelect.innerHTML += `<option value="${unit.id}">${unit.name}</option>`; });
+        data.units.forEach(unit => { unitSelect.innerHTML += `<option value="${unit.id}">${unit.code}->${unit.name}</option>`; });
     });
 });
 

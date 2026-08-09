@@ -105,7 +105,7 @@ ob_start();
             <div class="card border-0 shadow-sm rounded-4 full-height-card" id="registryCard">
                 <div class="card-header bg-white border-0 pt-4 px-4">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="bg-emerald-soft p-3 rounded-3 text-success">
+                        <div class="bg-emerald-soft p-3 rounded-3 text-primary">
                             <i class="bi bi-people-fill fs-3"></i>
                         </div>
                         <div>
@@ -165,7 +165,7 @@ ob_start();
                                 </div>
                                 <?php endif; ?>
                                 <div class="mt-5 d-flex gap-2">
-                                    <button type="submit" name="save_vendor" class="btn <?= $edit_data ? 'btn-primary' : 'btn-success' ?> flex-grow-1 rounded-pill py-3 fw-bold">
+                                    <button type="submit" name="save_vendor" class="btn <?= $edit_data ? 'btn-primary' : 'btn-primary' ?> flex-grow-1 rounded-pill py-3 fw-bold">
                                         <i class="bi <?= $edit_data ? 'bi-arrow-repeat' : 'bi-plus-lg' ?> me-1"></i> <?= $edit_data ? "Update Vendor" : "Register Vendor" ?>
                                     </button>
                                     <a href="view_vendors.php?type=<?= urlencode($category_type) ?>" class="btn btn-light rounded-pill px-4 py-3 fw-bold">Cancel</a>

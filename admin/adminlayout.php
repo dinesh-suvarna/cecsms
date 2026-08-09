@@ -27,7 +27,7 @@ header("Pragma: no-cache");
     <style>
         :root {
             --sb-width: 290px;
-            --primary-accent: #10b981;
+            --primary-accent: #07116e;
             --bg-body: #f8fafc;
             --sidebar-bg: #ffffff;
             --text-main: #1e293b;
@@ -241,7 +241,7 @@ header("Pragma: no-cache");
 
     <nav id="sidebar">
         <a href="/cecsms/index.php" class="sidebar-brand">
-            <div class="bg-success text-white rounded-3 px-2 py-1 shadow-sm">
+            <div class="bg-primary text-white rounded-3 px-2 py-1 shadow-sm">
                 <i class="bi bi-shield-lock"></i>
             </div>
             <span>Admin<span class="text-dark">Center</span></span>
@@ -313,6 +313,9 @@ header("Pragma: no-cache");
 
                     <a href="/cecsms/master/reports.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'], 'reports.php') !== false) ? 'active' : '' ?>">
                         <i class="bi bi-file-earmark-bar-graph"></i> Reports
+                    </a>
+                    <a href="/cecsms/master/computer_configuration_report.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'], 'computer_configuration_report') !== false) ? 'active' : '' ?>">
+                        <i class="bi bi-file-earmark-bar-graph"></i> Computer Configuration Report
                     </a>
 
                 

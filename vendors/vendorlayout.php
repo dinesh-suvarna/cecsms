@@ -24,7 +24,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <style>
         :root {
             --sb-width: 290px;
-            --primary-accent: #3b82f6; /* Blue accent for Vendors */
+            --primary-accent: #07116e; /* Blue accent for Vendors */
             --bg-body: #f8fafc;
             --sidebar-bg: #ffffff;
             --text-main: #1e293b;
@@ -145,10 +145,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <?php if ($role === 'SuperAdmin'): ?>
         <div class="nav-group-label">Reports & Analytics</div>
         <div class="nav flex-column">
-            <a href="vendor_performance.php" class="nav-link">
+            <a href="vendor_performance.php" class="nav-link <?= ($current_page == 'vendor_performance.php') ? 'active' : '' ?>">
                 <i class="bi bi-bar-chart-steps"></i> Supply Performance
             </a>
-            <a href="purchase_history.php" class="nav-link">
+            <a href="purchase_history.php" class="nav-link <?= ($current_page == 'purchase_history.php') ? 'active' : '' ?>">
                 <i class="bi bi-receipt"></i> Global Purchase Ledger
             </a>
         </div>

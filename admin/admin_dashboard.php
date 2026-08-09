@@ -187,7 +187,7 @@ $role = $_SESSION['role'] ?? '';
             <?php endif; ?>
 
             <div class="col-lg-4 col-md-6">
-                <a href="/cecsms/stock/dashboard.php" class="elite-card accent-blue">
+                <a href="/cecsms/stock/<?= ($role === 'SuperAdmin') ? 'dashboard.php' : '../divisions/division_dashboard.php'; ?>" class="elite-card accent-blue">
                     <div class="card-header-row">
                         <div class="icon-wrapper"><i class="bi bi-laptop"></i></div>
                         <div class="status-dot"></div>
@@ -224,7 +224,7 @@ $role = $_SESSION['role'] ?? '';
 
             <?php if(in_array($role, ['Admin', 'SuperAdmin'])): ?>
             <div class="col-lg-4 col-md-6">
-                <a href="/cecsms/ewaste/index.php" class="elite-card accent-emerald">
+                <a href="/cecsms/ewaste/ewaste_dashboard.php" class="elite-card accent-emerald">
                     <div class="card-header-row">
                         <div class="icon-wrapper"><i class="bi bi-recycle"></i></div>
                         <div class="status-dot"></div>

@@ -40,6 +40,7 @@ function getAssetIcon($itemName) {
     }
 }
 /* ================= FETCH REQUESTED ASSETS ================= */
+/* ================= FETCH REQUESTED ASSETS ================= */
 $query = "SELECT 
             da.id,
             da.division_asset_id,
@@ -50,7 +51,7 @@ $query = "SELECT
             u.unit_name,
             da.status,
             da.assigned_at,
-            al.notes -- Added to fetch the remarks
+            al.notes -- Fetches ONLY the latest remarks
         FROM division_assets da
         JOIN dispatch_details dd ON da.dispatch_detail_id = dd.id
         JOIN dispatch_master dm ON dd.dispatch_id = dm.id
@@ -58,8 +59,16 @@ $query = "SELECT
         JOIN items_master im ON sd.stock_item_id = im.id
         JOIN divisions d ON dm.division_id = d.id
         LEFT JOIN units u ON dm.unit_id = u.id 
-        -- Join asset_logs to get the notes for the specific requested action
-        LEFT JOIN asset_logs al ON sd.id = al.asset_id AND al.action_type = da.status
+        
+        -- CHANGED: Correlated subquery to fetch only the newest log record matching this status
+        LEFT JOIN asset_logs al ON al.id = (
+            SELECT log_sub.id 
+            FROM asset_logs log_sub 
+            WHERE log_sub.asset_id = sd.id 
+              AND log_sub.action_type = da.status
+            ORDER BY log_sub.created_at DESC -- assumes you have an incremental ID or timestamp
+            LIMIT 1
+        )
         WHERE da.status IN ('return_requested', 'repair_requested', 'dispose_requested') ";
 
 // Security: Non-SuperAdmins only see their own division's requests

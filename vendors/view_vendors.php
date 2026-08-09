@@ -56,9 +56,9 @@ ob_start();
         background: #f8fafc;
     }
     .nav-pills .nav-link.active { 
-        background: #0f172a; 
+        background: #0d6efd; 
         color: #fff; 
-        border-color: #0f172a;
+        border-color: #0d6efd;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
 

@@ -26,7 +26,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <style>
         :root {
             --sb-width: 290px;
-            --primary-accent: #10b981;
+            --primary-accent: #07116e;
             --bg-body: #f8fafc;
             --sidebar-bg: #ffffff;
             --text-main: #1e293b;
@@ -264,7 +264,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
 <nav id="sidebar">
     <a href="dashboard.php" class="sidebar-brand">
-        <div class="bg-success text-white rounded-3 px-2 py-1 shadow-sm">
+        <div class="bg-primary text-white rounded-3 px-2 py-1 shadow-sm">
             <i class="bi bi-box-seam"></i>
         </div>
         <span>Stock<span class="text-dark">Flow</span></span>

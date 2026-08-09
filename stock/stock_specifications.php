@@ -153,7 +153,7 @@ if($msg): ?>
                             <input type="text" name="storage_size" class="form-control rounded-3" placeholder="e.g. 512GB">
                         </div>
                     </div>
-                    <button type="submit" name="add_model" class="btn btn-success w-100 rounded-pill fw-bold">Save Specification</button>
+                    <button type="submit" name="add_model" class="btn btn-primary w-100 rounded-pill fw-bold">Save Specification</button>
                 </form>
             </div>
         </div>

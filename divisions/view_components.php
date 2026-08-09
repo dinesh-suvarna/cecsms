@@ -47,7 +47,7 @@ ob_start();
 ?>
 
 <style>
-:root { --brand-emerald: #10b981; --brand-forest: #065f46; --slate-50: #f8fafc; --slate-200: #e2e8f0; }
+:root { --brand-emerald: #0d6efd; --brand-forest: #065f46; --slate-50: #f8fafc; --slate-200: #e2e8f0; }
 .collapse { transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; }
 .institution-card { border: 1px solid #eef0f3 !important; border-radius: 12px; margin-bottom: 1rem; background: #fff; }
 .inst-header { background-color: #fff !important; border-left: 4px solid var(--brand-emerald) !important; cursor: pointer; transition: background 0.2s; }

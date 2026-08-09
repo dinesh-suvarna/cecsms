@@ -33,7 +33,7 @@ $institutions = $conn->query("SELECT id, institution_name FROM institutions ORDE
 $query = "
 SELECT 
     dm.id AS dispatch_id, dm.status, dm.dispatch_date, 
-    dd.quantity, im.model_name,si.item_name, sd.id AS stock_detail_id, sd.serial_number, si.category,
+    dd.quantity, im.model_name, si.item_name, sd.id AS stock_detail_id, sd.serial_number, si.category,
     i.institution_name, dm.institution_id,
     d.division_name, dm.division_id,
     un.unit_name, dm.unit_id, un.unit_code
@@ -50,12 +50,15 @@ ORDER BY dm.id DESC";
 
 $result = $conn->query($query);
 
-/* Grouping Logic */
+/* Grouping Logic (Hierarchical Grouping with Model Name) */
 $grouped = [];
 while($row = $result->fetch_assoc()){
     $inst = $row['institution_name'] ?? 'Unknown';
     $div  = $row['division_name'] ?? 'Unknown';
     $unit_label = ($row['unit_code'] ? $row['unit_code'] . " - " : "") . ($row['unit_name'] ?? 'General/Unassigned');
+    
+    // Grouping identifier using Model Name, falling back to Item Name if no model exists
+    $model_group = !empty($row['model_name']) ? $row['model_name'] : (!empty($row['item_name']) ? $row['item_name'] : 'Unknown Model');
 
     $grouped[$inst]['id'] = $row['institution_id'];
     $grouped[$inst]['computer_total'] ??= 0;
@@ -65,9 +68,17 @@ while($row = $result->fetch_assoc()){
 
     $grouped[$inst]['divisions'][$div]['units'][$unit_label]['id'] = $row['unit_id'];
     $grouped[$inst]['divisions'][$div]['units'][$unit_label]['computer_total'] ??= 0;
-    $grouped[$inst]['divisions'][$div]['units'][$unit_label]['rows'][] = $row;
+    
+    // Grouping by Model Group inside the Unit array
+    $grouped[$inst]['divisions'][$div]['units'][$unit_label]['models'][$model_group]['rows'][] = $row;
+    $grouped[$inst]['divisions'][$div]['units'][$unit_label]['models'][$model_group]['total_qty'] ??= 0;
 
     $qty = !empty($row['serial_number']) ? 1 : (int)$row['quantity'];
+    
+    // Increment the total count for this model subset
+    $grouped[$inst]['divisions'][$div]['units'][$unit_label]['models'][$model_group]['total_qty'] += $qty;
+    
+    // Keep target metric tracking specifically for PC categories
     if($row['category'] === 'Computer'){
         $grouped[$inst]['computer_total'] += $qty;
         $grouped[$inst]['divisions'][$div]['computer_total'] += $qty;
@@ -78,56 +89,54 @@ while($row = $result->fetch_assoc()){
 
 <div class="container mt-4">
     <div class="sticky-top no-print" style="top: 0; z-index: 1050; background: #f8f9fa; padding-top: 10px; padding-bottom: 10px;">
-    <div class="card shadow border-0 rounded-3">
-        <div class="card-body p-3">
-            <form method="GET" class="row g-2 align-items-end border-bottom pb-3 mb-3">
-                <div class="col-md-3">
-                    <label class="small fw-bold text-muted">From</label>
-                    <input type="date" name="from_date" class="form-control form-control-sm" value="<?= $from_date ?>">
-                </div>
-                <div class="col-md-3">
-                    <label class="small fw-bold text-muted">To</label>
-                    <input type="date" name="to_date" class="form-control form-control-sm" value="<?= $to_date ?>">
-                </div>
-                <div class="col-md-4">
-                    <label class="small fw-bold text-muted">Institution</label>
-                    <select name="institution_id" class="form-select form-select-sm">
-                        <option value="">All Institutions</option>
-                        <?php $institutions->data_seek(0); while($inst_row = $institutions->fetch_assoc()): ?>
-                            <option value="<?= $inst_row['id'] ?>" <?= $institution_filter == $inst_row['id'] ? 'selected' : '' ?>><?= $inst_row['institution_name'] ?></option>
-                        <?php endwhile; ?>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button class="btn btn-primary btn-sm w-100 shadow-sm">Apply</button>
-                </div>
-            </form>
-
-            <div class="row g-2 align-items-center">
-                <div class="col-md-9">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
-                        <input type="text" id="reportSearch" class="form-control bg-light border-start-0 ps-0" placeholder="Type to search">
+        <div class="card shadow border-0 rounded-3">
+            <div class="card-body p-3">
+                <form method="GET" class="row g-2 align-items-end border-bottom pb-3 mb-3">
+                    <div class="col-md-3">
+                        <label class="small fw-bold text-muted">From</label>
+                        <input type="date" name="from_date" class="form-control form-control-sm" value="<?= $from_date ?>">
                     </div>
-                </div>
-                <div class="col-md-3 text-end">
-                    <button type="button" id="globalToggleBtn" class="btn btn-outline-secondary btn-sm w-100" onclick="handleGlobalToggle()">
-                        <i class="bi bi-arrows-angle-expand me-1"></i> <span id="toggleText">Expand All</span>
-                    </button>
-                    <div>
-                    <button id="clearHighlightBtn" 
-                            class="btn btn-warning btn-sm ms-2" 
-                            style="display:none;">
-                        <i class="bi bi-x-circle me-1"></i> Clear Highlight
-                    </button>
+                    <div class="col-md-3">
+                        <label class="small fw-bold text-muted">To</label>
+                        <input type="date" name="to_date" class="form-control form-control-sm" value="<?= $to_date ?>">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="small fw-bold text-muted">Institution</label>
+                        <select name="institution_id" class="form-select form-select-sm">
+                            <option value="">All Institutions</option>
+                            <?php $institutions->data_seek(0); while($inst_row = $institutions->fetch_assoc()): ?>
+                                <option value="<?= $inst_row['id'] ?>" <?= $institution_filter == $inst_row['id'] ? 'selected' : '' ?>><?= $inst_row['institution_name'] ?></option>
+                            <?php endwhile; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary btn-sm w-100 shadow-sm">Apply</button>
+                    </div>
+                </form>
+
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-9">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+                            <input type="text" id="reportSearch" class="form-control bg-light border-start-0 ps-0" placeholder="Type to search">
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <button type="button" id="globalToggleBtn" class="btn btn-outline-secondary btn-sm w-100" onclick="handleGlobalToggle()">
+                            <i class="bi bi-arrows-angle-expand me-1"></i> <span id="toggleText">Expand All</span>
+                        </button>
+                        <div>
+                        <button id="clearHighlightBtn" 
+                                class="btn btn-warning btn-sm ms-2" 
+                                style="display:none;">
+                            <i class="bi bi-x-circle me-1"></i> Clear Highlight
+                        </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-   
-</div>
 
     <div id="reportContent">
         <?php foreach($grouped as $institution => $instData): 
@@ -179,9 +188,9 @@ while($row = $result->fetch_assoc()){
                                 <?php foreach($divData['units'] as $unit => $unitData): 
                                     $unit_id = "unit_" . md5($institution . $division . $unit);
                                 ?>
-                                    <div class="unit-block mb-3 ps-3">
+                                    <div class="unit-block mb-4 ps-3">
                                         <div class="d-flex justify-content-between align-items-center mb-2 toggle-header" 
-                                             data-bs-toggle="collapse" data-bs-target="#unit_table_<?= $unit_id ?>" style="cursor:pointer;">
+                                             data-bs-toggle="collapse" data-bs-target="#unit_container_<?= $unit_id ?>" style="cursor:pointer;">
                                             <h6 class="fw-bold text-dark mb-0">
                                                 <i class="bi bi-caret-right-fill me-1 toggle-icon small"></i>
                                                 <?= htmlspecialchars($unit) ?>
@@ -197,50 +206,125 @@ while($row = $result->fetch_assoc()){
                                             </div>
                                         </div>
 
-                                        <div id="unit_table_<?= $unit_id ?>" class="collapse">
-                                            <div class="table-responsive rounded-3 border bg-white mt-2">
-                                                <table class="table table-hover mb-0 align-middle searchable-table">
-                                                    <thead class="table-light">
-                                                        <tr class="small text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">
-                                                            <th style="width: 15%;" class="ps-3">ID</th>
-                                                            <th style="width: 20%;">Date</th>
-                                                            <th style="width: 35%;">Item Name</th>
-                                                            <th style="width: 15%;">Serial / Qty</th>
-                                                            <th style="width: 15%;">Status</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <?php foreach($unitData['rows'] as $row): ?>
-                                                        <tr style="font-size: 0.85rem;" 
-                                                            class="report-row" 
-                                                            data-stock-id="<?= $row['stock_detail_id'] ?>">
-                                                            <td class="ps-3 text-muted">DSP-<?= str_pad($row['dispatch_id'], 4, '0', STR_PAD_LEFT) ?></td>
-                                                            <td class="text-muted"><?= date("d M, Y", strtotime($row['dispatch_date'])) ?></td>
-                                                            <td class="fw-bold text-dark item-name">
-                                                                <a href="view_stock_details.php?highlight_id=<?= $row['stock_detail_id'] ?>" 
-                                                                class="text-decoration-none text-dark hover-link">
-                                                                    <i class="bi bi-box-arrow-in-up-right small text-primary me-1"></i>
-                                                                    <?= htmlspecialchars($row['model_name'] ?? $row['item_name']) ?>
-                                                                </a>
-                                                            </td>
-                                                            <td>
-                                                                <?php if(!empty($row['serial_number'])): ?>
-                                                                    <span class=" text-dark font-monospace fw-normal serial-text"><?= htmlspecialchars($row['serial_number']) ?></span>
-                                                                <?php else: ?>
-                                                                    <span class="fw-bold text-primary"><?= $row['quantity'] ?></span> <small class="text-muted">Units</small>
-                                                                <?php endif; ?>
-                                                            </td>
-                                                            <td class="text-nowrap">
-                                                                <div class="d-flex align-items-center">
-                                                                    <i class="bi bi-truck text-emerald fs-5 me-2"></i> 
-                                                                    <span class="text-emerald fw-bold" style="letter-spacing: 0.3px;">DISPATCHED</span>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                        <?php endforeach; ?>
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                        <div id="unit_container_<?= $unit_id ?>" class="collapse show">
+                                            <?php foreach($unitData['models'] as $modelName => $modelData): 
+                                                $model_md5 = md5($institution . $division . $unit . $modelName);
+                                                
+                                              // --- INTEGRATED DYNAMIC ICON LOGIC (FIXED FOR BI-PC-DISPLAY) ---
+                                                $firstRow   = reset($modelData['rows']);
+                                                $lowerCat   = strtolower($firstRow['category'] ?? '');
+                                                $lowerItem  = strtolower($firstRow['item_name'] ?? '');
+
+                                                // 1. Mice
+                                                if (str_contains($lowerCat, 'mouse') || str_contains($lowerItem, 'mouse')) { 
+                                                    $itemIcon = 'bi-mouse3'; 
+                                                }
+                                                // 2. Keyboards
+                                                elseif (str_contains($lowerCat, 'keyboard') || str_contains($lowerItem, 'keyboard')) { 
+                                                    $itemIcon = 'bi-keyboard'; 
+                                                }
+                                                // 3. Computers / Desktops / Monitors -> Always maps to bi-pc-display
+                                                elseif (
+                                                    str_contains($lowerCat, 'computer') || 
+                                                    str_contains($lowerCat, 'desktop') || 
+                                                    // str_contains($lowerCat, 'monitor') ||
+                                                    str_contains($lowerItem, 'computer') || 
+                                                    str_contains($lowerItem, 'desktop') )
+                                                    // str_contains($lowerItem, 'monitor')
+                                                 { 
+                                                    $itemIcon = 'bi-pc-display'; 
+                                                }
+                                                // 4. monitor
+                                                elseif (str_contains($lowerCat, 'monitor') || str_contains($lowerItem, 'monitor')) { 
+                                                    $itemIcon = 'bi-display'; 
+                                                }
+                                                // 5. Printers
+                                                elseif (str_contains($lowerCat, 'printer') || str_contains($lowerItem, 'printer')) { 
+                                                    $itemIcon = 'bi-printer'; 
+                                                }
+                                                // 6. Scanners
+                                                elseif (str_contains($lowerCat, 'scanner') || str_contains($lowerItem, 'scanner')) { 
+                                                    $itemIcon = 'bi-qr-code-scan'; 
+                                                }
+                                                // 7. Cameras / CCTV
+                                                elseif (
+                                                    str_contains($lowerCat, 'cctv') || str_contains($lowerCat, 'camera') || 
+                                                    str_contains($lowerItem, 'cctv') || str_contains($lowerItem, 'camera')
+                                                ) { 
+                                                    $itemIcon = 'bi-camera-video'; 
+                                                }
+                                                // 8. Power / UPS / Batteries
+                                                elseif (
+                                                    str_contains($lowerCat, 'ups') || str_contains($lowerCat, 'battery') || str_contains($lowerCat, 'power') || 
+                                                    str_contains($lowerItem, 'ups') || str_contains($lowerItem, 'battery') || str_contains($lowerItem, 'power')
+                                                ) { 
+                                                    $itemIcon = 'bi-lightning-charge'; 
+                                                }
+                                                //9. Rack
+                                                elseif (str_contains($lowerCat, 'rack') || str_contains($lowerItem, 'rack')) { 
+                                                    $itemIcon = 'bi-hdd-rack'; 
+                                                }
+                                                // Default Fallback
+                                                else { 
+                                                    $itemIcon = 'bi-box'; 
+                                                }
+                                            ?>
+                                                <div class="category-section mt-3 mb-2 border rounded-3 overflow-hidden bg-light shadow-2xs">
+                                                    <div class="p-2 px-3 bg-light border-bottom d-flex justify-content-between align-items-center text-dark" 
+                                                         data-bs-toggle="collapse" data-bs-target="#table_<?= $model_md5 ?>" style="cursor: pointer;">
+                                                        <span class="fw-semibold small text-uppercase tracking-wider">
+                                                            <i class="bi <?= $itemIcon ?> me-2 text-secondary"></i><?= htmlspecialchars($modelName) ?>
+                                                        </span>
+                                                        <span class="badge bg-secondary text-white rounded-pill small"><?= $modelData['total_qty'] ?> Qty</span>
+                                                    </div>
+                                                    
+                                                    <div id="table_<?= $model_md5 ?>" class="collapse show bg-white">
+                                                        <div class="table-responsive">
+                                                            <table class="table table-hover mb-0 align-middle searchable-table">
+                                                                <thead class="table-light">
+                                                                    <tr class="small text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">
+                                                                        <th style="width: 15%;" class="ps-3">ID</th>
+                                                                        <th style="width: 20%;">Date</th>
+                                                                        <th style="width: 35%;">Item Detail</th>
+                                                                        <th style="width: 15%;">Serial / Qty</th>
+                                                                        <th style="width: 15%;">Status</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    <?php foreach($modelData['rows'] as $row): ?>
+                                                                    <tr style="font-size: 0.85rem;" 
+                                                                        class="report-row" 
+                                                                        data-stock-id="<?= $row['stock_detail_id'] ?>">
+                                                                        <td class="ps-3 text-muted">DSP-<?= str_pad($row['dispatch_id'], 4, '0', STR_PAD_LEFT) ?></td>
+                                                                        <td class="text-muted"><?= date("d M, Y", strtotime($row['dispatch_date'])) ?></td>
+                                                                        <td class="fw-bold text-dark item-name">
+                                                                            <a href="view_stock_details.php?highlight_id=<?= $row['stock_detail_id'] ?>" 
+                                                                            class="text-decoration-none text-dark hover-link">
+                                                                                <i class="bi <?= $itemIcon ?> small text-primary me-1"></i>
+                                                                                <?= htmlspecialchars($row['model_name'] ?? $row['item_name']) ?>
+                                                                            </a>
+                                                                        </td>
+                                                                        <td>
+                                                                            <?php if(!empty($row['serial_number'])): ?>
+                                                                                <span class="text-dark font-monospace fw-normal serial-text"><?= htmlspecialchars($row['serial_number']) ?></span>
+                                                                            <?php else: ?>
+                                                                                <span class="fw-bold text-primary"><?= $row['quantity'] ?></span> <small class="text-muted">Units</small>
+                                                                            <?php endif; ?>
+                                                                        </td>
+                                                                        <td class="text-nowrap">
+                                                                            <div class="d-flex align-items-center">
+                                                                                <i class="bi bi-truck text-emerald fs-5 me-2"></i> 
+                                                                                <span class="text-emerald fw-bold" style="letter-spacing: 0.3px;">DISPATCHED</span>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                    <?php endforeach; ?>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
@@ -354,22 +438,14 @@ window.addEventListener("load", function(){
 
     if(stockId){
         setTimeout(() => {
-
-            const rows = document.querySelectorAll(
-                `.report-row[data-stock-id="${stockId}"]`
-            );
-
+            const rows = document.querySelectorAll(`.report-row[data-stock-id="${stockId}"]`);
             if(rows.length > 0){
-
                 let affectedUnits = new Set();
-
                 rows.forEach(row => {
-
                     // Expand all parent collapses
                     let parent = row.closest('.collapse');
                     while(parent){
-                        let bsCollapse = bootstrap.Collapse.getInstance(parent) 
-                            || new bootstrap.Collapse(parent, { toggle: false });
+                        let bsCollapse = bootstrap.Collapse.getInstance(parent) || new bootstrap.Collapse(parent, { toggle: false });
                         bsCollapse.show();
                         parent = parent.parentElement.closest('.collapse');
                     }
@@ -379,62 +455,44 @@ window.addEventListener("load", function(){
 
                     // Add badge safely
                     if(!row.querySelector('.match-badge')){
-                        row.insertAdjacentHTML(
-                            "beforeend",
-                            "<span class='badge bg-warning ms-2 match-badge'>Matched</span>"
-                        );
+                        row.insertAdjacentHTML("beforeend", "<span class='badge bg-warning ms-2 match-badge'>Matched</span>");
                     }
 
                     // Collect parent unit container
                     let unitBlock = row.closest('.unit-block');
-                    if(unitBlock){
-                        affectedUnits.add(unitBlock);
-                    }
+                    if(unitBlock){ affectedUnits.add(unitBlock); }
                 });
 
                 // Highlight entire unit blocks
-                affectedUnits.forEach(unit => {
-                    unit.classList.add("match-group-highlight");
-                });
+                affectedUnits.forEach(unit => { unit.classList.add("match-group-highlight"); });
 
                 // Scroll to first match
-                rows[0].scrollIntoView({
-                    behavior: "smooth",
-                    block: "center"
-                });
+                rows[0].scrollIntoView({ behavior: "smooth", block: "center" });
 
                 // SHOW CLEAR BUTTON
                 document.getElementById("clearHighlightBtn").style.display = "inline-block";
-
             }
-
         }, 400);
     }
 });
 
 document.getElementById("clearHighlightBtn").addEventListener("click", function(){
-
-    // Remove row highlights + badges
     document.querySelectorAll('.match-highlight').forEach(row => {
         row.classList.remove("match-highlight");
-
         let badge = row.querySelector('.match-badge');
         if(badge) badge.remove();
     });
-
     document.querySelectorAll('.match-group-highlight').forEach(unit => {
         unit.classList.remove("match-group-highlight");
     });
-
     this.style.display = "none";
 });
 </script>
 
 <style>
-
 :root {
-    --brand-emerald: #10b981;    
-    --brand-forest: #065f46;     
+    --brand-emerald: #0d6efd;    
+    --brand-forest: #065f46;    
     --brand-hover: rgba(16, 185, 129, 0.05);
     --div-bg: #f9fafb;           
 }
@@ -469,7 +527,6 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
     border-left: 3px solid var(--brand-emerald); 
     transition: background 0.2s; 
 }
-.unit-block:hover { background-color: var(--brand-hover); }
 
 .collapse { 
     transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1); 
@@ -528,25 +585,10 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
     transition: all 0.2s ease;
 }
 
-.division-header:hover {
-    background-color: #e2e8f0 !important;
-}
-
-.division-header .btn {
-    white-space: nowrap;
-    font-weight: 500;
-    transition: transform 0.2s ease;
-}
-
-.division-header .btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
-}
-
-.division-header .badge {
-    font-size: 0.75rem;
-    letter-spacing: 0.5px;
-}
+.division-header:hover { background-color: #e2e8f0 !important; }
+.division-header .btn { white-space: nowrap; font-weight: 500; transition: transform 0.2s ease; }
+.division-header .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important; }
+.division-header .badge { font-size: 0.75rem; letter-spacing: 0.5px; }
 
 .unit-block {
     background-color: #ffffff;
@@ -558,9 +600,11 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
     box-shadow: 0 2px 8px rgba(0,0,0,0.04); 
 }
 
-.unit-block .table {
-    margin-bottom: 0;
-    background: transparent;
+.category-section {
+    transition: all 0.2s ease;
+}
+.category-section:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .unit-block .table thead th {
@@ -591,13 +635,8 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
     outline: 2px solid #ffc107;
 }
 
-#clearHighlightBtn {
-    transition: all 0.3s ease;
-}
-#clearHighlightBtn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
+#clearHighlightBtn { transition: all 0.3s ease; }
+#clearHighlightBtn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
 
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #f1f1f1; }

@@ -86,6 +86,7 @@ ob_start();
             <option value="available">Available</option>
             <option value="partial">Partially Dispatched</option>
             <option value="dispatched">Dispatched</option>
+            <option value="disposed">Scrapped / Disposed</option>
         </select>
 
         <input type="text" id="searchInput" 
@@ -174,18 +175,32 @@ foreach($grouped as $item_name => $stocks){
     $row_class = ($row['stock_type'] === 'serial' && $row['status'] === 'dispatched') ? "dispatched-row" : "";
 
     
-    // 1. Calculate the raw difference
+//     
+    // 1. Calculate the raw difference for bulk items
 $calcRemaining = (int)$row['total_quantity'] - (int)$row['dispatched_qty'];
 
-// 2. Apply rules: Serial items are binary (1 or 0), Bulk items use the math but floor at 0
+// 2. Comprehensive Status Evaluation Context
 if($row['stock_type'] === 'serial') {
-    $remainingQty = ($row['status'] === 'dispatched') ? 0 : 1;
+    if($row['status'] === 'dispatched') {
+        $remainingQty = 0;
+        $dynamicStatus = "dispatched";
+    } elseif($row['status'] === 'disposed') {
+        $remainingQty = 0;
+        $dynamicStatus = "disposed"; // Capture decommissioned state
+    } elseif($row['status'] === 'maintenance') {
+        $remainingQty = 0;
+        $dynamicStatus = "maintenance";
+    } else {
+        $remainingQty = 1;
+        $dynamicStatus = "available";
+    }
 } else {
-    $remainingQty = max(0, $calcRemaining); 
-}
-
-    /* ===== DYNAMIC STATUS FOR FILTER ===== */
-    if($row['stock_type'] === 'non_serial'){
+    // Bulk items rule evaluation
+    if($row['status'] === 'disposed') {
+        $remainingQty = 0;
+        $dynamicStatus = "disposed";
+    } else {
+        $remainingQty = max(0, $calcRemaining); 
         $dispatchedQty = (int)$row['dispatched_qty'];
 
         if($remainingQty == 0){
@@ -195,9 +210,8 @@ if($row['stock_type'] === 'serial') {
         } else {
             $dynamicStatus = "available";
         }
-    } else {
-        $dynamicStatus = $row['status'];
     }
+}
     echo "<tr id='row-".(int)$row['id']."' class='stock-row $row_class group-row $group_id' 
       data-status='$dynamicStatus' 
       style='display:none;'>";
@@ -218,19 +232,30 @@ if($row['stock_type'] === 'serial'){
 
     // SERIAL ITEM → show serial number
     $serial = htmlspecialchars($row['serial_number']);
-    $displayCell = "<span class='fw-semibold text-dark'>$serial</span>";
+    $displayCell = "<span class='fw-semibold text-dark'>" . strtoupper($serial) . "</span>";
+    //$displayCell = "<span class='fw-semibold text-dark'>$serial</span>";
 
     // Status for serial
-    if($row['status'] === 'dispatched'){
-        $statusBadge = "<a href='dispatch_report.php?stock_id=$stockId&dispatch_id={$row['last_dispatch_id']}' 
-                            class='badge bg-danger text-decoration-none'>
-                            <i class='bi bi-truck me-1'></i> Dispatched
-                        </a>";
-    } else {
-        $statusBadge = "<span class='badge bg-success'>
-                            <i class='bi bi-check-circle me-1'></i> Available
-                        </span>";
-    }
+    // if($row['status'] === 'dispatched'){
+    //     $statusBadge = "<a href='dispatch_report.php?stock_id=$stockId&dispatch_id={$row['last_dispatch_id']}' 
+    //                         class='badge bg-danger text-decoration-none'>
+    //                         <i class='bi bi-truck me-1'></i> Dispatched
+    //                     </a>";
+    // } else {
+    //     $statusBadge = "<span class='badge bg-success'>
+    //                         <i class='bi bi-check-circle me-1'></i> Available
+    //                     </span>";
+    // }
+        if($row['status'] === 'dispatched'){
+    $statusBadge = "<a href='dispatch_report.php?stock_id=$stockId&dispatch_id={$row['last_dispatch_id']}' class='badge bg-danger text-decoration-none'><i class='bi bi-truck me-1'></i> Dispatched</a>";
+} elseif($row['status'] === 'disposed') {
+    // Elegant Decommission indicator
+    $statusBadge = "<span class='badge bg-dark'><i class='bi bi-trash3 me-1'></i> Decommissioned</span>";
+} elseif($row['status'] === 'maintenance') {
+    $statusBadge = "<span class='badge bg-warning text-dark'><i class='bi bi-tools me-1'></i> In Repair</span>";
+} else {
+    $statusBadge = "<span class='badge bg-success'><i class='bi bi-check-circle me-1'></i> Available</span>";
+}
 
 } else {
 

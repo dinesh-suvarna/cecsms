@@ -130,7 +130,7 @@ ob_start();
                         <label class="small fw-bold text-muted">Item Description/Name</label>
                         <input type="text" name="item_name" class="form-control rounded-3" placeholder="e.g. Dell Latitude 3420" required>
                     </div>
-                    <button type="submit" name="submit" class="btn btn-success w-100 rounded-pill fw-bold">Add to Registry</button>
+                    <button type="submit" name="submit" class="btn btn-primary w-100 rounded-pill fw-bold">Add to Registry</button>
                 </form>
             </div>
         </div>

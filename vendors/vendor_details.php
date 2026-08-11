@@ -146,7 +146,7 @@ ob_start();
         scroll-snap-stop: normal;
         transition: background-color 0.15s ease-in-out; 
     }
-    .custom-vendor-table tbody tr:hover { background-color: #f1f5f9; }
+    .custom-vendor-table tbody tr:hover { background-color: #cad2dd; }
     .custom-vendor-table tbody td { 
         padding: 0.9rem 1rem; 
         border-bottom: 1px solid #f1f5f9; 

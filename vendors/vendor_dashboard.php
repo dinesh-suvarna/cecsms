@@ -313,7 +313,7 @@ ob_start();
                                     <div class="fw-bold small">Service Maintenance</div>
                                     <div class="opacity-75" style="font-size: 0.75rem;">Review equipment logs</div>
                                 </div>
-                                <a href="service_manager.php" class="btn btn-light btn-sm fw-semibold rounded-2 px-3 py-1 flex-shrink-0 ms-2" style="font-size: 0.75rem;">View Logs</a>
+                                <a href="../services/view_services.php" class="btn btn-light btn-sm fw-semibold rounded-2 px-3 py-1 flex-shrink-0 ms-2" style="font-size: 0.75rem;">View Logs</a>
                             </div>
                         </div>
                     </div>

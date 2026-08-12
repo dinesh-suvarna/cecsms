@@ -9,60 +9,160 @@ require_once __DIR__ . "/../config/db.php";
 
 $page_title = "Categorized Vendor Directory";
 
-function getCategoryData($conn, $category) {
-    $v_stmt = $conn->prepare("SELECT * FROM vendors WHERE category = ? ORDER BY vendor_name ASC");
-    $v_stmt->bind_param("s", $category);
+// Fetch session parameters
+$role = $_SESSION['role'] ?? '';
+$division_id = (int)($_SESSION['division_id'] ?? 0);
+$user_id = (int)($_SESSION['user_id'] ?? 0);
+
+/**
+ * Retrieves vendor data filtered by category and division role.
+ */
+function getCategoryData($conn, $category, $role, $division_id) {
+    // 1. Fetch Vendors
+    if ($role === 'SuperAdmin' || $division_id === 0) {
+        $v_stmt = $conn->prepare("SELECT DISTINCT v.* FROM vendors v WHERE v.category = ? ORDER BY v.vendor_name ASC");
+        $v_stmt->bind_param("s", $category);
+    } else {
+        if ($category === 'Computer') {
+            $v_query = "SELECT DISTINCT v.* 
+                        FROM vendors v
+                        JOIN stock_details sd ON v.id = sd.vendor_id
+                        JOIN dispatch_details dd ON sd.id = dd.stock_detail_id
+                        JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+                        WHERE v.category = ? AND dm.division_id = ?
+                        ORDER BY v.vendor_name ASC";
+        } elseif ($category === 'Furniture') {
+            $v_query = "SELECT DISTINCT v.* 
+                        FROM vendors v
+                        JOIN furniture_stock fs ON v.id = fs.vendor_id
+                        JOIN units u ON fs.unit_id = u.id
+                        WHERE v.category = ? AND u.division_id = ?
+                        ORDER BY v.vendor_name ASC";
+        } elseif ($category === 'Electricals') {
+            $v_query = "SELECT DISTINCT v.* 
+                        FROM vendors v
+                        JOIN electrical_stock es ON v.id = es.vendor_id
+                        JOIN units u ON es.unit_id = u.id
+                        WHERE v.category = ? AND u.division_id = ?
+                        ORDER BY v.vendor_name ASC";
+        } else {
+            return [];
+        }
+        $v_stmt = $conn->prepare($v_query);
+        $v_stmt->bind_param("si", $category, $division_id);
+    }
+
     $v_stmt->execute();
     $vendors = $v_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
     $results = [];
 
+    // 2. Fetch Transaction History per Vendor
     foreach ($vendors as $vendor) {
         $vendor_id = $vendor['id'];
-        
+
         if ($category === 'Computer') {
-            $query = "SELECT 
-                        MAX(sd.bill_date) as bill_date, 
-                        sd.bill_no, 
-                        im.item_name, 
-                        'Computer' as cat, 
-                        SUM(sd.quantity) as qty, 
-                        AVG(sd.amount) as price 
-                      FROM stock_details sd 
-                      JOIN items_master im ON sd.stock_item_id = im.id 
-                      WHERE sd.vendor_id = ? 
-                      GROUP BY sd.bill_no, im.id
-                      ORDER BY MAX(sd.bill_date) DESC";
+            if ($role === 'SuperAdmin' || $division_id === 0) {
+                $query = "SELECT 
+                            MAX(sd.bill_date) as bill_date, 
+                            sd.bill_no, 
+                            im.item_name, 
+                            'Computer' as cat, 
+                            SUM(sd.quantity) as qty, 
+                            AVG(sd.amount) as price 
+                          FROM stock_details sd 
+                          JOIN items_master im ON sd.stock_item_id = im.id 
+                          WHERE sd.vendor_id = ? 
+                          GROUP BY sd.bill_no, im.id
+                          ORDER BY MAX(sd.bill_date) DESC";
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param("i", $vendor_id);
+            } else {
+                $query = "SELECT 
+                            MAX(sd.bill_date) as bill_date, 
+                            sd.bill_no, 
+                            im.item_name, 
+                            'Computer' as cat, 
+                            SUM(dd.quantity) as qty, 
+                            AVG(sd.amount) as price 
+                          FROM stock_details sd 
+                          JOIN items_master im ON sd.stock_item_id = im.id 
+                          JOIN dispatch_details dd ON sd.id = dd.stock_detail_id
+                          JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+                          WHERE sd.vendor_id = ? AND dm.division_id = ?
+                          GROUP BY sd.bill_no, im.id
+                          ORDER BY MAX(sd.bill_date) DESC";
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param("ii", $vendor_id, $division_id);
+            }
         } elseif ($category === 'Furniture') {
-            $query = "SELECT 
-                        MAX(fs.bill_date) as bill_date, 
-                        fs.bill_no, 
-                        fi.item_name, 
-                        'Furniture' as cat, 
-                        SUM(fs.total_qty) as qty, 
-                        AVG(fs.unit_price) as price 
-                      FROM furniture_stock fs 
-                      JOIN furniture_items fi ON fs.furniture_item_id = fi.id 
-                      WHERE fs.vendor_id = ? 
-                      GROUP BY fs.bill_no, fi.id
-                      ORDER BY MAX(fs.bill_date) DESC";
-        } else { // Electrical
-            $query = "SELECT 
-                        MAX(es.bill_date) as bill_date, 
-                        es.bill_no, 
-                        ei.item_name, 
-                        'Electrical' as cat, 
-                        SUM(es.total_qty) as qty, 
-                        AVG(es.unit_price) as price 
-                      FROM electrical_stock es 
-                      JOIN electrical_items ei ON es.electrical_item_id = ei.id 
-                      WHERE es.vendor_id = ? 
-                      GROUP BY es.bill_no, ei.id
-                      ORDER BY MAX(es.bill_date) DESC";
+            if ($role === 'SuperAdmin' || $division_id === 0) {
+                $query = "SELECT 
+                            MAX(fs.bill_date) as bill_date, 
+                            fs.bill_no, 
+                            fi.item_name, 
+                            'Furniture' as cat, 
+                            SUM(fs.total_qty) as qty, 
+                            AVG(fs.unit_price) as price 
+                          FROM furniture_stock fs 
+                          JOIN furniture_items fi ON fs.furniture_item_id = fi.id 
+                          WHERE fs.vendor_id = ? 
+                          GROUP BY fs.bill_no, fi.id
+                          ORDER BY MAX(fs.bill_date) DESC";
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param("i", $vendor_id);
+            } else {
+                $query = "SELECT 
+                            MAX(fs.bill_date) as bill_date, 
+                            fs.bill_no, 
+                            fi.item_name, 
+                            'Furniture' as cat, 
+                            SUM(fs.total_qty) as qty, 
+                            AVG(fs.unit_price) as price 
+                          FROM furniture_stock fs 
+                          JOIN furniture_items fi ON fs.furniture_item_id = fi.id 
+                          JOIN units u ON fs.unit_id = u.id
+                          WHERE fs.vendor_id = ? AND u.division_id = ?
+                          GROUP BY fs.bill_no, fi.id
+                          ORDER BY MAX(fs.bill_date) DESC";
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param("ii", $vendor_id, $division_id);
+            }
+        } elseif ($category === 'Electricals') {
+            if ($role === 'SuperAdmin' || $division_id === 0) {
+                $query = "SELECT 
+                            MAX(es.bill_date) as bill_date, 
+                            es.bill_no, 
+                            ei.item_name, 
+                            'Electricals' as cat, 
+                            SUM(es.total_qty) as qty, 
+                            AVG(es.unit_price) as price 
+                          FROM electrical_stock es 
+                          JOIN electrical_items ei ON es.electrical_item_id = ei.id 
+                          WHERE es.vendor_id = ? 
+                          GROUP BY es.bill_no, ei.id
+                          ORDER BY MAX(es.bill_date) DESC";
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param("i", $vendor_id);
+            } else {
+                $query = "SELECT 
+                            MAX(es.bill_date) as bill_date, 
+                            es.bill_no, 
+                            ei.item_name, 
+                            'Electricals' as cat, 
+                            SUM(es.total_qty) as qty, 
+                            AVG(es.unit_price) as price 
+                          FROM electrical_stock es 
+                          JOIN electrical_items ei ON es.electrical_item_id = ei.id 
+                          JOIN units u ON es.unit_id = u.id
+                          WHERE es.vendor_id = ? AND u.division_id = ?
+                          GROUP BY es.bill_no, ei.id
+                          ORDER BY MAX(es.bill_date) DESC";
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param("ii", $vendor_id, $division_id);
+            }
         }
 
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("i", $vendor_id);
         $stmt->execute();
         $history = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
@@ -83,10 +183,11 @@ function getCategoryData($conn, $category) {
     return $results;
 }
 
+// Aligned array keys with the exact database string 'Electricals'
 $categories = [
-    'Computer' => getCategoryData($conn, 'Computer'),
-    'Furniture' => getCategoryData($conn, 'Furniture'),
-    'Electrical' => getCategoryData($conn, 'Electricals')
+    'Computer' => getCategoryData($conn, 'Computer', $role, $division_id),
+    'Furniture' => getCategoryData($conn, 'Furniture', $role, $division_id),
+    'Electrical' => getCategoryData($conn, 'Electricals', $role, $division_id)
 ];
 
 ob_start();

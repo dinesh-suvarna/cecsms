@@ -5,45 +5,179 @@ require_once __DIR__ . "/../config/db.php";
 
 $page_title = "Vendor Intelligence Dashboard";
 
-// 1. Unified Metrics Query
-$metrics_query = "
-    SELECT 
-        (SELECT COUNT(*) FROM vendors) as total_vendors,
-        (SELECT COUNT(DISTINCT vendor_id) FROM (
-            SELECT vendor_id FROM stock_details WHERE vendor_id IS NOT NULL
-            UNION SELECT vendor_id FROM furniture_stock WHERE vendor_id IS NOT NULL
-            UNION SELECT vendor_id FROM electrical_stock WHERE vendor_id IS NOT NULL
-        ) as active) as active_vendors,
-        (SELECT COALESCE(SUM(amount), 0) FROM stock_details) + 
-        (SELECT COALESCE(SUM(total_qty * unit_price), 0) FROM furniture_stock) + 
-        (SELECT COALESCE(SUM(total_qty * unit_price), 0) FROM electrical_stock) as grand_total_spend";
-$metrics = $conn->query($metrics_query)->fetch_assoc();
+// Fetch Session Parameters
+$role = $_SESSION['role'] ?? '';
+$division_id = (int)($_SESSION['division_id'] ?? 0);
 
-// Calculate Max Spend for relative progress bar calculation
-$max_spend_query = "
-    SELECT MAX(total_spend) as max_spend FROM (
+// Check if user is restricted to a specific division
+$is_restricted = ($role !== 'SuperAdmin' && $division_id > 0);
+
+// ---------------------------------------------------------------------
+// 1. Unified Metrics Query
+// ---------------------------------------------------------------------
+if (!$is_restricted) {
+    // SuperAdmin / Global View
+    $metrics_query = "
         SELECT 
+            (SELECT COUNT(*) FROM vendors) as total_vendors,
+            (SELECT COUNT(DISTINCT vendor_id) FROM (
+                SELECT vendor_id FROM stock_details WHERE vendor_id IS NOT NULL
+                UNION SELECT vendor_id FROM furniture_stock WHERE vendor_id IS NOT NULL
+                UNION SELECT vendor_id FROM electrical_stock WHERE vendor_id IS NOT NULL
+            ) as active) as active_vendors,
+            (SELECT COALESCE(SUM(amount), 0) FROM stock_details) + 
+            (SELECT COALESCE(SUM(total_qty * unit_price), 0) FROM furniture_stock) + 
+            (SELECT COALESCE(SUM(total_qty * unit_price), 0) FROM electrical_stock) as grand_total_spend";
+    $stmt = $conn->prepare($metrics_query);
+} else {
+    // Division Restricted View
+    $metrics_query = "
+        SELECT 
+            (SELECT COUNT(*) FROM vendors) as total_vendors,
+            (SELECT COUNT(DISTINCT vendor_id) FROM (
+                SELECT sd.vendor_id 
+                FROM stock_details sd
+                JOIN dispatch_details dd ON sd.id = dd.stock_detail_id
+                JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+                WHERE sd.vendor_id IS NOT NULL AND dm.division_id = ?
+                
+                UNION 
+                
+                SELECT fs.vendor_id 
+                FROM furniture_stock fs
+                JOIN units u ON fs.unit_id = u.id
+                WHERE fs.vendor_id IS NOT NULL AND u.division_id = ?
+                
+                UNION 
+                
+                SELECT es.vendor_id 
+                FROM electrical_stock es
+                JOIN units u ON es.unit_id = u.id
+                WHERE es.vendor_id IS NOT NULL AND u.division_id = ?
+            ) as active) as active_vendors,
+            (
+                SELECT COALESCE(SUM(sd.amount), 0) 
+                FROM stock_details sd
+                JOIN dispatch_details dd ON sd.id = dd.stock_detail_id
+                JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+                WHERE dm.division_id = ?
+            ) + 
+            (
+                SELECT COALESCE(SUM(fs.total_qty * fs.unit_price), 0) 
+                FROM furniture_stock fs
+                JOIN units u ON fs.unit_id = u.id
+                WHERE u.division_id = ?
+            ) + 
+            (
+                SELECT COALESCE(SUM(es.total_qty * es.unit_price), 0) 
+                FROM electrical_stock es
+                JOIN units u ON es.unit_id = u.id
+                WHERE u.division_id = ?
+            ) as grand_total_spend";
+    $stmt = $conn->prepare($metrics_query);
+    $stmt->bind_param("iiiiii", $division_id, $division_id, $division_id, $division_id, $division_id, $division_id);
+}
+
+$stmt->execute();
+$metrics = $stmt->get_result()->fetch_assoc();
+
+// ---------------------------------------------------------------------
+// 2. Calculate Max Spend for Progress Bar Calculation
+// ---------------------------------------------------------------------
+if (!$is_restricted) {
+    $max_spend_query = "
+        SELECT MAX(total_spend) as max_spend FROM (
+            SELECT 
+                (COALESCE((SELECT SUM(amount) FROM stock_details WHERE vendor_id = v.id), 0) + 
+                 COALESCE((SELECT SUM(total_qty * unit_price) FROM furniture_stock WHERE vendor_id = v.id), 0) + 
+                 COALESCE((SELECT SUM(total_qty * unit_price) FROM electrical_stock WHERE vendor_id = v.id), 0)) as total_spend
+            FROM vendors v
+        ) as spends";
+    $max_stmt = $conn->prepare($max_spend_query);
+} else {
+    $max_spend_query = "
+        SELECT MAX(total_spend) as max_spend FROM (
+            SELECT 
+                (COALESCE((
+                    SELECT SUM(sd.amount) 
+                    FROM stock_details sd
+                    JOIN dispatch_details dd ON sd.id = dd.stock_detail_id
+                    JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+                    WHERE sd.vendor_id = v.id AND dm.division_id = ?
+                ), 0) + 
+                 COALESCE((
+                    SELECT SUM(fs.total_qty * fs.unit_price) 
+                    FROM furniture_stock fs
+                    JOIN units u ON fs.unit_id = u.id
+                    WHERE fs.vendor_id = v.id AND u.division_id = ?
+                ), 0) + 
+                 COALESCE((
+                    SELECT SUM(es.total_qty * es.unit_price) 
+                    FROM electrical_stock es
+                    JOIN units u ON es.unit_id = u.id
+                    WHERE es.vendor_id = v.id AND u.division_id = ?
+                ), 0)) as total_spend
+            FROM vendors v
+        ) as spends";
+    $max_stmt = $conn->prepare($max_spend_query);
+    $max_stmt->bind_param("iii", $division_id, $division_id, $division_id);
+}
+
+$max_stmt->execute();
+$max_spend_res = $max_stmt->get_result()->fetch_assoc();
+$max_spend = ($max_spend_res['max_spend'] > 0) ? $max_spend_res['max_spend'] : 1;
+
+// ---------------------------------------------------------------------
+// 3. Top Suppliers Performance Data Query
+// ---------------------------------------------------------------------
+if (!$is_restricted) {
+    $perf_query = "
+        SELECT 
+            v.id, v.vendor_name, v.category, v.phone_number, v.email,
             (COALESCE((SELECT SUM(amount) FROM stock_details WHERE vendor_id = v.id), 0) + 
              COALESCE((SELECT SUM(total_qty * unit_price) FROM furniture_stock WHERE vendor_id = v.id), 0) + 
-             COALESCE((SELECT SUM(total_qty * unit_price) FROM electrical_stock WHERE vendor_id = v.id), 0)) as total_spend
+             COALESCE((SELECT SUM(total_qty * unit_price) FROM electrical_stock WHERE vendor_id = v.id), 0)) as total_spend,
+            ((SELECT COUNT(*) FROM stock_details WHERE vendor_id = v.id) + 
+             (SELECT COUNT(*) FROM furniture_stock WHERE vendor_id = v.id) + 
+             (SELECT COUNT(*) FROM electrical_stock WHERE vendor_id = v.id)) as total_orders
         FROM vendors v
-    ) as spends";
-$max_spend_res = $conn->query($max_spend_query)->fetch_assoc();
-$max_spend = $max_spend_res['max_spend'] > 0 ? $max_spend_res['max_spend'] : 1;
+        ORDER BY total_spend DESC LIMIT 10";
+    $perf_stmt = $conn->prepare($perf_query);
+} else {
+    $perf_query = "
+        SELECT 
+            v.id, v.vendor_name, v.category, v.phone_number, v.email,
+            (COALESCE((
+                SELECT SUM(sd.amount) 
+                FROM stock_details sd
+                JOIN dispatch_details dd ON sd.id = dd.stock_detail_id
+                JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+                WHERE sd.vendor_id = v.id AND dm.division_id = ?
+            ), 0) + 
+             COALESCE((
+                SELECT SUM(fs.total_qty * fs.unit_price) 
+                FROM furniture_stock fs
+                JOIN units u ON fs.unit_id = u.id
+                WHERE fs.vendor_id = v.id AND u.division_id = ?
+            ), 0) + 
+             COALESCE((
+                SELECT SUM(es.total_qty * es.unit_price) 
+                FROM electrical_stock es
+                JOIN units u ON es.unit_id = u.id
+                WHERE es.vendor_id = v.id AND u.division_id = ?
+            ), 0)) as total_spend,
+            ((SELECT COUNT(*) FROM stock_details sd JOIN dispatch_details dd ON sd.id = dd.stock_detail_id JOIN dispatch_master dm ON dd.dispatch_id = dm.id WHERE sd.vendor_id = v.id AND dm.division_id = ?) + 
+             (SELECT COUNT(*) FROM furniture_stock fs JOIN units u ON fs.unit_id = u.id WHERE fs.vendor_id = v.id AND u.division_id = ?) + 
+             (SELECT COUNT(*) FROM electrical_stock es JOIN units u ON es.unit_id = u.id WHERE es.vendor_id = v.id AND u.division_id = ?)) as total_orders
+        FROM vendors v
+        HAVING total_spend > 0 OR total_orders > 0
+        ORDER BY total_spend DESC LIMIT 10";
+    $perf_stmt = $conn->prepare($perf_query);
+    $perf_stmt->bind_param("iiiiii", $division_id, $division_id, $division_id, $division_id, $division_id, $division_id);
+}
 
-// 2. Performance Data
-$perf_query = "
-    SELECT 
-        v.id, v.vendor_name, v.category, v.phone_number, v.email,
-        (COALESCE((SELECT SUM(amount) FROM stock_details WHERE vendor_id = v.id), 0) + 
-         COALESCE((SELECT SUM(total_qty * unit_price) FROM furniture_stock WHERE vendor_id = v.id), 0) + 
-         COALESCE((SELECT SUM(total_qty * unit_price) FROM electrical_stock WHERE vendor_id = v.id), 0)) as total_spend,
-        ((SELECT COUNT(*) FROM stock_details WHERE vendor_id = v.id) + 
-         (SELECT COUNT(*) FROM furniture_stock WHERE vendor_id = v.id) + 
-         (SELECT COUNT(*) FROM electrical_stock WHERE vendor_id = v.id)) as total_orders
-    FROM vendors v
-    ORDER BY total_spend DESC LIMIT 10";
-$perf_result = $conn->query($perf_query);
+$perf_stmt->execute();
+$perf_result = $perf_stmt->get_result();
 
 ob_start();
 ?>
@@ -71,7 +205,6 @@ ob_start();
         color: var(--saas-text-main);
     }
 
-    /* Metric Cards */
     .metric-card {
         background: var(--saas-card-bg);
         border: 1px solid var(--saas-border);
@@ -97,7 +230,6 @@ ob_start();
         font-size: 1.25rem;
     }
 
-    /* Table Styles */
     .saas-card {
         background: var(--saas-card-bg);
         border-radius: 16px;
@@ -131,7 +263,6 @@ ob_start();
         background-color: #F8FAFC;
     }
 
-    /* Dynamic Badges */
     .badge-category {
         font-size: 0.75rem;
         font-weight: 600;
@@ -146,7 +277,6 @@ ob_start();
     .badge-elec { background: #ECFDF5; color: #065F46; }
     .badge-default { background: #F1F5F9; color: #475569; }
 
-    /* Action Tiles */
     .action-tile {
         background: var(--saas-card-bg);
         border: 1px solid var(--saas-border);
@@ -193,7 +323,10 @@ ob_start();
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
             <h3 class="fw-bold tracking-tight mb-1" style="color: var(--saas-text-main);">Vendor Intelligence Engine</h3>
-            <p class="text-muted mb-0 small">Real-time spend analytics, order distribution, and supplier metrics.</p>
+            <p class="text-muted mb-0 small">
+                Real-time spend analytics, order distribution, and supplier metrics
+                <?= $is_restricted ? ' (Division Restricted)' : ' (Global View)' ?>.
+            </p>
         </div>
         <div class="d-flex align-items-center gap-2">
             <a href="vendor_manager.php" class="btn btn-primary shadow-sm rounded-3 px-3 py-2 font-medium small" style="background: var(--saas-primary);">
@@ -255,7 +388,7 @@ ob_start();
                 <div>
                     <h3 class="fw-bold mb-1 text-truncate">₹<?= number_format($metrics['grand_total_spend'], 2) ?></h3>
                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">
-                        All Divisions
+                        <?= $is_restricted ? 'Current Division' : 'All Divisions' ?>
                     </span>
                 </div>
             </div>
@@ -383,7 +516,7 @@ ob_start();
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="4" class="text-center py-4 text-muted">No vendor records currently available.</td>
+                                    <td colspan="4" class="text-center py-4 text-muted">No vendor records currently available for this division.</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>

@@ -299,6 +299,11 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
                     <span><i class="bi-boxes me-2"></i> Furniture Stock</span>
                 </a>
 
+                <a href="/cecsms/electrical_stock/electricals_dashboard.php" 
+                   class="nav-link d-flex justify-content-between align-items-center <?= ($current_page == 'electricals_dashboard.php') ? 'active' : '' ?>">
+                    <span><i class="bi bi-plug-fill me-2"></i> Electrical Stock</span>
+                </a>
+
                 <?php if($role === ROLE_SUPERADMIN): ?>
                     <li class="nav-item list-unstyled">
                         <a class="nav-link <?= ($page_title == 'Lifecycle Approvals') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">

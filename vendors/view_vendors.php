@@ -16,13 +16,9 @@ if (isset($_SESSION['success'])) {
 $category_type = $_GET['type'] ?? 'Computer'; 
 $page_title = "Service Partners";
 
-// --- FETCH LOGIC (Updated to sort A-Z) ---
-if (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin') {
-    $stmt = $conn->prepare("SELECT * FROM vendors ORDER BY vendor_name ASC");
-} else {
-    $stmt = $conn->prepare("SELECT * FROM vendors WHERE category = ? ORDER BY vendor_name ASC");
-    $stmt->bind_param("s", $category_type);
-}
+// --- UNIFIED FETCH LOGIC FOR ALL ROLES ---
+$stmt = $conn->prepare("SELECT * FROM vendors WHERE category = ? ORDER BY vendor_name ASC");
+$stmt->bind_param("s", $category_type);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -33,7 +29,6 @@ ob_start();
     .fw-800 { font-weight: 800 !important; letter-spacing: -0.5px; }
     .text-xxs { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05rem; }
     
-    /* Improved Category Badge Style */
     .badge-category {
         background: #eef2ff;
         color: #4338ca;
@@ -45,7 +40,6 @@ ob_start();
         font-size: 0.7rem;
     }
 
-    /* Tab Styling */
     .nav-pills .nav-link { 
         border-radius: 12px; 
         color: #64748b; 
@@ -62,7 +56,6 @@ ob_start();
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
 
-    /* Table & Search UI Alignment Fixes */
     .dataTables_wrapper .dataTables_filter { float: none; text-align: left; }
     .dataTables_wrapper .dataTables_length { margin-bottom: 0; }
     
@@ -107,29 +100,29 @@ ob_start();
     }
 
     .detail-card {
-    background: #f8fafc;
-    border-radius: 16px;
-    padding: 15px 20px;
-    display: flex;
-    flex-direction: column; /* This forces the stack */
-    gap: 4px; /* Space between label and value */
-}
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 15px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
 
-.detail-label {
-    font-size: 0.7rem;
-    color: #94a3b8;
-    font-weight: 800;
-    text-transform: uppercase;
-    display: block;
-}
+    .detail-label {
+        font-size: 0.7rem;
+        color: #94a3b8;
+        font-weight: 800;
+        text-transform: uppercase;
+        display: block;
+    }
 
-.detail-value {
-    font-size: 0.95rem;
-    color: #1e293b;
-    font-weight: 600;
-    display: block;
-    word-break: break-word; /* Prevents long emails/addresses from breaking layout */
-}
+    .detail-value {
+        font-size: 0.95rem;
+        color: #1e293b;
+        font-weight: 600;
+        display: block;
+        word-break: break-word;
+    }
 </style>
 
 <div class="container-fluid py-4">
@@ -138,24 +131,22 @@ ob_start();
         <div class="col">
             <h4 class="fw-800 text-dark mb-1">Service Partners</h4>
             <p class="text-muted small mb-0 d-flex align-items-center gap-2">
-                Managing <span class="badge-category"><?= $category_type ?></span> vendor relationships
+                Managing <span class="badge-category"><?= htmlspecialchars($category_type) ?></span> vendor relationships
             </p>
         </div>
         <div class="col-auto">
             <a href="vendor_manager.php?type=<?= urlencode($category_type) ?>" class="btn btn-primary rounded-3 px-4 py-2 fw-bold shadow-sm">
-                <i class="bi bi-plus-lg me-2"></i>New Vendor
+                <i class="bi bi-plus-lg me-2"></i>Register <?= htmlspecialchars($category_type) ?> Vendor
             </a>
         </div>
     </div>
 
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-        <!-- Tabs -->
+        <!-- Tabs: Accessible across all roles -->
         <div class="card-header bg-white border-0 p-4 pb-0">
             <ul class="nav nav-pills gap-2" id="vendorTabs">
                 <?php 
-                $tabs = (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin') 
-                        ? ['Computer', 'Furniture', 'Electricals'] 
-                        : [$category_type];
+                $tabs = ['Computer', 'Furniture', 'Electricals'];
                 foreach($tabs as $tab): 
                 ?>
                 <li class="nav-item">
@@ -182,8 +173,6 @@ ob_start();
                         <?php 
                         $count = 1;
                         while($row = $result->fetch_assoc()): 
-                            if($row['category'] !== $category_type) continue;
-                            
                             $words = explode(" ", $row['vendor_name']);
                             $initials = "";
                             foreach ($words as $w) { $initials .= strtoupper(substr($w, 0, 1)); }
@@ -232,14 +221,12 @@ ob_start();
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow-lg">
             <div class="modal-body p-5">
-                <!-- Header Section -->
                 <div class="text-center mb-4">
                     <div class="vendor-avatar mx-auto mb-3" style="width: 64px; height: 64px; font-size: 1.2rem; display: flex; align-items: center; justify-content: center;" id="det_initial">?</div>
                     <h4 class="fw-800 text-dark mb-1" id="det_name">Vendor Name</h4>
                     <span class="badge-category" id="det_cat">Category</span>
                 </div>
 
-                <!-- Info Grid -->
                 <div class="row g-3">
                     <div class="col-6">
                         <div class="detail-card">
@@ -280,18 +267,14 @@ ob_start();
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-
 <script>
 let vendorModal;
 
 $(document).ready(function() {
-    // Initialize Modal
     if(document.getElementById('detailsModal')){
         vendorModal = new bootstrap.Modal(document.getElementById('detailsModal'));
     }
 
-    // UNIFIED DATATABLE INITIALIZATION
-    // This fixes the 'show' part alignment and maintains A-Z sorting
     if ($.fn.DataTable.isDataTable('#saasVendorTable')) {
         $('#saasVendorTable').DataTable().destroy();
     }
@@ -308,12 +291,11 @@ $(document).ready(function() {
             }
         },
         "pageLength": 10,
-        "order": [[1, 'asc']], // A-Z Sorting enabled
+        "order": [[1, 'asc']],
         "columnDefs": [
             { "orderable": false, "targets": [0, 3] }
         ],
         "drawCallback": function() {
-            // Apply custom classes and ensure horizontal flex alignment
             $('.dataTables_filter input').addClass('form-control custom-search-input');
             $('.dataTables_length select').addClass('form-select form-select-sm d-inline-block w-auto');
             $('.dataTables_length label').addClass('d-flex align-items-center');
@@ -321,7 +303,6 @@ $(document).ready(function() {
         }
     });
 
-    // Delete Logic (SweetAlert style preserved as requested)
     $('.delete-vendor-btn').on('click', function() {
         const id = $(this).data('id');
         const name = $(this).data('name');
@@ -345,7 +326,6 @@ $(document).ready(function() {
         });
     });
 
-    // Success Message Toast
     <?php if($success_msg): ?>
         Swal.fire({ 
             icon: 'success', 
@@ -359,7 +339,6 @@ $(document).ready(function() {
     <?php endif; ?>
 });
 
-// View Details Function
 function viewVendorDetails(data) {
     document.getElementById('det_name').innerText = data.vendor_name;
     const initials = data.vendor_name.split(' ').map(word => word[0]).join('').toUpperCase().substring(0, 3);

@@ -67,7 +67,7 @@ $notif_count = $notifications->num_rows;
     <style>
         :root {
             --sb-width: 280px;
-            --primary-accent: #10b981;
+            --primary-accent: #07116e;
             --bg-body: #f8fafc;
             --sidebar-bg: #ffffff;
             --text-main: #1e293b;
@@ -190,7 +190,7 @@ $notif_count = $notifications->num_rows;
 
 <nav id="sidebar">
     <a href="division_dashboard.php" class="sidebar-brand">
-        <div class="bg-success text-white rounded-3 px-2 py-1 shadow-sm">
+        <div class="bg-primary text-white rounded-3 px-2 py-1 shadow-sm">
             <i class="bi bi-box-seam"></i>
         </div>
         <span>Stock<span class="text-dark">Flow</span></span>
@@ -257,7 +257,7 @@ $notif_count = $notifications->num_rows;
             <div>
                 <h5 class="mb-0 fw-bold text-dark lh-1 mb-1"><?= htmlspecialchars($page_title) ?></h5>
                 <p class="text-muted mb-0 d-none d-md-block" style="font-size: 11px; letter-spacing: 0.02rem;">
-                    Division asset tracking and status management.
+                    Department asset tracking and status management.
                 </p>
             </div>
         </div>

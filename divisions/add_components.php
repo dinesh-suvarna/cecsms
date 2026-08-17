@@ -44,14 +44,14 @@ ob_start();
                 <div class="card-body py-4 px-4 d-flex align-items-center justify-content-between bg-white">
                     <div class="d-flex align-items-center">
                         <div class="icon-box me-3 p-3 rounded-4" style="background: rgba(16, 185, 129, 0.1);">
-                            <i class="bi bi-cpu-fill fs-3" style="color: #10b981;"></i>
+                            <i class="bi bi-cpu-fill fs-3" style="color: #0d6efd;"></i>
                         </div>
                         <div>
                             <h4 class="fw-bold mb-1">Components Inventory</h4>
                             <p class="text-muted small mb-0">Manage micro-controllers, sensors, and electronic parts</p>
                         </div>
                     </div>
-                    <a href="view_components.php" class="btn text-white px-4 rounded-pill shadow-sm fw-bold" style="background-color: #10b981; border: none;">
+                    <a href="view_components.php" class="btn text-white px-4 rounded-pill shadow-sm fw-bold" style="background-color: #0d6efd; border: none;">
                         <i class="bi bi-list-ul me-2"></i> View Inventory
                     </a>
                 </div>
@@ -118,7 +118,7 @@ ob_start();
 </div>
 
 <style>
-:root { --emerald: #10b981; --emerald-dark: #059669; }
+:root { --emerald: #0d6efd; --emerald-dark: #0d6efd; }
 .form-control-lg, .form-select-lg { font-size: 0.95rem; padding: 0.75rem 1rem; background-color: #fcfdfe; }
 .form-control:focus, .form-select:focus { border-color: var(--emerald) !important; box-shadow: 0 0 0 0.25rem rgba(16, 185, 129, 0.1) !important; }
 .btn-emerald-submit { background-color: var(--emerald); border: none; transition: all 0.3s ease; }

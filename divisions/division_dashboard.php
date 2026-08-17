@@ -3,7 +3,7 @@ require_once __DIR__ . "/../config/db.php";
 include "../admin/auth.php";
 include "../includes/session.php";
 
-$page_title = "Division Overview";
+$page_title = "Department Overview";
 $page_icon  = "bi-speedometer2";
 
 $division_id = $_SESSION['division_id'] ?? 0;

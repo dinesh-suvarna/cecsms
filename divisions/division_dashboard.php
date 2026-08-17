@@ -51,7 +51,7 @@ $recent_requests = $conn->query($req_query);
 
 // 4. Asset Health Metrics
 $health_query = "SELECT 
-    SUM(CASE WHEN da.status = 'assigned' THEN 1 ELSE 0 END) as healthy,
+    SUM(CASE WHEN da.status = 'assigned' THEN 1 ELSE 0 END) as active,
     SUM(CASE WHEN da.status = 'under_repair' THEN 1 ELSE 0 END) as repairing,
     SUM(CASE WHEN da.status IN ('return_requested', 'repair_requested', 'dispose_requested') THEN 1 ELSE 0 END) as outgoing
     FROM division_assets da
@@ -76,33 +76,264 @@ ob_start();
 ?>
 
 <style>
-    .dash-card { border: none; border-radius: 16px; transition: all 0.3s ease; background: #fff; }
-    .dash-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important; }
-    
+:root {
+    --erp-navy: #123b63;
+    --erp-navy-dark: #0b2942;
+    --erp-blue: #2b628f;
+    --erp-green: #3f755e;
+    --erp-amber: #9a6b22;
+    --erp-red: #9a4a4a;
+    --erp-info: #426f8f;
+    --erp-bg: #f3f5f7;
+    --erp-panel: #ffffff;
+    --erp-panel-soft: #f7f9fb;
+    --erp-border: #d9e0e7;
+    --erp-border-dark: #c6d0da;
+    --erp-text: #20384d;
+    --erp-text-soft: #526679;
+    --erp-muted: #718191;
+    --erp-shadow: 0 1px 2px rgba(20,45,70,.06);
+    --erp-shadow-hover: 0 4px 12px rgba(20,45,70,.09);
+}
+
+.container-fluid {
+    max-width: 1440px;
+    padding: 28px 32px 36px;
+}
+
+.container-fluid > .row:first-child {
+    padding-bottom: 17px;
+    border-bottom: 1px solid var(--erp-border);
+}
+
+.container-fluid > .row:first-child h4 {
+    color: var(--erp-navy-dark);
+    font-size: 1.2rem;
+    font-weight: 650 !important;
+}
+
+.container-fluid > .row:first-child h4 span {
+    color: var(--erp-navy) !important;
+}
+
+.container-fluid > .row:first-child p {
+    color: var(--erp-muted) !important;
+    font-size: .82rem !important;
+    margin-bottom: 0;
+}
+
+.dash-card {
+    border: 1px solid var(--erp-border) !important;
+    border-radius: 6px !important;
+    background: var(--erp-panel);
+    transition: border-color .18s ease, box-shadow .18s ease;
+    box-shadow: var(--erp-shadow) !important;
+}
+
+.dash-card:hover {
+    transform: none;
+    border-color: var(--erp-border-dark) !important;
+    box-shadow: var(--erp-shadow-hover) !important;
+}
+
+.container-fluid .border-start {
+    border-left-width: 3px !important;
+}
+
+.container-fluid .border-primary { border-color: var(--erp-blue) !important; }
+.container-fluid .border-success { border-color: var(--erp-green) !important; }
+.container-fluid .border-warning { border-color: var(--erp-amber) !important; }
+.container-fluid .border-info { border-color: var(--erp-info) !important; }
+
+.icon-shape {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    font-size: 1.08rem;
+    border: 1px solid rgba(18,59,99,.08);
+}
+
+.bg-emerald-soft {
+    background-color: #eef5f1 !important;
+    color: var(--erp-green) !important;
+}
+
+.bg-amber-soft {
+    background-color: #f7f2e8 !important;
+    color: var(--erp-amber) !important;
+}
+
+.bg-blue-soft {
+    background-color: #edf3f8 !important;
+    color: var(--erp-blue) !important;
+}
+
+.bg-light { background-color: #f5f7f9 !important; }
+
+.extra-small { font-size: .7rem; }
+
+.container-fluid .text-success { color: var(--erp-green) !important; }
+.container-fluid .text-warning { color: var(--erp-amber) !important; }
+.container-fluid .text-info { color: var(--erp-info) !important; }
+.container-fluid .text-muted { color: var(--erp-muted) !important; }
+.container-fluid .text-dark { color: var(--erp-text) !important; }
+
+.container-fluid .card h4 {
+    color: var(--erp-text);
+    font-size: 1.35rem;
+    font-weight: 650 !important;
+}
+
+.container-fluid .row.g-3 > .col-md-4 > .card,
+.container-fluid .row.g-3 > .col-md-8 > .card {
+    border-radius: 6px !important;
+}
+
+.container-fluid .card h6 {
+    color: var(--erp-text);
+    font-size: .86rem;
+    font-weight: 650 !important;
+}
+
+.container-fluid .border-top {
+    border-color: var(--erp-border) !important;
+}
+
+.progress-thin {
+    height: 5px;
+    border-radius: 2px;
+    background-color: #e9eef2;
+}
+
+.progress-bar.bg-success {
+    background-color: var(--erp-green) !important;
+}
+
+#dashTab {
+    border: 1px solid var(--erp-border);
+    border-radius: 5px !important;
+    background: #f5f7f9 !important;
+    padding: 3px !important;
+}
+
+#dashTab .nav-link {
+    color: var(--erp-text-soft);
+    border-radius: 3px !important;
+    font-size: .76rem !important;
+    font-weight: 600 !important;
+    padding: 8px 10px !important;
+}
+
+#dashTab .nav-link:hover {
+    color: var(--erp-navy);
+}
+
+#dashTab .nav-link.active {
+    background: var(--erp-panel) !important;
+    color: var(--erp-navy) !important;
+    box-shadow: 0 1px 2px rgba(20,45,70,.08);
+}
+
+.timeline-item {
+    border-left: 2px solid #dce3e9;
+    padding-left: 14px;
+    padding-bottom: 16px;
+    position: relative;
+}
+
+.timeline-item::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 1px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--erp-navy);
+    border: 2px solid var(--erp-panel);
+    box-shadow: 0 0 0 1px var(--erp-border);
+}
+
+.timeline-item strong { color: var(--erp-text); }
+
+.request-item {
+    border-left: 3px solid var(--erp-amber);
+    padding: 11px 13px;
+    background: var(--erp-panel-soft);
+    border-top: 1px solid #edf0f3;
+    border-right: 1px solid #edf0f3;
+    border-bottom: 1px solid #edf0f3;
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 8px;
+}
+
+.request-item .badge {
+    border-radius: 3px !important;
+    font-weight: 600;
+}
+
+.container-fluid a.text-success {
+    color: var(--erp-navy) !important;
+    letter-spacing: .02em;
+}
+
+.container-fluid a.text-success:hover {
+    color: var(--erp-blue) !important;
+}
+
+.overflow-auto::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb {
+    background: #cbd5dd;
+    border-radius: 3px;
+}
+
+[data-bs-theme="dark"] {
+    --erp-bg: #101a24;
+    --erp-panel: #172534;
+    --erp-panel-soft: #1b2b3a;
+    --erp-border: #2c3d4d;
+    --erp-border-dark: #3d5162;
+    --erp-text: #edf3f7;
+    --erp-text-soft: #c1ced8;
+    --erp-muted: #99aab8;
+    --erp-navy: #8fb1cc;
+    --erp-navy-dark: #dce8f0;
+}
+
+[data-bs-theme="dark"] .dash-card { background: var(--erp-panel); }
+[data-bs-theme="dark"] #dashTab,
+[data-bs-theme="dark"] .bg-light { background: var(--erp-panel-soft) !important; }
+
+[data-bs-theme="dark"] #dashTab .nav-link.active {
+    background: var(--erp-panel) !important;
+    color: var(--erp-navy-dark) !important;
+}
+
+[data-bs-theme="dark"] .request-item {
+    background: var(--erp-panel-soft);
+    border-color: var(--erp-border);
+}
+
+@media (max-width: 991.98px) {
+    .container-fluid { padding: 22px 20px 30px; }
+}
+
+@media (max-width: 575.98px) {
+    .container-fluid { padding: 18px 14px 24px; }
     .icon-shape {
-        width: 48px; height: 48px;
-        display: flex; align-items: center; justify-content: center;
-        border-radius: 12px; font-size: 1.25rem;
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
     }
-    
-    .bg-emerald-soft { background-color: #f0fdf4; color: #10b981; }
-    .bg-amber-soft { background-color: #fffbeb; color: #f59e0b; }
-    .bg-blue-soft { background-color: #eff6ff; color: #3b82f6; }
-    
-    .progress-thin { height: 6px; border-radius: 10px; background-color: #f1f5f9; }
-    .request-item { border-left: 3px solid #10b981; padding: 10px 15px; background: #f8fafc; border-radius: 0 8px 8px 0; margin-bottom: 8px; }
-    
-    .extra-small { font-size: 0.72rem; }
-    .italic { font-style: italic; }
-
-    .overflow-auto::-webkit-scrollbar { width: 4px; }
-    .overflow-auto::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-
-    .timeline-item { border-left: 2px solid #e2e8f0; padding-left: 15px; position: relative; padding-bottom: 15px; }
-    .timeline-item::before {
-        content: ""; position: absolute; left: -6px; top: 0;
-        width: 10px; height: 10px; border-radius: 50%; background: #10b981;
-    }
+}
 </style>
 
 <div class="container-fluid py-4">
@@ -168,12 +399,12 @@ ob_start();
                 <h6 class="fw-bold mb-3">Asset Health</h6>
                 <div class="d-flex justify-content-between mb-4 mt-2">
                     <div class="text-center">
-                        <div class="text-success fw-bold h5 mb-0"><?= $health_data['healthy'] ?? 0 ?></div>
-                        <small class="text-muted extra-small fw-bold">HEALTHY</small>
+                        <div class="text-success fw-bold h5 mb-0"><?= $health_data['active'] ?? 0 ?></div>
+                        <small class="text-muted extra-small fw-bold">ACTIVE</small>
                     </div>
                     <div class="text-center border-start border-end px-3">
                         <div class="text-info fw-bold h5 mb-0"><?= $health_data['repairing'] ?? 0 ?></div>
-                        <small class="text-muted extra-small fw-bold">REPAIRING</small>
+                        <small class="text-muted extra-small fw-bold">IN REPAIR</small>
                     </div>
                     <div class="text-center">
                         <div class="text-danger fw-bold h5 mb-0"><?= $health_data['outgoing'] ?? 0 ?></div>

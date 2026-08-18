@@ -44,7 +44,6 @@ if($role != 'SuperAdmin'){
     }
 }
 
-
 $unit_code = $unit['unit_code'];
 $unit_name = $unit['unit_name'];
 $unit_type = $unit['unit_type'];
@@ -100,33 +99,171 @@ if(isset($_POST['update_unit'])){
         $check->close();
     }
 }
+
+ob_start();
 ?>
 
-<?php ob_start(); ?>
+<style>
+/* =========================================================
+   ENTERPRISE ERP STYLES
+========================================================= */
+:root {
+    --erp-navy: #173f63;
+    --erp-navy-dark: #102f4a;
+    --erp-blue: #0d6efd;
+    --erp-text: #263746;
+    --erp-muted: #71808f;
+    --erp-border: #dce3e9;
+    --erp-bg: #f5f7f9;
+    --erp-white: #ffffff;
+    --erp-shadow: 0 1px 3px rgba(20, 40, 60, .06);
+}
 
-<div class="container-fluid py-3" style="max-width: 1200px;">
-    <div class="card shadow-lg rounded-4 border-0 position-relative overflow-hidden main-card">
-        
-        <div class="edit-corner-flag"></div>
+.edit-unit-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 26px 30px 40px;
+}
 
-        <div class="card-body p-4 p-md-5">
-            <div class="mb-4">
-                <h4 class="fw-bold" style="color: #64b1ff;">
-                    <i class="bi bi-pencil-square me-2"></i>Edit Lab/Facility
-                </h4>
-                <p class="text-muted small">ID: #<?= $unit_id ?> | Managing records for <strong><?= htmlspecialchars($unit_name) ?></strong></p>
+/* HEADER */
+.inst-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 20px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--erp-border);
+}
+.inst-header-left { display: flex; align-items: center; gap: 14px; }
+.inst-header-icon {
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    background: #edf3f8; border: 1px solid #dce6ee; border-radius: 5px;
+    color: var(--erp-navy); font-size: 1.1rem;
+}
+.inst-header h3 { margin: 0; color: var(--erp-navy-dark); font-size: 1.18rem; font-weight: 650; }
+.inst-header p { margin: 3px 0 0; color: var(--erp-muted); font-size: .76rem; }
+
+/* FORM PANEL */
+.inst-form-panel {
+    background: #f9fafb; border: 1px solid var(--erp-border); border-radius: 5px;
+    margin-bottom: 18px; box-shadow: var(--erp-shadow);
+}
+.inst-form-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 13px 18px; border-bottom: 1px solid var(--erp-border); background: #f5f7f9;
+}
+.inst-form-title { display: flex; align-items: center; gap: 8px; color: var(--erp-navy-dark); font-size: .82rem; font-weight: 650; }
+.inst-form-body { padding: 22px; }
+
+.inst-form-panel .form-label { 
+    color: #536575; font-size: .65rem; font-weight: 700; 
+    text-transform: uppercase; letter-spacing: .045em; margin-bottom: 6px; 
+}
+
+.inst-form-panel .form-control, 
+.inst-form-panel .form-select {
+    height: 39px; border: 1px solid var(--erp-border); border-radius: 4px !important;
+    color: var(--erp-text); background: #fff; font-size: .8rem;
+    box-shadow: none !important;
+}
+
+.inst-form-panel .form-control[readonly] {
+    background: #eef2f5 !important;
+    color: #617382;
+}
+
+/* BUTTONS */
+.btn-form-save {
+    height: 39px; background: var(--erp-navy); border: 1px solid var(--erp-navy);
+    color: #fff; border-radius: 4px !important; font-size: .76rem; font-weight: 600;
+}
+.btn-form-save:hover { background: var(--erp-navy-dark); border-color: var(--erp-navy-dark); color: #fff; }
+
+.btn-form-cancel {
+    height: 39px; border: 1px solid #c8d2db; background: #fff;
+    color: #596b7a; border-radius: 4px !important; font-size: .76rem; font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+}
+.btn-form-cancel:hover { background: #f5f7f9; color: #334451; }
+
+.inst-alert { border-radius: 4px !important; font-size: .76rem; }
+
+/* DARK MODE */
+[data-bs-theme="dark"] {
+    --erp-bg: #101a24; --erp-white: #172534; --erp-text: #edf3f7; --erp-muted: #9aabb9;
+    --erp-border: #2d3e4e; --erp-navy: #8eafc9; --erp-navy-dark: #dce8f0;
+}
+[data-bs-theme="dark"] .inst-header h3 { color: #edf3f7; }
+[data-bs-theme="dark"] .inst-header-icon { background: #203445; border-color: #33495a; color: #b8d0e2; }
+[data-bs-theme="dark"] .inst-form-panel, [data-bs-theme="dark"] .inst-form-header { background: #142230; }
+[data-bs-theme="dark"] .inst-form-panel .form-control, 
+[data-bs-theme="dark"] .inst-form-panel .form-select { 
+    background: #172534 !important; color: var(--erp-text); border-color: var(--erp-border); 
+}
+[data-bs-theme="dark"] .inst-form-panel .form-control[readonly] { background: #0f1923 !important; color: #7f93a4; }
+[data-bs-theme="dark"] .btn-form-cancel { background: #172534; border-color: var(--erp-border); color: #b8c6d1; }
+</style>
+
+<div class="edit-unit-page">
+
+    <!-- PAGE HEADER -->
+    <div class="inst-header">
+        <div class="inst-header-left">
+            <div class="inst-header-icon">
+                <i class="bi bi-pencil-square"></i>
             </div>
+            <div>
+                <h3>Edit Facility Details</h3>
+                <p>ID: #<?= $unit_id ?> | Managing configuration for <strong><?= htmlspecialchars($unit_name) ?></strong></p>
+            </div>
+        </div>
+        <a href="units.php" class="btn btn-form-cancel px-3">
+            <i class="bi bi-arrow-left me-1"></i> Back to Facilities
+        </a>
+    </div>
 
-            <form method="POST" id="editUnitForm">
-                <div class="row g-4">
+    <!-- ALERTS -->
+    <?php if ($success): ?>
+        <div class="alert alert-success inst-alert alert-dismissible fade show mb-3">
+            <i class="bi bi-check-circle me-2"></i><?= htmlspecialchars($success) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($error): ?>
+        <div class="alert alert-danger inst-alert alert-dismissible fade show mb-3">
+            <i class="bi bi-exclamation-circle me-2"></i><?= htmlspecialchars($error) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <?php endif; ?>
+
+    <!-- EDIT FORM PANEL -->
+    <div class="inst-form-panel">
+        <div class="inst-form-header">
+            <div class="inst-form-title">
+                <i class="bi bi-door-open-fill text-primary"></i> Edit Facility Specifications
+            </div>
+        </div>
+
+        <div class="inst-form-body">
+            <form method="POST">
+                <div class="row g-3">
+                    
+                    <!-- Institution (Readonly) -->
                     <div class="col-md-6">
-                        <label class="small fw-bold text-muted mb-1">Institution</label>
-                        <input type="text" class="form-control bg-light border-0 py-2" value="<?= htmlspecialchars($display_inst_name) ?>" readonly>
+                        <label class="form-label">Institution</label>
+                        <input type="text" 
+                               class="form-control" 
+                               value="<?= htmlspecialchars($display_inst_name) ?>" 
+                               readonly>
                     </div>
 
+                    <!-- Department -->
                     <div class="col-md-6">
-                        <label class="small fw-bold text-muted mb-1">Department</label>
-                        <select name="division_id" class="form-select py-2" required>
+                        <label class="form-label">Department <span class="text-danger">*</span></label>
+                        <select name="division_id" class="form-select" required>
                             <?php
                             if($role == 'SuperAdmin'){
                                 $divisions = $conn->query("SELECT id, division_name FROM divisions WHERE status='Active' ORDER BY division_name");
@@ -145,157 +282,79 @@ if(isset($_POST['update_unit'])){
                         </select>
                     </div>
 
+                    <!-- Facility Code -->
                     <div class="col-md-4">
-                        <label class="small fw-bold text-muted mb-1">Code</label>
-                        <input type="text" name="unit_code" value="<?= htmlspecialchars($unit_code) ?>" class="form-control py-2" required>
+                        <label class="form-label">Facility Code <span class="text-danger">*</span></label>
+                        <input type="text" 
+                               name="unit_code" 
+                               value="<?= htmlspecialchars($unit_code) ?>" 
+                               class="form-control" 
+                               placeholder="e.g. CSL01"
+                               required>
                     </div>
 
+                    <!-- Facility Name -->
                     <div class="col-md-8">
-                        <label class="small fw-bold text-muted mb-1">Facility Name</label>
-                        <input type="text" name="unit_name" value="<?= htmlspecialchars($unit_name) ?>" class="form-control py-2" required>
+                        <label class="form-label">Facility Name <span class="text-danger">*</span></label>
+                        <input type="text" 
+                               name="unit_name" 
+                               value="<?= htmlspecialchars($unit_name) ?>" 
+                               class="form-control" 
+                               placeholder="e.g. Advanced AI Lab"
+                               required>
                     </div>
 
+                    <!-- Facility Type -->
                     <div class="col-md-6">
-                        <label class="small fw-bold text-muted mb-1">Facility Type</label>
-                        <select name="unit_type" class="form-select py-2">
+                        <label class="form-label">Facility Type <span class="text-danger">*</span></label>
+                        <select name="unit_type" class="form-select" required>
                             <?php 
-                            $types = ['lab', 'office', 'store room', 'classroom', 'room', 'hod cabin', 'staffroom', 'library','other'];
+                            $types = ['lab', 'office', 'store room', 'classroom', 'room', 'hod cabin', 'staffroom', 'library', 'other'];
                             foreach($types as $t): ?>
                                 <option value="<?= $t ?>" <?= $unit_type == $t ? 'selected' : '' ?>><?= ucfirst($t) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
 
+                    <!-- Area -->
                     <div class="col-md-6">
-                        <label class="small fw-bold text-muted mb-1">Area (Sq. Mt.)</label>
-                        <input type="number" step="0.01" name="area_sqmt" value="<?= htmlspecialchars($area_sqmt) ?>" class="form-control py-2">
+                        <label class="form-label">Area (Sq. Mt.)</label>
+                        <input type="number" 
+                               step="0.01" 
+                               name="area_sqmt" 
+                               value="<?= htmlspecialchars($area_sqmt) ?>" 
+                               class="form-control"
+                               placeholder="e.g. 120.50">
                     </div>
 
+                    <!-- Location -->
                     <div class="col-12">
-                        <label class="small fw-bold text-muted mb-1">Location</label>
-                        <input type="text" name="location" value="<?= htmlspecialchars($location) ?>" class="form-control py-2" placeholder="e.g. Block A, 2nd Floor">
+                        <label class="form-label">Location</label>
+                        <input type="text" 
+                               name="location" 
+                               value="<?= htmlspecialchars($location) ?>" 
+                               class="form-control" 
+                               placeholder="e.g. Block A, 2nd Floor">
                     </div>
+
                 </div>
 
-                <div class="d-flex gap-3 mt-5">
-                    <button type="submit" name="update_unit" class="btn text-white px-5 py-2 rounded-pill fw-bold shadow-sm" style="background-color: #64b1ff; border: none;">
-                        <i class="bi bi-check-circle me-1"></i> Update Record
-                    </button>
-                    <a href="units.php" class="btn btn-light border px-5 py-2 rounded-pill fw-bold text-muted">
-                        Back to List
+                <!-- Actions -->
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="units.php" class="btn btn-form-cancel px-4">
+                        Cancel
                     </a>
+                    <button type="submit" 
+                            name="update_unit" 
+                            class="btn btn-form-save px-4">
+                        <i class="bi bi-check-lg me-1"></i> Save Changes
+                    </button>
                 </div>
             </form>
         </div>
     </div>
+
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    
-    const GlassAlert = Swal.mixin({
-        background: 'rgba(255, 255, 255, 0.9)',
-        backdrop: `rgba(100, 177, 255, 0.12) blur(10px)`, // Glass blur effect
-        customClass: {
-            popup: 'glass-popup-style',
-            confirmButton: 'rounded-pill px-5 py-2 fw-bold shadow-sm'
-        },
-        buttonsStyling: true
-    });
-
-    
-    <?php if($success): ?>
-        GlassAlert.fire({
-            icon: 'success',
-            iconColor: '#64b1ff',
-            title: '<span style="color: #334155;">Success!</span>',
-            html: '<p class="text-muted mb-0"><?= $success ?></p>',
-            confirmButtonColor: '#64b1ff',
-            timer: 3000,
-            timerProgressBar: true,
-            didClose: () => {
-                window.location.href = 'units.php';
-            }
-        });
-    <?php endif; ?>
-
-    // Handle Error
-    <?php if($error): ?>
-        GlassAlert.fire({
-            icon: 'error',
-            iconColor: '#ef4444',
-            title: '<span style="color: #334155;">Entry Error</span>',
-            text: '<?= $error ?>',
-            confirmButtonColor: '#ef4444'
-        });
-    <?php endif; ?>
-});
-</script>
-
-<style>
-.main-card {
-    min-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.edit-corner-flag {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 0;
-    height: 0;
-    border-style: solid;
-    border-width: 0 80px 80px 0;
-    border-color: transparent #ef4444 transparent transparent;
-    z-index: 10;
-}
-
-.edit-corner-flag::before {
-    content: "EDIT";
-    position: absolute;
-    top: 10px;
-    right: -75px;
-    color: white;
-    font-size: 0.75rem;
-    font-weight: 900;
-    transform: rotate(45deg);
-    width: 80px;
-    text-align: center;
-    letter-spacing: 1.5px;
-}
-
-.form-control, .form-select {
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    transition: all 0.25s ease;
-}
-
-.form-control:focus, .form-select:focus {
-    border-color: #64b1ff;
-    box-shadow: 0 0 0 4px rgba(100, 177, 255, 0.15);
-    background-color: #fff;
-}
-
-
-.glass-popup-style {
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08) !important;
-    border-radius: 28px !important;
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.05);
-}
-
-.swal2-show {
-    animation: swal2-show 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-}
-</style>
 
 <?php
 $content = ob_get_clean();

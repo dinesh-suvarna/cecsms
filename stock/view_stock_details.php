@@ -61,149 +61,175 @@ ob_start();
 ?>
 
 <style>
+/* Enterprise UI Local Tokens & Scaled Typography */
 :root {
-    --saas-border: #e2e8f0;
-    --saas-bg: #f8fafc;
-    --saas-text-muted: #64748b;
+    --erp-border: #dce3e9;
+    --erp-bg-light: #f8fafc;
+    --erp-navy: #173f63;
+    --erp-navy-dark: #102f4a;
+    --erp-text-muted: #64748b;
 }
 
-.saas-card {
+.erp-toolbar {
     background: #ffffff;
-    border: 1px solid var(--saas-border);
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+    border: 1px solid var(--erp-border);
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
 }
 
-.saas-toolbar {
-    background: #ffffff;
-    border: 1px solid var(--saas-border);
-    border-radius: 10px;
-    padding: 8px 14px;
+.erp-toolbar .form-control, 
+.erp-toolbar .form-select {
+    font-size: 0.88rem !important;
+    border-color: var(--erp-border);
 }
 
-/* Category Outer Cards */
+.erp-toolbar .form-control:focus, 
+.erp-toolbar .form-select:focus {
+    border-color: var(--erp-navy) !important;
+}
+
+/* Category Outer Accordion Cards */
 .cat-accordion-card {
-    border: 1px solid var(--saas-border) !important;
-    border-radius: 12px !important;
+    border: 1px solid var(--erp-border) !important;
+    border-radius: 6px !important;
     margin-bottom: 0.75rem;
     overflow: hidden;
     background: #ffffff;
+    box-shadow: 0 1px 3px rgba(20, 40, 60, 0.04);
 }
 
 .cat-accordion-btn {
     background: #ffffff !important;
-    padding: 1rem 1.25rem;
+    padding: 0.85rem 1.25rem;
     border: none;
     box-shadow: none !important;
 }
 
 .cat-accordion-btn:not(.collapsed) {
-    background: #ffffff !important;
-    border-bottom: 1px solid var(--saas-border);
+    background: #f8fafc !important;
+    border-bottom: 1px solid var(--erp-border);
 }
 
 .folder-icon-box {
-    width: 36px;
-    height: 36px;
-    background-color: #e0e7ff;
-    color: #4f46e5;
-    border-radius: 8px;
+    width: 38px;
+    height: 38px;
+    background-color: #edf3f8;
+    color: var(--erp-navy);
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 1.1rem;
+    border: 1px solid #d0deeb;
 }
 
-/* Item Nested Cards */
+.cat-title-text {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--erp-navy-dark);
+}
+
+/* Item Nested Accordion Cards */
 .item-accordion-card {
-    border: 1px solid var(--saas-border) !important;
-    border-radius: 8px !important;
-    margin-bottom: 0.5rem;
+    border: 1px solid var(--erp-border) !important;
+    border-radius: 6px !important;
+    margin-bottom: 0.6rem;
     background: #ffffff;
 }
 
 .item-accordion-btn {
     padding: 0.75rem 1rem;
     background: #ffffff !important;
+    font-size: 0.9rem;
 }
 
 /* Sub-Group Invoice Block */
 .invoice-block {
-    border: 1px solid #edf2f7;
-    border-radius: 8px;
+    border: 1px solid var(--erp-border);
+    border-radius: 6px;
     background: #ffffff;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.85rem;
 }
 
 .invoice-header {
     background-color: #f1f5f9;
-    padding: 0.5rem 0.85rem;
-    font-size: 0.78rem;
-    border-bottom: 1px solid #e2e8f0;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.84rem;
+    border-bottom: 1px solid var(--erp-border);
+    color: #334155;
 }
 
-.saas-subtable {
+.erp-subtable {
     margin-bottom: 0;
-    font-size: 0.82rem;
+    font-size: 0.88rem;
 }
 
-.saas-subtable thead th {
+.erp-subtable thead th {
     background-color: #ffffff;
-    color: var(--saas-text-muted);
-    font-size: 0.68rem;
+    color: var(--erp-text-muted);
+    font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    border-bottom: 1px solid var(--saas-border);
-    padding: 0.45rem 0.85rem;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--erp-border);
+    padding: 0.6rem 0.9rem;
 }
 
-.saas-subtable td {
-    padding: 0.55rem 0.85rem;
+.erp-subtable td {
+    padding: 0.65rem 0.9rem;
     vertical-align: middle;
     border-bottom: 1px solid #f1f5f9;
 }
 
-.action-btn-saas {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
+.action-btn-erp {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #64748b;
-    border: 1px solid transparent;
-    background: transparent;
+    color: #475569;
+    border: 1px solid var(--erp-border);
+    background: #ffffff;
+    font-size: 0.88rem;
     transition: all 0.15s ease;
 }
 
-.action-btn-saas:hover {
+.action-btn-erp:hover {
     background: #f1f5f9;
-    color: #0f172a;
+    color: var(--erp-navy-dark);
     border-color: #cbd5e1;
+}
+
+.badge-erp {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.35rem 0.65rem;
+    border-radius: 4px;
 }
 </style>
 
 <!-- PAGE HEADER -->
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pt-2 mb-3 pb-2 border-bottom">
     <div>
-        <h4 class="fw-bold m-0 text-dark">
-            <i class="<?= $page_icon ?> text-primary me-2"></i><?= $page_title ?>
+        <h4 class="fw-bold m-0 text-dark" style="font-size: 1.25rem;">
+            <i class="<?= $page_icon ?> me-2" style="color: var(--erp-navy);"></i><?= $page_title ?>
         </h4>
-        <p class="text-muted small m-0">Inventory registry grouped by category, item catalog, and procurement invoice.</p>
+        <p class="text-muted m-0" style="font-size: 0.85rem;">Inventory registry grouped by category, item catalog, and procurement invoice.</p>
     </div>
 </div>
 
 <!-- SEARCH & FILTER TOOLBAR -->
-<div class="saas-toolbar mb-3">
+<div class="erp-toolbar mb-3 shadow-sm">
     <div class="row g-2 align-items-center">
-        <div class="col-md-4 col-sm-6">
-            <div class="input-group input-group-sm">
-                <span class="input-group-text bg-transparent border-0 pe-1"><i class="bi bi-search text-muted"></i></span>
-                <input type="text" id="searchInput" class="form-control border-0 bg-transparent shadow-none" placeholder="Search serial, bill, PO, or vendor...">
+        <div class="col-md-5 col-sm-6">
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-end-0 pe-1"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="searchInput" class="form-control border-start-0 shadow-none" placeholder="Search serial, bill, PO, or vendor...">
             </div>
         </div>
        <div class="col-md-3 col-sm-6 ms-auto">
-            <select id="statusFilter" class="form-select form-select-sm shadow-none">
+            <select id="statusFilter" class="form-select shadow-none">
                 <option value="all">All Statuses</option>
                 <option value="available">Available</option>
                 <option value="partial">Partially Dispatched</option>
@@ -213,8 +239,8 @@ ob_start();
             </select>
         </div>
         <div class="col-auto">
-            <button id="resetSearch" class="btn btn-sm btn-light border text-secondary px-2.5" title="Clear Filters">
-                <i class="bi bi-x-lg"></i>
+            <button id="resetSearch" class="btn btn-light border text-secondary px-3" style="font-size: 0.88rem;" title="Clear Filters">
+                <i class="bi bi-x-lg me-1"></i> Clear
             </button>
         </div>
     </div>
@@ -243,12 +269,12 @@ ob_start();
                         <div class="d-flex justify-content-between align-items-center w-100 me-3">
                             <div class="d-flex align-items-center gap-3">
                                 <div class="folder-icon-box">
-                                    <i class="bi bi-folder-fill fs-5"></i>
+                                    <i class="bi bi-folder-fill"></i>
                                 </div>
-                                <span class="fw-bold text-dark fs-6"><?= htmlspecialchars($catName) ?></span>
+                                <span class="cat-title-text"><?= htmlspecialchars($catName) ?></span>
                             </div>
                             <div>
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 fw-semibold">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold" style="font-size: 0.82rem;">
                                     <?= $catTotalQty ?> Items
                                 </span>
                             </div>
@@ -257,7 +283,7 @@ ob_start();
                 </h2>
 
                 <div id="<?= $catId ?>" class="accordion-collapse collapse">
-                    <div class="accordion-body p-3 bg-light">
+                    <div class="accordion-body p-3" style="background: var(--erp-bg-light);">
                         
                         <!-- NESTED ITEM ACCORDION -->
                         <div id="itemAccordion_<?= $catId ?>">
@@ -282,19 +308,19 @@ ob_start();
                                     }
                                 }
                             ?>
-                                <div class="accordion-item item-accordion-card">
+                                <div class="accordion-item item-accordion-card shadow-sm">
                                     <h2 class="accordion-header">
                                         <button class="accordion-button item-accordion-btn collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $itemId ?>">
                                             <div class="d-flex justify-content-between align-items-center w-100 me-2">
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <i class="bi bi-box-seam text-secondary"></i>
-                                                    <span class="fw-semibold text-dark"><?= htmlspecialchars($itemName) ?></span>
+                                                    <i class="bi bi-box-seam text-secondary fs-6"></i>
+                                                    <span class="fw-bold text-dark" style="font-size: 0.92rem;"><?= htmlspecialchars($itemName) ?></span>
                                                 </div>
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <span class="badge bg-light text-dark border rounded-pill px-2">
+                                                    <span class="badge bg-light text-dark border rounded-pill px-2.5 py-1" style="font-size: 0.78rem;">
                                                         <?= $itemTotalQty ?> Total
                                                     </span>
-                                                    <span class="badge <?= $itemTotalRemaining > 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary' ?> rounded-pill px-2">
+                                                    <span class="badge <?= $itemTotalRemaining > 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary' ?> rounded-pill px-2.5 py-1" style="font-size: 0.78rem;">
                                                         <?= $itemTotalRemaining ?> Available
                                                     </span>
                                                 </div>
@@ -320,14 +346,14 @@ ob_start();
                                                                 <span><i class="bi bi-receipt text-secondary me-1"></i><strong>PO:</strong> <?= htmlspecialchars($meta['po_number']) ?></span>
                                                             <?php endif; ?>
                                                         </div>
-                                                        <span class="badge bg-white text-dark border">
+                                                        <span class="badge bg-white text-dark border" style="font-size: 0.75rem;">
                                                             <?= count($items) ?> Batch Record(s)
                                                         </span>
                                                     </div>
 
                                                     <!-- SUB-TABLE -->
                                                     <div class="table-responsive">
-                                                        <table class="table saas-subtable align-middle">
+                                                        <table class="table erp-subtable align-middle">
                                                             <thead>
                                                                 <tr>
                                                                     <th style="width: 50px;">#</th>
@@ -380,42 +406,42 @@ ob_start();
                                                                     }
                                                                 ?>
                                                                     <tr id="row-<?= $stockId ?>" class="unit-data-row" data-status="<?= $dynamicStatus ?>">
-                                                                        <td class="text-muted small"><?= $subSl++ ?></td>
+                                                                        <td class="text-muted"><?= $subSl++ ?></td>
                                                                         <td class="fw-semibold text-dark">
                                                                             <?php if ($row['stock_type'] === 'serial'): ?>
-                                                                                <span class="text-uppercase"><?= htmlspecialchars($row['serial_number']) ?></span>
+                                                                                <span class="text-uppercase font-monospace" style="font-size: 0.9rem;"><?= htmlspecialchars($row['serial_number']) ?></span>
                                                                             <?php else: ?>
-                                                                                <span class="text-muted italic">Non-Serialized (Bulk)</span>
+                                                                                <span class="text-muted fst-italic" style="font-size: 0.85rem;">Non-Serialized (Bulk)</span>
                                                                             <?php endif; ?>
                                                                         </td>
                                                                         <td class="text-center fw-semibold"><?= number_format($row['total_quantity']) ?></td>
                                                                         <td class="text-center text-danger fw-semibold"><?= number_format($row['dispatched_qty']) ?></td>
                                                                         <td class="text-center text-success fw-semibold"><?= number_format($remainingQty) ?></td>
-                                                                        <td class="text-end">₹<?= number_format((float)$row['amount'], 2) ?></td>
+                                                                        <td class="text-end fw-semibold">₹<?= number_format((float)$row['amount'], 2) ?></td>
                                                                         <td class="text-center">
                                                                             <?php if ($dynamicStatus === 'dispatched'): ?>
-                                                                                <a href="dispatch_report.php?stock_id=<?= $stockId ?>&dispatch_id=<?= $row['last_dispatch_id'] ?>" class="badge bg-danger text-decoration-none">
+                                                                                <a href="dispatch_report.php?stock_id=<?= $stockId ?>&dispatch_id=<?= $row['last_dispatch_id'] ?>" class="badge badge-erp bg-danger text-decoration-none">
                                                                                     <i class="bi bi-truck me-1"></i> Dispatched
                                                                                 </a>
                                                                             <?php elseif ($dynamicStatus === 'partial'): ?>
-                                                                                <a href="dispatch_report.php?stock_id=<?= $stockId ?>" class="badge bg-warning text-dark text-decoration-none">
+                                                                                <a href="dispatch_report.php?stock_id=<?= $stockId ?>" class="badge badge-erp bg-warning text-dark text-decoration-none">
                                                                                     Partially Dispatched (<?= $row['dispatched_qty'] ?>)
                                                                                 </a>
                                                                             <?php elseif ($dynamicStatus === 'disposed'): ?>
-                                                                                <span class="badge bg-dark"><i class="bi bi-trash3 me-1"></i> Scrapped</span>
+                                                                                <span class="badge badge-erp bg-dark"><i class="bi bi-trash3 me-1"></i> Scrapped</span>
                                                                             <?php elseif ($dynamicStatus === 'maintenance'): ?>
-                                                                                <span class="badge bg-warning text-dark"><i class="bi bi-tools me-1"></i> Repair</span>
+                                                                                <span class="badge badge-erp bg-warning text-dark"><i class="bi bi-tools me-1"></i> Repair</span>
                                                                             <?php else: ?>
-                                                                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Available</span>
+                                                                                <span class="badge badge-erp bg-success"><i class="bi bi-check-circle me-1"></i> Available</span>
                                                                             <?php endif; ?>
                                                                         </td>
                                                                         <td class="text-end pe-3">
                                                                             <div class="d-inline-flex gap-1">
-                                                                                <a href="edit_stock.php?id=<?= $stockId ?>" class="action-btn-saas" title="Edit Record">
+                                                                                <a href="edit_stock.php?id=<?= $stockId ?>" class="action-btn-erp" title="Edit Record">
                                                                                     <i class="bi bi-pencil-square"></i>
                                                                                 </a>
                                                                                 <?php if ($dynamicStatus === 'dispatched'): ?>
-                                                                                    <a href="#" class="action-btn-saas text-success" title="Move to E-Waste">
+                                                                                    <a href="#" class="action-btn-erp text-success" title="Move to E-Waste">
                                                                                         <i class="bi bi-recycle"></i>
                                                                                     </a>
                                                                                 <?php endif; ?>
@@ -440,9 +466,9 @@ ob_start();
             </div>
         <?php endforeach; ?>
     <?php else: ?>
-        <div class="saas-card p-4 text-center text-muted">
-            <i class="bi bi-inbox fs-3 d-block mb-1 opacity-50"></i>
-            <p class="mb-0 small fw-medium">No stock records found.</p>
+        <div class="card border p-4 text-center text-muted rounded-2">
+            <i class="bi bi-inbox fs-2 d-block mb-1 opacity-50"></i>
+            <p class="mb-0 fw-medium" style="font-size: 0.9rem;">No stock records found.</p>
         </div>
     <?php endif; ?>
 </div>

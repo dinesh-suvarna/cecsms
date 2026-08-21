@@ -110,298 +110,385 @@ ob_start();
 ?>
 
 <style>
+/* Enterprise UI Theme Tokens */
 :root {
-    --saas-border: #e2e8f0;
-    --saas-primary: #0d6efd;
-    --saas-text-muted: #64748b;
+    --erp-navy: #173f63;
+    --erp-navy-dark: #102f4a;
+    --erp-text: #263746;
+    --erp-muted: #71808f;
+    --erp-border: #dce3e9;
+    --erp-bg: #f5f7f9;
+    --erp-white: #ffffff;
+    --erp-shadow: 0 1px 3px rgba(20, 40, 60, .06);
 }
 
-/* Ensure body can hold full screen overlays correctly */
-#editModal {
-    z-index: 1056 !important;
+/* Page Layout Container */
+.erp-page-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
 }
 
-.saas-card {
+/* Header Styling */
+.inst-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 20px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--erp-border);
+}
+.inst-header-left { display: flex; align-items: center; gap: 14px; }
+.inst-header-icon {
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    background: #edf3f8; border: 1px solid #dce6ee; border-radius: 5px;
+    color: var(--erp-navy); font-size: 1.1rem;
+}
+.inst-header h3 { margin: 0; color: var(--erp-navy-dark); font-size: 1.18rem; font-weight: 650; }
+.inst-header p { margin: 3px 0 0; color: var(--erp-muted); font-size: .76rem; }
+
+/* Panels & Containers */
+.inst-panel {
     background: #ffffff;
-    border: 1px solid var(--saas-border);
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+    border: 1px solid var(--erp-border);
+    border-radius: 5px;
+    box-shadow: var(--erp-shadow);
 }
+.inst-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--erp-border);
+    background: #f5f7f9;
+}
+.inst-panel-title { color: var(--erp-navy-dark); font-size: .82rem; font-weight: 650; }
 
-.saas-toolbar {
+/* Toolbar */
+.erp-toolbar {
     background: #ffffff;
-    border: 1px solid var(--saas-border);
-    border-radius: 10px;
-    padding: 6px 12px;
+    border: 1px solid var(--erp-border);
+    border-radius: 5px;
+    padding: 8px 12px;
+    box-shadow: var(--erp-shadow);
 }
 
+/* Buttons */
+.btn-erp-primary {
+    height: 34px; background: var(--erp-navy); border: 1px solid var(--erp-navy);
+    color: #fff; border-radius: 4px !important; font-size: .76rem; font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+}
+.btn-erp-primary:hover { background: var(--erp-navy-dark); color: #fff; }
+
+.btn-erp-cancel {
+    height: 34px; border: 1px solid #c8d2db; background: #fff;
+    color: #596b7a; border-radius: 4px !important; font-size: .76rem; font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+}
+.btn-erp-cancel:hover { background: #f5f7f9; color: #334451; }
+
+/* Accordion Stack */
 .cat-stack-card {
-    border: 1px solid var(--saas-border) !important;
-    border-radius: 12px !important;
+    border: 1px solid var(--erp-border) !important;
+    border-radius: 5px !important;
     margin-bottom: 0.75rem;
     background: #ffffff;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    box-shadow: var(--erp-shadow);
+    overflow: hidden;
 }
 
 .cat-header-btn {
     background-color: #ffffff !important;
     border: none;
     padding: 0.85rem 1.15rem;
+    box-shadow: none !important;
 }
 .cat-header-btn:not(.collapsed) {
-    background-color: #f8fafc !important;
-    border-bottom: 1px solid var(--saas-border);
+    background-color: #f5f7f9 !important;
+    border-bottom: 1px solid var(--erp-border);
 }
 
 .cat-icon-box {
     width: 32px;
     height: 32px;
-    border-radius: 8px;
-    background: #e0e7ff;
-    color: #4338ca;
+    border-radius: 4px;
+    background: #edf3f8;
+    border: 1px solid #dce6ee;
+    color: var(--erp-navy);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-size: 0.9rem;
 }
 
-.saas-table {
-    margin-bottom: 0;
-    font-size: 0.83rem;
+/* Data Tables */
+.table-erp { font-size: .78rem; margin: 0; }
+.table-erp thead th {
+    background: #f5f7f9; color: #536575; font-size: .65rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--erp-border);
+    padding: 9px 16px;
 }
-.saas-table thead th {
-    background-color: #f8fafc;
-    color: var(--saas-text-muted);
-    font-size: 0.68rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    border-bottom: 1px solid var(--saas-border);
-    padding: 0.55rem 1rem;
-}
-.saas-table td {
-    padding: 0.65rem 1rem;
-    vertical-align: middle;
-    border-bottom: 1px solid #f1f5f9;
-}
-.saas-table tbody tr:last-child td { border-bottom: none; }
+.table-erp tbody td { padding: 9px 16px; border-bottom: 1px solid var(--erp-border); vertical-align: middle; }
+.table-erp tbody tr:last-child td { border-bottom: none; }
+
+/* Badges & Pills */
+.badge-erp { font-size: .65rem; font-weight: 600; padding: 3px 8px; border-radius: 4px; display: inline-block; }
+.badge-erp-neutral { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.badge-erp-success { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+.badge-erp-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
 
 .type-pill {
     font-size: 0.65rem;
     font-weight: 700;
     padding: 2px 8px;
-    border-radius: 12px;
+    border-radius: 4px;
     text-transform: uppercase;
 }
 .pill-serial { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 .pill-nonserial { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 
-.action-btn-saas {
+/* Action Buttons */
+.action-btn-erp {
     width: 28px;
     height: 28px;
-    border-radius: 6px;
+    border-radius: 4px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: #64748b;
-    border: 1px solid transparent;
-    background: transparent;
+    border: 1px solid var(--erp-border);
+    background: #ffffff;
     transition: all 0.15s ease;
 }
-.action-btn-saas:hover {
-    background: #f1f5f9;
-    color: #0f172a;
-    border-color: #cbd5e1;
+.action-btn-erp:hover {
+    background: #f5f7f9;
+    color: var(--erp-navy-dark);
 }
-.action-btn-saas.danger:hover {
+.action-btn-erp.danger:hover {
     background: #fef2f2;
     color: #dc2626;
     border-color: #fecaca;
 }
+
+#editModal { z-index: 1056 !important; }
+
+/* Dark Mode Overrides */
+[data-bs-theme="dark"] {
+    --erp-bg: #101a24;
+    --erp-white: #172534;
+    --erp-text: #edf3f7;
+    --erp-muted: #9aabb9;
+    --erp-border: #2d3e4e;
+    --erp-navy: #8eafc9;
+    --erp-navy-dark: #dce8f0;
+}
+[data-bs-theme="dark"] .inst-header h3 { color: #edf3f7; }
+[data-bs-theme="dark"] .inst-header-icon { background: #203445; border-color: #33495a; color: #b8d0e2; }
+[data-bs-theme="dark"] .inst-panel,
+[data-bs-theme="dark"] .erp-toolbar,
+[data-bs-theme="dark"] .cat-stack-card { background: #142230 !important; }
+[data-bs-theme="dark"] .inst-panel-header,
+[data-bs-theme="dark"] .cat-header-btn:not(.collapsed) { background: #101a24 !important; border-color: var(--erp-border); }
+[data-bs-theme="dark"] .cat-header-btn { background-color: #142230 !important; }
+[data-bs-theme="dark"] .table-erp thead th { background: #101a24; border-color: var(--erp-border); color: var(--erp-muted); }
+[data-bs-theme="dark"] .table-erp tbody td { border-color: var(--erp-border); color: var(--erp-text); }
+[data-bs-theme="dark"] .btn-erp-cancel,
+[data-bs-theme="dark"] .action-btn-erp { background: #172534; border-color: var(--erp-border); color: #b8c6d1; }
+[data-bs-theme="dark"] .modal-content { background: #142230; border-color: var(--erp-border); color: #edf3f7; }
 </style>
 
-<!-- PAGE HEADER -->
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-    <div>
-        <h4 class="fw-bold m-0 text-dark">
-            <i class="<?= $page_icon ?> text-primary me-2"></i><?= $page_title ?>
-        </h4>
-        <p class="text-muted small m-0">Master catalog of registerable assets, grouped by category.</p>
-    </div>
-    <button class="btn btn-primary btn-sm px-3 py-2 rounded-2 shadow-sm fw-semibold" style="background-color: var(--saas-primary); border: none;" type="button" data-bs-toggle="collapse" data-bs-target="#addAssetCollapse">
-        <i class="bi bi-plus-lg me-1"></i> Add Asset Category
-    </button>
-</div>
+<div class="erp-page-container">
 
-<!-- COLLAPSIBLE ADD FORM -->
-<div class="collapse mb-3" id="addAssetCollapse">
-    <div class="saas-card p-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="fw-bold m-0 text-dark">
-                <i class="bi bi-plus-circle text-primary me-1.5"></i> Register New Asset Type
-            </h6>
-            <button type="button" class="btn-close small" data-bs-toggle="collapse" data-bs-target="#addAssetCollapse"></button>
+    <!-- PAGE HEADER -->
+    <div class="inst-header">
+        <div class="inst-header-left">
+            <div class="inst-header-icon">
+                <i class="bi <?= $page_icon ?>"></i>
+            </div>
+            <div>
+                <h3><?= htmlspecialchars($page_title) ?></h3>
+                <p>Master catalog of registerable assets, grouped by category.</p>
+            </div>
         </div>
-        <form method="POST" action="">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold text-secondary">Tracking Type</label>
-                    <select name="stock_type" class="form-select form-select-sm">
-                        <option value="serial">Serialized (Track by Serial No.)</option>
-                        <option value="non_serial">Non-Serialized (Bulk Quantity)</option>
-                    </select>
+        <button class="btn btn-erp-primary px-3" type="button" data-bs-toggle="collapse" data-bs-target="#addAssetCollapse">
+            <i class="bi bi-plus-lg me-1.5"></i> Add Asset Category
+        </button>
+    </div>
+
+    <!-- COLLAPSIBLE ADD FORM -->
+    <div class="collapse mb-4" id="addAssetCollapse">
+        <div class="inst-panel p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                <div class="inst-panel-title">
+                    <i class="bi bi-plus-circle me-1.5 text-primary"></i> Register New Asset Type
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label small fw-semibold text-secondary">Category Group</label>
-                    <select name="category" class="form-select form-select-sm">
-                        <option>Computer</option>
-                        <option>Accessory</option>
-                        <option>Component</option>
-                        <option>Networking</option>
-                    </select>
+                <button type="button" class="btn-close small" data-bs-toggle="collapse" data-bs-target="#addAssetCollapse"></button>
+            </div>
+            <form method="POST" action="">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-secondary">Tracking Type</label>
+                        <select name="stock_type" class="form-select form-select-sm">
+                            <option value="serial">Serialized (Track by Serial No.)</option>
+                            <option value="non_serial">Non-Serialized (Bulk Quantity)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-secondary">Category Group</label>
+                        <select name="category" class="form-select form-select-sm">
+                            <option>Computer</option>
+                            <option>Accessory</option>
+                            <option>Component</option>
+                            <option>Networking</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold text-secondary">Item Description / Name <span class="text-danger">*</span></label>
+                        <input type="text" name="item_name" class="form-control form-control-sm" placeholder="e.g. Dell Latitude 3420" required>
+                    </div>
                 </div>
-                <div class="col-md-5">
-                    <label class="form-label small fw-semibold text-secondary">Item Description / Name <span class="text-danger">*</span></label>
-                    <input type="text" name="item_name" class="form-control form-control-sm" placeholder="e.g. Dell Latitude 3420" required>
+
+                <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+                    <button type="button" class="btn btn-erp-cancel px-3" data-bs-toggle="collapse" data-bs-target="#addAssetCollapse">Cancel</button>
+                    <button type="submit" name="submit" class="btn btn-erp-primary px-3">
+                        <i class="bi bi-check-lg me-1"></i> Save Asset
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SEARCH TOOLBAR -->
+    <div class="erp-toolbar mb-3">
+        <div class="row g-2 align-items-center">
+            <div class="col flex-grow-1">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-transparent border-0 pe-1"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="assetSearch" class="form-control border-0 bg-transparent shadow-none" placeholder="Filter assets by name, category, or tracking type...">
                 </div>
             </div>
-
-            <div class="d-flex justify-content-end gap-2 mt-3">
-                <button type="button" class="btn btn-sm btn-light border rounded-2 px-3" data-bs-toggle="collapse" data-bs-target="#addAssetCollapse">Cancel</button>
-                <button type="submit" name="submit" class="btn btn-sm btn-primary rounded-2 px-3" style="background-color: var(--saas-primary); border: none;">
-                    <i class="bi bi-check-lg me-1"></i> Save Asset
+            <div class="col-auto d-flex gap-1">
+                <button id="resetSearch" class="btn btn-erp-cancel px-2.5" title="Clear Search">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <button id="collapseAllBtn" class="btn btn-erp-cancel px-3" title="Collapse All">
+                    <i class="bi bi-arrows-collapse me-1"></i> Collapse All
                 </button>
             </div>
-        </form>
-    </div>
-</div>
-
-<!-- SEARCH TOOLBAR -->
-<div class="saas-toolbar mb-3">
-    <div class="row g-2 align-items-center">
-        <div class="col flex-grow-1">
-            <div class="input-group input-group-sm">
-                <span class="input-group-text bg-transparent border-0 pe-1"><i class="bi bi-search text-muted"></i></span>
-                <input type="text" id="assetSearch" class="form-control border-0 bg-transparent shadow-none" placeholder="Filter assets by name, category, or tracking type...">
-            </div>
-        </div>
-        <div class="col-auto d-flex gap-1">
-            <button id="resetSearch" class="btn btn-sm btn-light border text-secondary px-2.5" title="Clear Search">
-                <i class="bi bi-x-lg"></i>
-            </button>
-            <button id="collapseAllBtn" class="btn btn-sm btn-light border text-secondary px-3" title="Collapse All">
-                <i class="bi bi-arrows-collapse me-1"></i> Collapse All
-            </button>
         </div>
     </div>
-</div>
 
-<!-- ACCORDION STACK -->
-<div id="categoryAccordion">
-    <?php if (!empty($categories)): ?>
-        <?php foreach ($categories as $catName => $catItems): 
-            $catId = "cat_" . md5($catName);
-        ?>
-            <div class="accordion-item cat-stack-card">
-                <h2 class="accordion-header">
-                    <button class="accordion-button cat-header-btn collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $catId ?>">
-                        <div class="d-flex justify-content-between align-items-center w-100 me-2">
-                            <div class="d-flex align-items-center gap-2.5">
-                                <div class="cat-icon-box">
-                                    <i class="bi bi-folder2-open"></i>
+    <!-- ACCORDION STACK -->
+    <div id="categoryAccordion">
+        <?php if (!empty($categories)): ?>
+            <?php foreach ($categories as $catName => $catItems): 
+                $catId = "cat_" . md5($catName);
+            ?>
+                <div class="accordion-item cat-stack-card">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button cat-header-btn collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $catId ?>">
+                            <div class="d-flex justify-content-between align-items-center w-100 me-2">
+                                <div class="d-flex align-items-center gap-2.5">
+                                    <div class="cat-icon-box">
+                                        <i class="bi bi-folder2-open"></i>
+                                    </div>
+                                    <span class="fw-bold text-dark fs-6"><?= htmlspecialchars($catName) ?></span>
                                 </div>
-                                <span class="fw-bold text-dark fs-6"><?= htmlspecialchars($catName) ?></span>
+                                <span class="badge-erp badge-erp-neutral">
+                                    <?= count($catItems) ?> Items
+                                </span>
                             </div>
-                            <span class="badge rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.72rem; background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe;">
-                                <?= count($catItems) ?> Items
-                            </span>
-                        </div>
-                    </button>
-                </h2>
-                <div id="<?= $catId ?>" class="accordion-collapse collapse" data-bs-parent="#categoryAccordion" data-parent-id="#categoryAccordion">
-                    <div class="accordion-body p-0 bg-white border-top">
-                        <div class="table-responsive">
-                            <table class="table saas-table align-middle text-nowrap">
-                                <thead>
-                                    <tr>
-                                        <th>Asset Name</th>
-                                        <th>Tracking Type</th>
-                                        <th class="text-center">Total In</th>
-                                        <th class="text-center">Dispatched</th>
-                                        <th class="text-center">Available</th>
-                                        <th class="text-end pe-3">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($catItems as $row): 
-                                        $available = $row['total_purchased'] - $row['total_dispatched'];
-                                        $isSerial = ($row['stock_type'] == 'serial');
-                                    ?>
+                        </button>
+                    </h2>
+                    <div id="<?= $catId ?>" class="accordion-collapse collapse" data-bs-parent="#categoryAccordion" data-parent-id="#categoryAccordion">
+                        <div class="accordion-body p-0 bg-white border-top">
+                            <div class="table-responsive">
+                                <table class="table table-erp align-middle text-nowrap">
+                                    <thead>
                                         <tr>
-                                            <td>
-                                                <div class="fw-semibold text-dark me-2 d-inline-block"><?= htmlspecialchars($row['item_name']) ?></div>
-                                                <?php if($row['stock_exists'] > 0): ?>
-                                                    <i class="bi bi-lock-fill text-muted small" title="Stock records exist. Type locked."></i>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <span class="type-pill <?= $isSerial ? 'pill-serial' : 'pill-nonserial' ?>">
-                                                    <?= $isSerial ? 'Serialized' : 'Non-Serialized' ?>
-                                                </span>
-                                            </td>
-                                            <td class="text-center fw-semibold text-dark"><?= number_format($row['total_purchased']) ?></td>
-                                            <td class="text-center text-danger fw-semibold"><?= number_format($row['total_dispatched']) ?></td>
-                                            <td class="text-center">
-                                                <span class="badge rounded-pill <?= ($available > 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger') ?> px-2.5 py-1">
-                                                    <?= number_format($available) ?>
-                                                </span>
-                                            </td>
-                                            <td class="text-end pe-3">
-                                                <div class="d-inline-flex gap-1">
-                                                    <button type="button" class="action-btn-saas" title="Edit Asset"
-                                                            onclick="editItem(<?= $row['id'] ?>,'<?= addslashes($row['item_name']) ?>','<?= htmlspecialchars($row['category'], ENT_QUOTES) ?>','<?= $row['stock_type'] ?>', <?= $row['stock_exists'] ?>)">
-                                                        <i class="bi bi-pencil-square"></i>
-                                                    </button>
-                                                    <button type="button" class="action-btn-saas danger delete-btn" data-id="<?= $row['id'] ?>" title="Delete Asset">
-                                                        <i class="bi bi-trash3"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
+                                            <th>Asset Name</th>
+                                            <th>Tracking Type</th>
+                                            <th class="text-center">Total In</th>
+                                            <th class="text-center">Dispatched</th>
+                                            <th class="text-center">Available</th>
+                                            <th class="text-end pe-3">Actions</th>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($catItems as $row): 
+                                            $available = $row['total_purchased'] - $row['total_dispatched'];
+                                            $isSerial = ($row['stock_type'] == 'serial');
+                                        ?>
+                                            <tr>
+                                                <td>
+                                                    <div class="fw-semibold text-dark me-2 d-inline-block"><?= htmlspecialchars($row['item_name']) ?></div>
+                                                    <?php if($row['stock_exists'] > 0): ?>
+                                                        <i class="bi bi-lock-fill text-muted small" title="Stock records exist. Type locked."></i>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <span class="type-pill <?= $isSerial ? 'pill-serial' : 'pill-nonserial' ?>">
+                                                        <?= $isSerial ? 'Serialized' : 'Non-Serialized' ?>
+                                                    </span>
+                                                </td>
+                                                <td class="text-center fw-semibold text-dark"><?= number_format($row['total_purchased']) ?></td>
+                                                <td class="text-center text-danger fw-semibold"><?= number_format($row['total_dispatched']) ?></td>
+                                                <td class="text-center">
+                                                    <span class="badge-erp <?= ($available > 0 ? 'badge-erp-success' : 'badge-erp-danger') ?>">
+                                                        <?= number_format($available) ?>
+                                                    </span>
+                                                </td>
+                                                <td class="text-end pe-3">
+                                                    <div class="d-inline-flex gap-1">
+                                                        <button type="button" class="action-btn-erp" title="Edit Asset"
+                                                                onclick="editItem(<?= $row['id'] ?>,'<?= addslashes($row['item_name']) ?>','<?= htmlspecialchars($row['category'], ENT_QUOTES) ?>','<?= $row['stock_type'] ?>', <?= $row['stock_exists'] ?>)">
+                                                            <i class="bi bi-pencil-square"></i>
+                                                        </button>
+                                                        <button type="button" class="action-btn-erp danger delete-btn" data-id="<?= $row['id'] ?>" title="Delete Asset">
+                                                            <i class="bi bi-trash3"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <div class="inst-panel p-4 text-center text-muted">
+                <i class="bi bi-inbox fs-3 d-block mb-1 opacity-50"></i>
+                <p class="mb-0 small fw-medium">No asset records registered.</p>
             </div>
-        <?php endforeach; ?>
-    <?php else: ?>
-        <div class="saas-card p-4 text-center text-muted">
-            <i class="bi bi-inbox fs-3 d-block mb-1 opacity-50"></i>
-            <p class="mb-0 small fw-medium">No asset records registered.</p>
-        </div>
-    <?php endif; ?>
+        <?php endif; ?>
+    </div>
+
 </div>
 
 <!-- EDIT MODAL STRUCTURE -->
 <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-content rounded-2 border shadow-sm">
             <form method="POST" id="editForm">
-                <div class="modal-header border-0 p-4 pb-0">
-                    <h5 class="fw-bold m-0" id="editModalLabel"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Item Details</h5>
+                <div class="modal-header border-bottom p-3">
+                    <h6 class="fw-bold m-0" id="editModalLabel"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Item Details</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-4">
+                <div class="modal-body p-3">
                     <input type="hidden" name="id" id="eid">
                     <div class="mb-3">
                         <label class="small fw-semibold text-secondary">Item Name</label>
-                        <input type="text" name="item_name" id="ename" class="form-control form-control-sm rounded-2" required>
+                        <input type="text" name="item_name" id="ename" class="form-control form-control-sm rounded-1" required>
                     </div>
                     <div class="mb-3">
                         <label class="small fw-semibold text-secondary">Category</label>
-                        <select name="category" id="ecat" class="form-select form-select-sm rounded-2">
+                        <select name="category" id="ecat" class="form-select form-select-sm rounded-1">
                             <option>Computer</option>
                             <option>Accessory</option>
                             <option>Component</option>
@@ -410,16 +497,16 @@ ob_start();
                     </div>
                     <div class="mb-3">
                         <label class="small fw-semibold text-secondary">Stock Tracking Type</label>
-                        <select name="stock_type" id="etype" class="form-select form-select-sm rounded-2">
+                        <select name="stock_type" id="etype" class="form-select form-select-sm rounded-1">
                             <option value="serial">Serialized (Track by Serial No.)</option>
                             <option value="non_serial">Non-Serialized (Bulk Quantity)</option>
                         </select>
                         <small id="typeWarning" class="text-muted" style="font-size: 11px;"></small>
                     </div>
                 </div>
-                <div class="modal-footer border-0 p-4 pt-0">
-                    <button type="button" class="btn btn-sm btn-light border rounded-2 px-3" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" name="update" class="btn btn-sm btn-primary rounded-2 px-3" style="background-color: var(--saas-primary); border: none;">Update Item</button>
+                <div class="modal-footer border-top p-2 px-3">
+                    <button type="button" class="btn btn-erp-cancel px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="update" class="btn btn-erp-primary px-3">Update Item</button>
                 </div>
             </form>
         </div>
@@ -462,7 +549,7 @@ $(document).ready(function() {
                 }
             });
             $('.accordion-collapse').removeClass('show');
-            $('.cat-stack-card, .saas-table tbody tr').css('display', '');
+            $('.cat-stack-card, .table-erp tbody tr').css('display', '');
             return; 
         }
 
@@ -474,7 +561,7 @@ $(document).ready(function() {
             let isCatMatch = catName.includes(query);
             let matchingRowsCount = 0;
 
-            $catCard.find('.saas-table tbody tr').each(function() {
+            $catCard.find('.table-erp tbody tr').each(function() {
                 let $row = $(this);
                 let itemName = $row.find('td:nth-child(1)').text().trim().toLowerCase();
                 let trackingType = $row.find('td:nth-child(2)').text().trim().toLowerCase();

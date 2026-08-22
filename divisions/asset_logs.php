@@ -22,7 +22,6 @@ function getAssetIcon($itemName) {
 }
 
 /* ================= SQL QUERY ================= */
-// Enhanced to handle "Main Stock" transitions
 $query = "
     SELECT 
         al.id as log_id,
@@ -56,57 +55,116 @@ ob_start();
 ?>
 
 <style>
-    /* Custom Badge Colors */
-    .bg-warning-subtle { background-color: #fef3c7 !important; color: #92400e !important; }
-    .bg-info-subtle { background-color: #e0f2fe !important; color: #0369a1 !important; }
-    .bg-danger-subtle { background-color: #fee2e2 !important; color: #991b1b !important; }
-    .bg-success-subtle { background-color: #dcfce7 !important; color: #15803d !important; }
+:root {
+    --erp-navy: #123b63;
+    --erp-navy-dark: #0b2942;
+    --erp-blue: #2b628f;
+    --erp-green: #3f755e;
+    --erp-amber: #9a6b22;
+    --erp-red: #9a4a4a;
+    --erp-info: #426f8f;
+    --erp-bg: #f3f5f7;
+    --erp-panel: #ffffff;
+    --erp-panel-soft: #f7f9fb;
+    --erp-border: #d9e0e7;
+    --erp-border-dark: #c6d0da;
+    --erp-text: #20384d;
+    --erp-text-soft: #526679;
+    --erp-muted: #718191;
+    --erp-shadow: 0 1px 3px rgba(20,45,70,.05);
+    --erp-shadow-hover: 0 4px 12px rgba(20,45,70,.09);
+}
 
-    /* Highlight Rejected Rows */
-    .table-row-rejected {
-        background-color: rgba(254, 226, 226, 0.3) !important; /* Very light red tint */
-        transition: background-color 0.3s ease;
-    }
-    .table-row-rejected:hover {
-        background-color: rgba(254, 226, 226, 0.6) !important;
-    }
-    .rejection-text {
-        color: #dc3545;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .table thead th {
-        font-size: 0.65rem;
-        letter-spacing: 0.05em;
-        font-weight: 700;
-        background-color: #f8fafc;
-    }
+.container-fluid {
+    max-width: 1440px;
+    padding: 24px 28px 36px;
+}
+
+.dash-card {
+    border: 1px solid var(--erp-border) !important;
+    border-radius: 6px !important;
+    background: var(--erp-panel);
+    transition: all .18s ease-in-out;
+    box-shadow: var(--erp-shadow) !important;
+}
+
+.extra-small { font-size: .72rem; }
+
+.table thead th {
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    color: var(--erp-text-soft);
+    background-color: var(--erp-panel-soft) !important;
+    border-bottom: 1px solid var(--erp-border) !important;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.table tbody td {
+    border-bottom: 1px solid #edf0f3;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.hover-row { transition: background-color 0.15s ease; }
+.hover-row:hover td { background-color: #f5f8fa !important; }
+
+/* Custom Badge System */
+.bg-amber-subtle   { background-color: #fef3c7 !important; color: #92400e !important; }
+.bg-info-subtle    { background-color: #e0f2fe !important; color: #0369a1 !important; }
+.bg-danger-subtle  { background-color: #fee2e2 !important; color: #991b1b !important; }
+.bg-success-subtle { background-color: #dcfce7 !important; color: #15803d !important; }
+.bg-neutral-subtle { background-color: #f1f5f9 !important; color: #475569 !important; }
+
+.table-row-rejected {
+    background-color: rgba(254, 226, 226, 0.25) !important;
+}
+.table-row-rejected:hover td {
+    background-color: rgba(254, 226, 226, 0.45) !important;
+}
+
+.icon-box {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background: #edf3f8;
+    color: var(--erp-blue);
+    border: 1px solid rgba(18,59,99,.08);
+}
 </style>
 
-<div class="container-fluid py-4">
-    <div class="mb-4 d-flex justify-content-between align-items-center">
+<div class="container-fluid py-0">
+    <!-- Header Section -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between pb-3 mb-4 border-bottom gap-3">
         <div>
-            <h4 class="fw-bold mb-1">Asset Audit Trail</h4>
-            <p class="text-muted small mb-0">Historical record of all unit asset movements.</p>
+            <h4 class="fw-bold mb-1" style="color: var(--erp-navy-dark); font-size: 1.25rem;">
+                Asset Audit Trail
+            </h4>
+            <p class="text-muted small mb-0">Historical log of all unit asset assignments and lifecycle events.</p>
         </div>
-        <div class="badge bg-white border text-dark px-3 py-2 rounded-3 shadow-sm">
-            <i class="bi bi-filter me-2 text-primary"></i>Showing Latest Logs
+        <div>
+            <span class="badge bg-white border text-secondary px-3 py-2 fw-semibold extra-small shadow-sm">
+                <i class="bi bi-clock-history me-1 text-primary"></i> Live Activity Feed
+            </span>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <!-- Audit Log Table Card -->
+    <div class="card dash-card overflow-hidden">
         <div class="table-responsive">
             <table class="table align-middle mb-0">
                 <thead>
                     <tr>
-                        <th class="ps-4 py-3 text-muted text-uppercase">Timestamp</th>
-                        <th class="py-3 text-muted text-uppercase">Asset</th>
-                        <th class="py-3 text-muted text-uppercase">Unit / Lab</th>
-                        <th class="py-3 text-muted text-uppercase">Action</th>
-                        <th class="py-3 text-muted text-uppercase">By User</th>
-                        <th class="py-3 text-muted text-uppercase">Remarks</th>
+                        <th class="ps-4 py-3 text-uppercase">Timestamp</th>
+                        <th class="py-3 text-uppercase">Asset Details</th>
+                        <th class="py-3 text-uppercase">Unit / Laboratory</th>
+                        <th class="py-3 text-uppercase">Action Type</th>
+                        <th class="py-3 text-uppercase">Executed By</th>
+                        <th class="py-3 text-uppercase">Remarks & Audit Notes</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -115,74 +173,75 @@ ob_start();
                             $status = $row['action_type'];
                             $notes = $row['notes'] ?? '';
                             
-                            // 1. Detect Rejection/Denial Logic
                             $is_rejected = (stripos($notes, 'Rejected') !== false || stripos($notes, 'Deny') !== false);
                             
                             if ($is_rejected) {
-                                $badge_class = 'bg-danger-subtle text-danger-emphasis';
+                                $badge_class = 'bg-danger-subtle';
                                 $status_label = "REJECTED";
                                 $row_class = "table-row-rejected";
                             } else {
-                                $row_class = "";
+                                $row_class = "hover-row";
                                 $status_label = strtoupper(str_replace('_', ' ', $status));
                                 $badge_class = [
-                                    'return_requested' => 'bg-warning-subtle text-warning-emphasis',
-                                    'repair_requested' => 'bg-info-subtle text-info-emphasis',
-                                    'dispose_requested' => 'bg-danger-subtle text-danger-emphasis',
-                                    'completed'         => 'bg-success-subtle text-success-emphasis'
-                                ][$status] ?? 'bg-secondary-subtle text-secondary';
+                                    'return_requested' => 'bg-amber-subtle',
+                                    'repair_requested' => 'bg-info-subtle',
+                                    'dispose_requested' => 'bg-danger-subtle',
+                                    'completed'         => 'bg-success-subtle'
+                                ][$status] ?? 'bg-neutral-subtle';
                             }
                         ?>
                         <tr class="<?= $row_class ?>">
-                            <td class="ps-4 small">
-                                <div class="fw-bold"><?= date('d M, Y', strtotime($row['created_at'])) ?></div>
-                                <div class="text-muted opacity-75" style="font-size: 0.7rem;"><?= date('h:i A', strtotime($row['created_at'])) ?></div>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark extra-small"><?= date('d M, Y', strtotime($row['created_at'])) ?></div>
+                                <div class="text-muted extra-small" style="font-size: 0.68rem;"><?= date('h:i A', strtotime($row['created_at'])) ?></div>
                             </td>
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <div class="p-2 bg-light rounded-3 me-2 border shadow-sm" style="width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;">
-                                        <i class="bi <?= getAssetIcon($row['item_name']) ?> text-success"></i>
+                                    <div class="icon-box me-2">
+                                        <i class="bi <?= getAssetIcon($row['item_name']) ?>"></i>
                                     </div>
                                     <div>
-                                        <div class="fw-bold small"><?= htmlspecialchars($row['item_name']) ?></div>
-                                        <div class="text-primary fw-bold" style="font-size: 0.65rem;">
+                                        <div class="fw-bold text-dark extra-small"><?= htmlspecialchars($row['item_name']) ?></div>
+                                        <div class="fw-bold extra-small" style="color: var(--erp-blue); font-size: 0.65rem;">
                                             SN: <?= htmlspecialchars($row['serial_number'] ?? 'N/A') ?>
                                         </div>
                                     </div>
                                 </div>
                             </td>
                             <td>
-                                <div class="small fw-semibold text-dark">
+                                <div class="extra-small fw-bold text-dark">
                                     <?= htmlspecialchars($row['unit_name']) ?>
                                 </div>
-                                <div class="extra-small text-muted text-uppercase fw-bold" style="font-size: 0.6rem;">
+                                <div class="extra-small text-muted text-uppercase fw-bold" style="font-size: 0.62rem;">
                                     ID: <?= htmlspecialchars($row['display_tag']) ?>
                                 </div>
                             </td>
                             <td>
-                                <span class="badge rounded-pill <?= $badge_class ?>" style="font-size: 0.65rem; font-weight: 700; padding: 0.4em 0.8em;">
+                                <span class="badge rounded-pill <?= $badge_class ?>" style="font-size: 0.63rem; font-weight: 700; padding: 0.35em 0.75em;">
                                     <?= $status_label ?>
                                 </span>
                             </td>
-                            <td class="small fw-medium">
-                                <i class="bi bi-person-circle me-1 opacity-50"></i>
-                                <?= htmlspecialchars($row['staff_name'] ?: 'System') ?>
+                            <td>
+                                <span class="extra-small fw-semibold text-dark">
+                                    <i class="bi bi-person me-1 text-muted"></i>
+                                    <?= htmlspecialchars($row['staff_name'] ?: 'System') ?>
+                                </span>
                             </td>
-                            <td class="small">
+                            <td>
                                 <?php if ($is_rejected): ?>
-                                    <span class="rejection-text">
+                                    <span class="text-danger extra-small fw-semibold d-flex align-items-center gap-1">
                                         <i class="bi bi-x-circle-fill"></i>
                                         <?= htmlspecialchars($notes) ?>
                                     </span>
                                 <?php else: ?>
-                                    <span class="text-muted italic"><?= htmlspecialchars($notes ?: '--') ?></span>
+                                    <span class="text-muted extra-small"><?= htmlspecialchars($notes ?: '--') ?></span>
                                 <?php endif; ?>
                             </td>
                         </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">No activity logs found.</td>
+                            <td colspan="6" class="text-center py-5 text-muted extra-small">No asset activity logs recorded.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

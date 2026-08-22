@@ -468,7 +468,7 @@ ob_start();
                                 <span class="fw-semibold text-dark fs-6"><?= htmlspecialchars($inst) ?></span>
                             </div>
                             <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-semibold" style="font-size: 0.7rem;">
-                                <?= $instDivCounts[$row['inst_id']] ?? 0 ?> Depts
+                                <?= $instDivCounts[$row['inst_id']] ?? 0 ?> Departments
                             </span>
                         </div>
                     </button>
@@ -494,7 +494,7 @@ ob_start();
                                 <div class="dept-icon-box">
                                     <i class="bi bi-grid-1x2"></i>
                                 </div>
-                                <span class="fw-semibold text-dark" style="font-size: 0.85rem;">
+                                <span class="fw-semibold text-dark" style="font-size: 0.875rem;">
                                     <?= htmlspecialchars($div) ?>
                                 </span>
                             </div>

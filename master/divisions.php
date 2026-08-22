@@ -221,14 +221,14 @@ ob_start();
 
 /* ACCORDION ERP STYLE */
 .accordion-item { border: 0; border-bottom: 1px solid var(--erp-border) !important; }
-.accordion-button { background: #f7f9fa; color: var(--erp-navy-dark); font-size: .85rem; font-weight: 650; padding: 12px 18px; }
+.accordion-button { background: #f7f9fa; color: var(--erp-navy-dark); font-size: 1rem !important; font-weight: 650; padding: 12px 18px; }
 .accordion-button:not(.collapsed) { background: #edf3f8; color: var(--erp-navy); box-shadow: none; }
 
 /* TABLES */
 .inst-table { width: 100%; margin: 0; border-collapse: separate; border-spacing: 0; }
 .inst-table thead th { background: #f7f9fa; color: #667786; border-bottom: 1px solid var(--erp-border); padding: 11px 14px; font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .045em; }
-.inst-table tbody td { padding: 11px 14px; color: var(--erp-text); border-bottom: 1px solid #edf1f4; font-size: .78rem; vertical-align: middle; }
-.inst-table tbody tr:hover { background: #f9fbfc; }
+.inst-table tbody td { padding: 11px 14px; color: var(--erp-text); border-bottom: 1px solid #edf1f4; font-size: 0.875rem; vertical-align: middle; }
+.inst-table tbody tr:hover { background: #afd0e0; }
 
 /* BADGES & STATUS */
 .inst-status { display: inline-flex; align-items: center; gap: 6px; font-size: .68rem; font-weight: 650; }

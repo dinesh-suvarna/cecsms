@@ -211,7 +211,7 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
 <body>
 
     <nav id="sidebar">
-        <a href="/cecsms/index.php" class="sidebar-brand">
+        <a href="/cecsms/vendors/vendor_dashboard.php" class="sidebar-brand">
             <div class="d-flex align-items-center justify-content-center rounded-3 bg-primary text-white shadow-sm" style="width: 38px; height: 38px;">
                 <i class="bi bi-person-vcard-fill fs-5"></i>
             </div>

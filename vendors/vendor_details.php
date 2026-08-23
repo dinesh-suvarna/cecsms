@@ -62,7 +62,7 @@ function getCategoryData(mysqli $conn, string $category, string $role, int $divi
     // 2. Fetch Transaction History per Vendor
     foreach ($vendors as $vendor) {
         $vendor_id = $vendor['id'];
-        $stmt = null; // Guard: prevents IDE uninitialized variable warning
+        $stmt = null; 
 
         if ($category === 'Computer') {
             if ($role === 'SuperAdmin' || $division_id === 0) {
@@ -166,7 +166,6 @@ function getCategoryData(mysqli $conn, string $category, string $role, int $divi
             }
         }
 
-        // Safety check to ensure $stmt was initialized before execution
         if (!$stmt) {
             continue;
         }
@@ -193,7 +192,6 @@ function getCategoryData(mysqli $conn, string $category, string $role, int $divi
     return $results;
 }
 
-// Aligned array keys with the exact database string 'Electricals'
 $categories = [
     'Computer' => getCategoryData($conn, 'Computer', $role, $division_id),
     'Furniture' => getCategoryData($conn, 'Furniture', $role, $division_id),
@@ -219,6 +217,37 @@ ob_start();
         background-color: var(--erp-bg); 
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         color: var(--erp-text-main);
+    }
+
+    /* Search Box Styling */
+    .global-search-wrapper {
+        position: relative;
+        max-width: 360px;
+    }
+
+    .global-search-input {
+        border-radius: 6px;
+        border: 1px solid var(--erp-border);
+        padding: 0.45rem 0.85rem 0.45rem 2.25rem;
+        font-size: 0.85rem;
+        width: 100%;
+        background: #ffffff;
+        transition: all 0.15s ease;
+    }
+
+    .global-search-input:focus {
+        border-color: var(--erp-navy);
+        box-shadow: 0 0 0 3px rgba(18, 59, 99, 0.12);
+        outline: none;
+    }
+
+    .global-search-icon {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--erp-text-muted);
+        font-size: 0.85rem;
     }
 
     /* Tabs Styling */
@@ -262,7 +291,6 @@ ob_start();
         background: #f8fafc !important; 
     }
     
-    /* Sticky Contact Bar */
     .vendor-info-bar {
         position: sticky;
         top: 0;
@@ -271,13 +299,11 @@ ob_start();
         border-bottom: 1px solid var(--erp-border);
     }
 
-    /* Scrollable Container */
     .table-scroll-container {
         max-height: 450px;
         overflow-y: auto;
     }
 
-    /* Professional ERP Table Styling */
     .custom-vendor-table { width: 100%; border-collapse: separate; border-spacing: 0; }
     .custom-vendor-table thead th { 
         position: sticky;
@@ -293,9 +319,7 @@ ob_start();
         border-bottom: 1px solid var(--erp-border); 
     }
 
-    .custom-vendor-table tbody tr { 
-        transition: background-color 0.15s ease-in-out; 
-    }
+    .custom-vendor-table tbody tr { transition: background-color 0.15s ease-in-out; }
     .custom-vendor-table tbody tr:hover { background-color: #f1f5f9; }
     .custom-vendor-table tbody td { 
         padding: 0.85rem 1rem; 
@@ -323,9 +347,16 @@ ob_start();
             <h4 class="fw-bold tracking-tight mb-1" style="color: var(--erp-text-main); letter-spacing: -0.01em;">Categorized Vendor Directory</h4>
             <p class="text-muted extra-small mb-0">Comprehensive vendor profiles and transaction history organized by stock domain.</p>
         </div>
-        <a href="view_vendors.php" class="btn btn-light btn-sm fw-semibold border rounded-2 px-3">
-            <i class="bi bi-arrow-left me-1"></i> Registry View
-        </a>
+        <div class="d-flex align-items-center gap-2">
+            <!-- Global Search Input -->
+            <div class="global-search-wrapper">
+                <i class="bi bi-search global-search-icon"></i>
+                <input type="text" id="detailsGlobalSearch" class="global-search-input" placeholder="Search vendors, bills, items...">
+            </div>
+            <a href="view_vendors.php" class="btn btn-light btn-sm fw-semibold border rounded-2 px-3">
+                <i class="bi bi-arrow-left me-1"></i> Registry View
+            </a>
+        </div>
     </div>
 
     <!-- Category Tabs -->
@@ -382,7 +413,6 @@ ob_start();
                                 </h2>
                                 <div id="<?= $accId ?>" class="accordion-collapse collapse" data-bs-parent="#acc-<?= strtolower($catName) ?>">
                                     <div class="accordion-body p-0">
-                                        <!-- Sticky Email, Address & Action Toolbar -->
                                         <div class="p-3 vendor-info-bar d-flex flex-wrap justify-content-between align-items-center gap-2">
                                             <div class="row extra-small text-muted g-2 flex-grow-1">
                                                 <div class="col-md-4">
@@ -392,7 +422,6 @@ ob_start();
                                                     <i class="bi bi-geo-alt me-2 text-secondary"></i><?= htmlspecialchars($vendor['address'] ?: 'No Address Specified') ?>
                                                 </div>
                                             </div>
-                                            <!-- Export & Print Actions -->
                                             <div class="d-flex gap-2">
                                                 <button 
                                                     type="button" 
@@ -410,7 +439,6 @@ ob_start();
                                             </div>
                                         </div>
                                         
-                                        <!-- Scrollable Table Container -->
                                         <div class="table-scroll-container">
                                             <table id="<?= $targetTableId ?>" class="custom-vendor-table align-middle">
                                                 <thead>
@@ -482,7 +510,7 @@ ob_start();
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Event delegation for print buttons
+    // Print logic
     document.querySelectorAll('.btn-print-vendor').forEach(button => {
         button.addEventListener('click', function (e) {
             e.stopPropagation();
@@ -509,7 +537,6 @@ document.addEventListener('DOMContentLoaded', function () {
             printWindow.document.write('</style>');
             printWindow.document.write('</head><body>');
             
-            // Header Info
             printWindow.document.write('<div class="header-box">');
             printWindow.document.write('<h2>' + vendorName + '</h2>');
             printWindow.document.write('<p class="mb-1"><strong>Phone:</strong> ' + phone + ' | <strong>Email:</strong> ' + email + '</p>');
@@ -529,9 +556,91 @@ document.addEventListener('DOMContentLoaded', function () {
             }, 500);
         });
     });
+
+    // Default tab tracking (defaults to Computer tab)
+    let defaultTabBtn = document.querySelector('#sectorTabs button[data-bs-target="#tab-computer"]');
+
+    // Update active tab manually when user clicks
+    document.querySelectorAll('#sectorTabs button').forEach(button => {
+        button.addEventListener('click', function() {
+            if (!document.getElementById('detailsGlobalSearch').value.trim()) {
+                defaultTabBtn = this;
+            }
+        });
+    });
+
+    // REAL-TIME GLOBAL CROSS-TAB SEARCH
+    const searchInput = document.getElementById('detailsGlobalSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            let firstTabWithMatches = null;
+
+            tabPanes.forEach(pane => {
+                const accordionItems = pane.querySelectorAll('.accordion-item');
+                let matchCountInPane = 0;
+
+                accordionItems.forEach(item => {
+                    const text = item.innerText.toLowerCase();
+                    if (query === '' || text.includes(query)) {
+                        item.style.display = '';
+                        matchCountInPane++;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+
+                if (matchCountInPane > 0 && !firstTabWithMatches) {
+                    firstTabWithMatches = pane.getAttribute('id');
+                }
+            });
+
+            if (query.length > 0) {
+                // If active tab has no matches, switch to the first tab that has matches
+                const activePane = document.querySelector('.tab-pane.show.active');
+                const activeMatches = activePane ? activePane.querySelectorAll('.accordion-item:not([style*="display: none"])').length : 0;
+
+                if (activeMatches === 0 && firstTabWithMatches) {
+                    const targetBtn = document.querySelector(`#sectorTabs button[data-bs-target="#${firstTabWithMatches}"]`);
+                    if (targetBtn) {
+                        const tabTrigger = bootstrap.Tab.getOrCreateInstance(targetBtn);
+                        tabTrigger.show();
+                    }
+                }
+            } else {
+                // Search cleared: Switch back to default tab (Computer)
+                if (defaultTabBtn) {
+                    const tabTrigger = bootstrap.Tab.getOrCreateInstance(defaultTabBtn);
+                    tabTrigger.show();
+                }
+            }
+        });
+    }
+
+    // URL Param handler
+    const urlParams = new URLSearchParams(window.location.search);
+    const cat = urlParams.get('cat');
+    const vendorId = urlParams.get('vendor_id');
+
+    if (cat && vendorId) {
+        const tabTrigger = document.querySelector(`button[data-bs-target="#tab-${cat}"]`);
+        if (tabTrigger) {
+            const tab = new bootstrap.Tab(tabTrigger);
+            tab.show();
+        }
+
+        const targetAccordionId = `collapse-${cat}-${vendorId}`;
+        const targetAccordion = document.getElementById(targetAccordionId);
+        if (targetAccordion) {
+            const collapse = new bootstrap.Collapse(targetAccordion, { show: true });
+            setTimeout(() => {
+                targetAccordion.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        }
+    }
 });
 
-// CSV/Excel Export Function fixed for column alignment with colspan
 function exportTableToCSV(tableId, filename) {
     const table = document.getElementById(tableId);
     let csv = [];
@@ -548,7 +657,6 @@ function exportTableToCSV(tableId, filename) {
             
             row.push('"' + text + '"');
             
-            // Fill empty CSV cells for spanned columns to keep total aligned under Total Amount
             for (let k = 1; k < colspan; k++) {
                 row.push('""');
             }
@@ -566,32 +674,7 @@ function exportTableToCSV(tableId, filename) {
     document.body.removeChild(downloadLink);
 }
 </script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const urlParams = new URLSearchParams(window.location.search);
-    const cat = urlParams.get('cat');
-    const vendorId = urlParams.get('vendor_id');
 
-    if (cat && vendorId) {
-        // 1. Activate the matching tab
-        const tabTrigger = document.querySelector(`button[data-bs-target="#tab-${cat}"]`);
-        if (tabTrigger) {
-            const tab = new bootstrap.Tab(tabTrigger);
-            tab.show();
-        }
-
-        // 2. Expand and scroll to the vendor accordion
-        const targetAccordionId = `collapse-${cat}-${vendorId}`;
-        const targetAccordion = document.getElementById(targetAccordionId);
-        if (targetAccordion) {
-            const collapse = new bootstrap.Collapse(targetAccordion, { show: true });
-            setTimeout(() => {
-                targetAccordion.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 300);
-        }
-    }
-});
-</script>
 <?php 
 $content = ob_get_clean();
 include "../vendors/vendorlayout.php"; 

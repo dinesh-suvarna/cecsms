@@ -198,7 +198,8 @@ ob_start();
                         <i class="bi bi-people-fill"></i>
                     </div>
                     <div>
-                        <h5 class="fw-bold mb-1 text-dark"><?= $edit_data ? "Modify Vendor" : $category_type . " Vendor Registry" ?></h5>
+                        <h5 class="fw-bold tracking-tight mb-1" style="color: var(--erp-text-main); letter-spacing: -0.01em;">
+                        <?= $edit_data ? "Modify Vendor" : $category_type . " Vendor Registry" ?></h5>
                         <p class="text-muted mb-0 extra-small">Provide complete information for accurate inventory tracking.</p>
                     </div>
                 </div>

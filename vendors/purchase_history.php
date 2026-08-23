@@ -149,12 +149,45 @@ ob_start();
 
     body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color: var(--erp-text-main); }
 
+    /* Search Box Styling */
+    .global-search-wrapper {
+        position: relative;
+        width: 280px;
+    }
+
+    .global-search-input {
+        border-radius: 6px;
+        border: 1px solid var(--erp-border);
+        padding: 0.45rem 0.85rem 0.45rem 2.25rem;
+        font-size: 0.85rem;
+        width: 100%;
+        background: #ffffff;
+        transition: all 0.15s ease;
+    }
+
+    .global-search-input:focus {
+        border-color: var(--erp-navy);
+        box-shadow: 0 0 0 3px rgba(18, 59, 99, 0.12);
+        outline: none;
+    }
+
+    .global-search-icon {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--erp-text-muted);
+        font-size: 0.85rem;
+    }
+
     /* Nav Tabs */
     .erp-tabs .nav-link { 
         color: var(--erp-text-muted); font-weight: 600; border-radius: 6px; 
         padding: 0.55rem 1.25rem; font-size: 0.85rem; background: #ffffff; border: 1px solid var(--erp-border); 
+        transition: all 0.2s ease;
     }
     .erp-tabs .nav-link.active { background: var(--erp-navy); color: #ffffff; border-color: var(--erp-navy); }
+    .erp-tabs .nav-link:hover:not(.active) { background: #f8fafc; color: var(--erp-text-main); }
 
     /* Accordion Item Card */
     .accordion-item { border: 1px solid var(--erp-border) !important; border-radius: 8px !important; margin-bottom: 0.85rem; background: #ffffff; overflow: hidden; }
@@ -171,15 +204,24 @@ ob_start();
     .custom-ledger-table tbody td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--erp-border); font-size: 0.85rem; }
 </style>
 
-<div class="container-fluid py-4">
+<div class="container-fluid p-0">
+    <!-- Header Block -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-800 text-dark mb-0">Global Purchase Audit Ledger</h4>
+            <h4 class="fw-bold tracking-tight mb-1" style="color: var(--erp-text-main); letter-spacing: -0.01em;">Global Purchase Audit Ledger</h4>
             <p class="text-muted small mb-0">Itemized bill aggregation grouped by inventory item.</p>
         </div>
-        <a href="vendor_details.php" class="btn btn-white border fw-bold text-dark shadow-sm">
-            <i class="bi bi-people me-2"></i>Vendor Directory
-        </a>
+        
+        <!-- Search Bar and Action Button Right-Aligned -->
+        <div class="d-flex align-items-center gap-2">
+            <div class="global-search-wrapper">
+                <i class="bi bi-search global-search-icon"></i>
+                <input type="text" id="ledgerSearchInput" class="global-search-input" placeholder="Search vendors, bills, items...">
+            </div>
+            <a href="vendor_details.php" class="btn btn-white border fw-bold text-dark shadow-sm">
+                <i class="bi bi-arrow-left me-1"></i> Directory View
+            </a>
+        </div>
     </div>
 
     <!-- Category Tabs Filter -->
@@ -188,7 +230,7 @@ ob_start();
             <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-computer"><i class="bi bi-pc-display me-1"></i> Computer</button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-furniture"><i class="bi bi-boxes me-1"></i> Furniture</button>
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-furniture"><i class="bi bi-box-seam me-1"></i> Furniture</button>
         </li>
         <li class="nav-item">
             <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-electrical"><i class="bi bi-plug-fill me-1"></i> Electrical</button>
@@ -214,7 +256,7 @@ ob_start();
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $accId ?>">
                                         <div class="row align-items-center w-100 me-3">
                                             <div class="col">
-                                                <div class="fw-bold text-dark extra-small"><?= htmlspecialchars($itemData['item_name']) ?></div>
+                                                <div class="fw-bold text-dark extra-small ledger-item-name"><?= htmlspecialchars($itemData['item_name']) ?></div>
                                                 <div class="text-muted extra-small mt-1" style="font-size: 0.72rem;">
                                                     <i class="bi bi-receipt me-1"></i> <?= count($itemData['bills']) ?> Consolidated Bill Entry/Entries
                                                 </div>
@@ -247,7 +289,9 @@ ob_start();
                                                 </thead>
                                                 <tbody>
                                                     <?php foreach ($itemData['bills'] as $row): ?>
-                                                        <tr>
+                                                        <tr class="ledger-row" 
+                                                            data-vendor="<?= htmlspecialchars(strtolower($row['vendor_name'])) ?>" 
+                                                            data-bill="<?= htmlspecialchars(strtolower($row['bill_no'])) ?>">
                                                             <td class="ps-4">
                                                                 <span class="fw-semibold text-dark extra-small"><?= date('d M, Y', strtotime($row['purchase_date'])) ?></span>
                                                             </td>
@@ -282,6 +326,89 @@ ob_start();
         <?php $firstTab = false; endforeach; ?>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    let defaultTabBtn = document.querySelector('#ledgerCategoryTabs button[data-bs-target="#tab-computer"]');
+
+    // Track original active tab before searching
+    document.querySelectorAll('#ledgerCategoryTabs button').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (!document.getElementById('ledgerSearchInput').value.trim()) {
+                defaultTabBtn = this;
+            }
+        });
+    });
+
+    const searchInput = document.getElementById('ledgerSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            const query = this.value.toLowerCase().trim();
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            let firstTabWithMatches = null;
+
+            tabPanes.forEach(pane => {
+                const accordionItems = pane.querySelectorAll('.accordion-item');
+                let matchesInTab = 0;
+
+                accordionItems.forEach(item => {
+                    const itemName = item.querySelector('.ledger-item-name')?.innerText.toLowerCase() || '';
+                    const rows = item.querySelectorAll('.ledger-row');
+                    let matchingRowsInItem = 0;
+
+                    rows.forEach(row => {
+                        const vendor = row.getAttribute('data-vendor') || '';
+                        const bill = row.getAttribute('data-bill') || '';
+
+                        if (query === '' || itemName.includes(query) || vendor.includes(query) || bill.includes(query)) {
+                            row.style.display = '';
+                            matchingRowsInItem++;
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+
+                    // Hide item accordion if no rows match query
+                    if (query === '' || itemName.includes(query) || matchingRowsInItem > 0) {
+                        item.style.display = '';
+                        matchesInTab++;
+                        
+                        // Auto expand accordion item if user is searching for a vendor or bill
+                        const collapseEl = item.querySelector('.accordion-collapse');
+                        if (query !== '' && matchingRowsInItem > 0 && collapseEl) {
+                            bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false }).show();
+                        }
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+
+                if (matchesInTab > 0 && !firstTabWithMatches) {
+                    firstTabWithMatches = pane.getAttribute('id');
+                }
+            });
+
+            if (query.length > 0) {
+                // Switch tab dynamically if active tab has no search results
+                const activePane = document.querySelector('.tab-pane.show.active');
+                const activeMatches = activePane ? activePane.querySelectorAll('.accordion-item:not([style*="display: none"])').length : 0;
+
+                if (activeMatches === 0 && firstTabWithMatches) {
+                    const targetBtn = document.querySelector(`#ledgerCategoryTabs button[data-bs-target="#${firstTabWithMatches}"]`);
+                    if (targetBtn) {
+                        bootstrap.Tab.getOrCreateInstance(targetBtn).show();
+                    }
+                }
+            } else {
+                // Revert to default tab upon clearing search
+                if (defaultTabBtn) {
+                    bootstrap.Tab.getOrCreateInstance(defaultTabBtn).show();
+                }
+            }
+        });
+    }
+});
+</script>
 
 <?php 
 $content = ob_get_clean();

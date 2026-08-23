@@ -53,18 +53,19 @@ ob_start();
         --erp-navy: #123b63;
         --erp-bg: #f8fafc;
         --erp-card-bg: #ffffff;
-        --erp-border: #e2e8f0;
+        --erp-border: #d9e0e7;
         --erp-border-subtle: #f1f5f9;
-        --erp-text-main: #0f172a;
+        --erp-text-main: #20384d;
         --erp-text-muted: #64748b;
+        --erp-shadow-sm: 0 1px 3px rgba(20,45,70,.05);
     }
 
     /* Page Header */
     .erp-header-title {
         font-weight: 800;
-        color: var(--erp-navy);
-        letter-spacing: -0.02em;
-        font-size: 1.25rem;
+        color: var(--erp-text-main);
+        letter-spacing: -0.01em;
+        font-size: 1.35rem;
     }
 
     .erp-header-sub {
@@ -72,33 +73,60 @@ ob_start();
         color: var(--erp-text-muted);
     }
 
-    /* Vendor Details Tab Pill Design */
-    .vendor-nav-tabs {
-        border-bottom: none;
-        gap: 6px;
+    /* Search Input Styling */
+    .global-search-wrapper {
+        position: relative;
+        max-width: 320px;
+        width: 100%;
     }
 
-    .vendor-nav-tabs .nav-link {
-        font-weight: 700;
-        font-size: 0.85rem;
-        color: #64748b;
-        background-color: #f1f5f9;
+    .global-search-input {
+        border-radius: 6px;
         border: 1px solid var(--erp-border);
-        border-radius: 8px;
-        padding: 8px 18px;
-        transition: all 0.2s ease-in-out;
+        padding: 0.45rem 0.85rem 0.45rem 2.25rem;
+        font-size: 0.85rem;
+        width: 100%;
+        background: #ffffff;
+        transition: all 0.15s ease;
     }
 
-    .vendor-nav-tabs .nav-link:hover {
-        color: var(--erp-navy);
-        background-color: #e2e8f0;
+    .global-search-input:focus {
+        border-color: var(--erp-navy);
+        box-shadow: 0 0 0 3px rgba(18, 59, 99, 0.12);
+        outline: none;
     }
 
-    .vendor-nav-tabs .nav-link.active {
-        background-color: var(--erp-navy) !important;
-        color: #ffffff !important;
+    .global-search-icon {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--erp-text-muted);
+        font-size: 0.85rem;
+    }
+
+    /* Tabs Styling */
+    .erp-tabs .nav-link { 
+        color: var(--erp-text-muted); 
+        font-weight: 600; 
+        border-radius: 6px; 
+        padding: 0.55rem 1.25rem; 
+        font-size: 0.85rem;
+        background: #ffffff;
+        border: 1px solid var(--erp-border); 
+        transition: all 0.2s ease; 
+    }
+
+    .erp-tabs .nav-link.active { 
+        background: var(--erp-navy) !important; 
+        color: #ffffff !important; 
         border-color: var(--erp-navy) !important;
-        box-shadow: 0 2px 4px rgba(18, 59, 99, 0.15);
+        box-shadow: var(--erp-shadow-sm); 
+    }
+
+    .erp-tabs .nav-link:hover:not(.active) { 
+        background: #f8fafc; 
+        color: var(--erp-text-main); 
     }
 
     /* Enterprise Accordion Card Styles */
@@ -106,12 +134,12 @@ ob_start();
         border: 1px solid var(--erp-border);
         background: var(--erp-card-bg);
         border-radius: 10px !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        box-shadow: var(--erp-shadow-sm);
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
     /* Highlighted state for active Service History inner card */
-   .perf-card.perf-card-active-service {
+    .perf-card.perf-card-active-service {
         background-color: #e3e8ee; 
         border-color: #cbd5e1;
         border-left: 3px solid var(--erp-navy);
@@ -192,16 +220,16 @@ ob_start();
     }
 
     .maint-pulse-badge {
-    font-size: 0.725rem;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 20px; /* Full pill shape */
-    background-color: #fef2f2;
-    color: #991b1b;
-    border: 1px solid #fca5a5;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+        font-size: 0.725rem;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 20px;
+        background-color: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
 
     /* Pulsing red dot */
@@ -216,20 +244,20 @@ ob_start();
         animation: maint-pulse 1.8s infinite;
     }
 
-@keyframes maint-pulse {
-    0% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6);
+    @keyframes maint-pulse {
+        0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6);
+        }
+        70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 5px rgba(220, 38, 38, 0);
+        }
+        100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+        }
     }
-    70% {
-        transform: scale(1);
-        box-shadow: 0 0 0 5px rgba(220, 38, 38, 0);
-    }
-    100% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
-    }
-}
 
     .empty-state-card {
         border: 1px dashed var(--erp-border);
@@ -239,32 +267,39 @@ ob_start();
 </style>
 
 <div class="container-fluid p-0">
-    <!-- Header Controls -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+    <!-- Header Block (Matched exact design) -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="erp-header-title mb-0">Vendor Performance Analytics</h4>
+            <h4 class="erp-header-title mb-1">Vendor Performance Analytics</h4>
             <p class="erp-header-sub mb-0">Comparative procurement and operational performance matrix by sector.</p>
         </div>
-        
-        <!-- Category Navigation Tabs -->
-        <ul class="nav nav-pills vendor-nav-tabs" id="vendorCategoryTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="computer-tab" data-bs-toggle="pill" data-bs-target="#tab-computer" type="button" role="tab">
-                    <i class="bi bi-laptop me-1.5"></i> Computer
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="furniture-tab" data-bs-toggle="pill" data-bs-target="#tab-furniture" type="button" role="tab">
-                    <i class="bi bi-box-seam me-1.5"></i> Furniture
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="electrical-tab" data-bs-toggle="pill" data-bs-target="#tab-electrical" type="button" role="tab">
-                    <i class="bi bi-lightning-charge me-1.5"></i> Electricals
-                </button>
-            </li>
-        </ul>
+        <div>
+            <!-- Global Vendor Search Bar -->
+            <div class="global-search-wrapper">
+                <i class="bi bi-search global-search-icon"></i>
+                <input type="text" id="analyticsVendorSearch" class="global-search-input" placeholder="Search vendor name...">
+            </div>
+        </div>
     </div>
+
+    <!-- Category Tabs (Positioned Bottom Left below header title) -->
+    <ul class="nav nav-pills erp-tabs mb-4 gap-2" id="vendorCategoryTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="computer-tab" data-bs-toggle="pill" data-bs-target="#tab-computer" type="button" role="tab">
+                <i class="bi bi-pc-display me-1"></i> Computer
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="furniture-tab" data-bs-toggle="pill" data-bs-target="#tab-furniture" type="button" role="tab">
+                <i class="bi bi-box-seam me-1"></i> Furniture
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="electrical-tab" data-bs-toggle="pill" data-bs-target="#tab-electrical" type="button" role="tab">
+                <i class="bi bi-plug-fill me-1"></i> Electricals
+            </button>
+        </li>
+    </ul>
 
     <!-- Tab Contents -->
     <div class="tab-content" id="vendorCategoryContent">
@@ -284,6 +319,7 @@ ob_start();
                                         <div class="row w-100 align-items-center g-2">
                                             <div class="col-md-4">
                                                 <div class="d-flex align-items-center gap-2">
+                                                    <!-- Class vendor-title used for specific JS name matching -->
                                                     <span class="vendor-title"><?= htmlspecialchars($v['vendor_name']) ?></span>
                                                     
                                                     <!-- Collapsed Maintenance Warning Indicator -->
@@ -363,6 +399,74 @@ ob_start();
         ?>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Reference to default tab button (Computer tab)
+    let defaultTabBtn = document.querySelector('#vendorCategoryTabs button[data-bs-target="#tab-computer"]');
+
+    // Keep track of active tab when manually clicked
+    document.querySelectorAll('#vendorCategoryTabs button').forEach(button => {
+        button.addEventListener('click', function() {
+            if (!document.getElementById('analyticsVendorSearch').value.trim()) {
+                defaultTabBtn = this;
+            }
+        });
+    });
+
+    // REAL-TIME VENDOR NAME CROSS-TAB SEARCH
+    const searchInput = document.getElementById('analyticsVendorSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            let firstTabWithMatches = null;
+
+            tabPanes.forEach(pane => {
+                const accordionItems = pane.querySelectorAll('.accordion-item');
+                let matchCountInPane = 0;
+
+                accordionItems.forEach(item => {
+                    // Filter strictly by the vendor_name element text
+                    const vendorTitleEl = item.querySelector('.vendor-title');
+                    const vendorName = vendorTitleEl ? vendorTitleEl.innerText.toLowerCase() : '';
+
+                    if (query === '' || vendorName.includes(query)) {
+                        item.style.display = '';
+                        matchCountInPane++;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+
+                if (matchCountInPane > 0 && !firstTabWithMatches) {
+                    firstTabWithMatches = pane.getAttribute('id');
+                }
+            });
+
+            if (query.length > 0) {
+                // If current active tab has zero matches, switch to the first tab that has matches
+                const activePane = document.querySelector('.tab-pane.show.active');
+                const activeMatches = activePane ? activePane.querySelectorAll('.accordion-item:not([style*="display: none"])').length : 0;
+
+                if (activeMatches === 0 && firstTabWithMatches) {
+                    const targetBtn = document.querySelector(`#vendorCategoryTabs button[data-bs-target="#${firstTabWithMatches}"]`);
+                    if (targetBtn) {
+                        const tabTrigger = bootstrap.Tab.getOrCreateInstance(targetBtn);
+                        tabTrigger.show();
+                    }
+                }
+            } else {
+                // Reset search: Revert active tab back to default
+                if (defaultTabBtn) {
+                    const tabTrigger = bootstrap.Tab.getOrCreateInstance(defaultTabBtn);
+                    tabTrigger.show();
+                }
+            }
+        });
+    }
+});
+</script>
 
 <?php 
 $content = ob_get_clean();

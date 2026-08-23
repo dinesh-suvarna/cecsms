@@ -17,7 +17,7 @@ $user_id = (int)($_SESSION['user_id'] ?? 0);
 /**
  * Retrieves vendor data filtered by category and division role.
  */
-function getCategoryData($conn, $category, $role, $division_id) {
+function getCategoryData(mysqli $conn, string $category, string $role, int $division_id) {
     // 1. Fetch Vendors
     if ($role === 'SuperAdmin' || $division_id === 0) {
         $v_stmt = $conn->prepare("SELECT DISTINCT v.* FROM vendors v WHERE v.category = ? ORDER BY v.vendor_name ASC");
@@ -54,12 +54,14 @@ function getCategoryData($conn, $category, $role, $division_id) {
 
     $v_stmt->execute();
     $vendors = $v_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $v_stmt->close();
 
     $results = [];
 
     // 2. Fetch Transaction History per Vendor
     foreach ($vendors as $vendor) {
         $vendor_id = $vendor['id'];
+        $stmt = null; // Guard: prevents IDE uninitialized variable warning
 
         if ($category === 'Computer') {
             if ($role === 'SuperAdmin' || $division_id === 0) {
@@ -69,7 +71,7 @@ function getCategoryData($conn, $category, $role, $division_id) {
                             im.item_name, 
                             'Computer' as cat, 
                             SUM(sd.quantity) as qty, 
-                            AVG(sd.amount) as price 
+                            (SUM(sd.quantity * sd.amount) / SUM(sd.quantity)) as price 
                           FROM stock_details sd 
                           JOIN items_master im ON sd.stock_item_id = im.id 
                           WHERE sd.vendor_id = ? 
@@ -84,7 +86,7 @@ function getCategoryData($conn, $category, $role, $division_id) {
                             im.item_name, 
                             'Computer' as cat, 
                             SUM(dd.quantity) as qty, 
-                            AVG(sd.amount) as price 
+                            (SUM(dd.quantity * sd.amount) / SUM(dd.quantity)) as price 
                           FROM stock_details sd 
                           JOIN items_master im ON sd.stock_item_id = im.id 
                           JOIN dispatch_details dd ON sd.id = dd.stock_detail_id
@@ -103,7 +105,7 @@ function getCategoryData($conn, $category, $role, $division_id) {
                             fi.item_name, 
                             'Furniture' as cat, 
                             SUM(fs.total_qty) as qty, 
-                            AVG(fs.unit_price) as price 
+                            (SUM(fs.total_qty * fs.unit_price) / SUM(fs.total_qty)) as price 
                           FROM furniture_stock fs 
                           JOIN furniture_items fi ON fs.furniture_item_id = fi.id 
                           WHERE fs.vendor_id = ? 
@@ -118,7 +120,7 @@ function getCategoryData($conn, $category, $role, $division_id) {
                             fi.item_name, 
                             'Furniture' as cat, 
                             SUM(fs.total_qty) as qty, 
-                            AVG(fs.unit_price) as price 
+                            (SUM(fs.total_qty * fs.unit_price) / SUM(fs.total_qty)) as price 
                           FROM furniture_stock fs 
                           JOIN furniture_items fi ON fs.furniture_item_id = fi.id 
                           JOIN units u ON fs.unit_id = u.id
@@ -136,7 +138,7 @@ function getCategoryData($conn, $category, $role, $division_id) {
                             ei.item_name, 
                             'Electricals' as cat, 
                             SUM(es.total_qty) as qty, 
-                            AVG(es.unit_price) as price 
+                            (SUM(es.total_qty * es.unit_price) / SUM(es.total_qty)) as price 
                           FROM electrical_stock es 
                           JOIN electrical_items ei ON es.electrical_item_id = ei.id 
                           WHERE es.vendor_id = ? 
@@ -151,7 +153,7 @@ function getCategoryData($conn, $category, $role, $division_id) {
                             ei.item_name, 
                             'Electricals' as cat, 
                             SUM(es.total_qty) as qty, 
-                            AVG(es.unit_price) as price 
+                            (SUM(es.total_qty * es.unit_price) / SUM(es.total_qty)) as price 
                           FROM electrical_stock es 
                           JOIN electrical_items ei ON es.electrical_item_id = ei.id 
                           JOIN units u ON es.unit_id = u.id
@@ -163,8 +165,14 @@ function getCategoryData($conn, $category, $role, $division_id) {
             }
         }
 
+        // Safety check to ensure $stmt was initialized before execution
+        if (!$stmt) {
+            continue;
+        }
+
         $stmt->execute();
         $history = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
 
         $total_spend = 0;
         foreach ($history as $item) {
@@ -180,6 +188,7 @@ function getCategoryData($conn, $category, $role, $division_id) {
             ]
         ];
     }
+
     return $results;
 }
 
@@ -324,7 +333,7 @@ ob_start();
             <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-computer"><i class="bi bi-pc-display me-1"></i> Computer</button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-furniture"><i class="bi bi-boxes me-1"></i> Furniture</button>
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-furniture"><i class="bi bi-box-seam me-1"></i> Furniture</button>
         </li>
         <li class="nav-item">
             <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-electrical"><i class="bi bi-plug-fill me-1"></i> Electrical</button>
@@ -360,7 +369,7 @@ ob_start();
                                                 </div>
                                             </div>
                                             <div class="col-auto text-end">
-                                                <span class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.65rem;">Total Outlay</span>
+                                                <span class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.65rem;">Total Spend</span>
                                                 <span class="fw-bold text-primary extra-small">₹<?= number_format($stats['spend'], 2) ?></span>
                                             </div>
                                             <div class="col-auto text-end border-start ps-3 ms-3">
@@ -451,7 +460,7 @@ ob_start();
                                                 <?php if (!empty($history)): ?>
                                                 <tfoot>
                                                     <tr>
-                                                        <td colspan="5" class="ps-4 fw-bold text-dark extra-small">Cumulative Outlay:</td>
+                                                        <td colspan="5" class="ps-4 fw-bold text-dark extra-small">Total Expenditure:</td>
                                                         <td class="text-end pe-4 fw-bold text-primary extra-small">₹<?= number_format($stats['spend'], 2) ?></td>
                                                     </tr>
                                                 </tfoot>

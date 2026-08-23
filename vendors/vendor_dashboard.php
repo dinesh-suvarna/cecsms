@@ -187,150 +187,144 @@ ob_start();
 
 <style>
     :root {
-        --saas-primary: #4F46E5;
-        --saas-primary-hover: #4338CA;
-        --saas-primary-light: #EEF2FF;
-        --saas-bg: #F8FAFC;
-        --saas-card-bg: #FFFFFF;
-        --saas-border: #E2E8F0;
-        --saas-text-main: #0F172A;
-        --saas-text-muted: #64748B;
-        --saas-card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        --saas-card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+        --erp-navy: #123b63;
+        --erp-navy-dark: #0b2942;
+        --erp-bg: #f3f5f7;
+        --erp-card-bg: #ffffff;
+        --erp-border: #d9e0e7;
+        --erp-text-main: #20384d;
+        --erp-text-muted: #64748b;
+        --erp-shadow-sm: 0 1px 3px rgba(20,45,70,.05);
+        --erp-shadow-hover: 0 6px 16px rgba(18,59,99,.08);
     }
 
     body { 
-        background-color: var(--saas-bg); 
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        color: var(--saas-text-main);
+        background-color: var(--erp-bg); 
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: var(--erp-text-main);
+    }
+
+    .erp-card {
+        background: var(--erp-card-bg);
+        border: 1px solid var(--erp-border);
+        border-radius: 8px;
+        box-shadow: var(--erp-shadow-sm);
+        transition: all 0.2s ease-in-out;
     }
 
     .metric-card {
-        background: var(--saas-card-bg);
-        border: 1px solid var(--saas-border);
-        border-radius: 16px;
-        padding: 1.5rem;
-        transition: all 0.25s ease-in-out;
-        box-shadow: var(--saas-card-shadow);
+        padding: 1.25rem 1.5rem;
     }
 
     .metric-card:hover { 
         transform: translateY(-2px);
-        box-shadow: var(--saas-card-hover-shadow); 
-        border-color: #CBD5E1; 
+        box-shadow: var(--erp-shadow-hover); 
+        border-color: #bbc7d4; 
     }
 
-    .metric-icon-wrapper {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
+    .metric-icon-box {
+        width: 44px;
+        height: 44px;
+        border-radius: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.25rem;
+        font-size: 1.2rem;
     }
 
-    .saas-card {
-        background: var(--saas-card-bg);
-        border-radius: 16px;
-        border: 1px solid var(--saas-border);
-        box-shadow: var(--saas-card-shadow);
-        overflow: hidden;
-    }
-
-    .saas-table thead th {
-        background-color: #F8FAFC;
+    .erp-table thead th {
+        background-color: #f8fafc;
         text-transform: uppercase;
-        font-size: 0.7rem;
+        font-size: 0.68rem;
         font-weight: 700;
-        letter-spacing: 0.05em;
-        color: var(--saas-text-muted);
-        padding: 1rem 1.5rem;
-        border-bottom: 1px solid var(--saas-border);
+        letter-spacing: 0.06em;
+        color: var(--erp-text-muted);
+        padding: 0.85rem 1.25rem;
+        border-bottom: 1px solid var(--erp-border);
     }
 
-    .saas-table tbody td { 
-        padding: 1rem 1.5rem; 
-        border-bottom: 1px solid var(--saas-border); 
+    .erp-table tbody td { 
+        padding: 0.9rem 1.25rem; 
+        border-bottom: 1px solid var(--erp-border); 
         vertical-align: middle; 
     }
 
-    .saas-table tbody tr:last-child td {
+    .erp-table tbody tr:last-child td {
         border-bottom: none;
     }
 
-    .saas-table tbody tr:hover {
-        background-color: #F8FAFC;
+    .erp-table tbody tr:hover {
+        background-color: #f8fafc;
     }
 
     .badge-category {
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         font-weight: 600;
-        padding: 0.35em 0.75em;
-        border-radius: 6px;
+        padding: 0.3em 0.65em;
+        border-radius: 4px;
         display: inline-flex;
         align-items: center;
     }
 
-    .badge-comp { background: #EEF2FF; color: #4338CA; }
-    .badge-furn { background: #FEF3C7; color: #92400E; }
-    .badge-elec { background: #ECFDF5; color: #065F46; }
-    .badge-default { background: #F1F5F9; color: #475569; }
+    .badge-comp { background: #e0f2fe; color: #0369a1; }
+    .badge-furn { background: #fef3c7; color: #92400e; }
+    .badge-elec { background: #dcfce7; color: #15803d; }
+    .badge-default { background: #f1f5f9; color: #475569; }
 
     .action-tile {
-        background: var(--saas-card-bg);
-        border: 1px solid var(--saas-border);
-        border-radius: 12px;
-        padding: 0.875rem 1rem;
+        background: var(--erp-card-bg);
+        border: 1px solid var(--erp-border);
+        border-radius: 8px;
+        padding: 0.85rem 1rem;
         display: flex;
         align-items: center;
         text-decoration: none;
-        color: var(--saas-text-main);
+        color: var(--erp-text-main);
         transition: all 0.2s ease;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+        box-shadow: var(--erp-shadow-sm);
     }
 
     .action-tile:hover { 
-        background: #FFFFFF; 
-        border-color: var(--saas-primary);
-        color: var(--saas-primary); 
-        transform: translateX(4px);
-        box-shadow: var(--saas-card-shadow);
+        background: #ffffff; 
+        border-color: var(--erp-navy);
+        color: var(--erp-navy); 
+        transform: translateX(3px);
+        box-shadow: var(--erp-shadow-hover);
     }
 
     .icon-box {
         width: 36px;
         height: 36px;
-        border-radius: 8px;
+        border-radius: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: var(--saas-primary-light);
-        color: var(--saas-primary);
+        background: #f0f4f8;
+        color: var(--erp-navy);
     }
 
     .promo-card {
-        background: linear-gradient(135deg, #4F46E5 0%, #3730A3 100%);
-        border-radius: 16px;
-        color: #FFFFFF;
+        background: linear-gradient(135deg, var(--erp-navy) 0%, var(--erp-navy-dark) 100%);
+        border-radius: 8px;
+        color: #ffffff;
         position: relative;
         overflow: hidden;
     }
 </style>
 
-<div class="container-fluid py-4 px-lg-5">
+<div class="container-fluid p-0">
     <!-- Header Block -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
-            <h3 class="fw-bold tracking-tight mb-1" style="color: var(--saas-text-main);">Vendor Intelligence Engine</h3>
-            <p class="text-muted mb-0 small">
-                Real-time spend analytics, order distribution, and supplier metrics
-                <?= $is_restricted ? ' (Division Restricted)' : ' (Global View)' ?>.
+            <h4 class="fw-bold tracking-tight mb-1" style="color: var(--erp-text-main); letter-spacing: -0.01em;">Vendor Intelligence Dashboard</h4>
+            <p class="text-muted mb-0 extra-small">
+                Real-time procurement expenditure, procurement distribution and supplier stats
+                <!-- <?= $is_restricted ? ' <span class="badge bg-warning-subtle text-warning border ms-1">Division Restricted</span>' : ' <span class="badge bg-secondary-subtle text-secondary border ms-1">Global Scope</span>' ?> -->
             </p>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <a href="vendor_manager.php" class="btn btn-primary shadow-sm rounded-3 px-3 py-2 font-medium small" style="background: var(--saas-primary);">
-                <i class="bi bi-plus-lg me-2"></i>New Vendor
+            <a href="vendor_manager.php" class="btn btn-primary shadow-sm rounded-2 px-3 py-2 font-semibold extra-small" style="background: var(--erp-navy); border-color: var(--erp-navy);">
+                <i class="bi bi-plus-lg me-1"></i> Add Vendor
             </a>
         </div>
     </div>
@@ -339,17 +333,17 @@ ob_start();
     <div class="row g-3 mb-4">
         <!-- Registered Vendors -->
         <div class="col-12 col-md-4">
-            <div class="metric-card">
+            <div class="erp-card metric-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem; letter-spacing: 0.05em;">Registered Vendors</span>
-                    <div class="metric-icon-wrapper" style="background: #EEF2FF; color: #4F46E5;">
-                        <i class="bi bi-building"></i>
+                    <span class="text-uppercase fw-bold text-muted extra-small" style="letter-spacing: 0.05em;">Registered Vendors</span>
+                    <div class="metric-icon-box" style="background: #edf3f8; color: var(--erp-navy);">
+                        <i class="bi bi-person-vcard"></i>
                     </div>
                 </div>
                 <div>
-                    <h3 class="fw-bold mb-1 text-truncate"><?= number_format($metrics['total_vendors']) ?></h3>
-                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
-                        <i class="bi bi-check-circle me-1"></i>System Total
+                    <h3 class="fw-bold mb-1 text-truncate text-dark" style="letter-spacing: -0.02em;"><?= number_format($metrics['total_vendors']) ?></h3>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill extra-small fw-semibold">
+                        <i class="bi bi-check-circle me-1"></i>Active In System
                     </span>
                 </div>
             </div>
@@ -357,20 +351,20 @@ ob_start();
 
         <!-- Active Suppliers -->
         <div class="col-12 col-md-4">
-            <div class="metric-card">
+            <div class="erp-card metric-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem; letter-spacing: 0.05em;">Active Suppliers</span>
-                    <div class="metric-icon-wrapper" style="background: #ECFDF5; color: #10B981;">
+                    <span class="text-uppercase fw-bold text-muted extra-small" style="letter-spacing: 0.05em;">Active Suppliers</span>
+                    <div class="metric-icon-box" style="background: #dcfce7; color: #15803d;">
                         <i class="bi bi-box-seam"></i>
                     </div>
                 </div>
                 <div>
-                    <h3 class="fw-bold mb-1 text-truncate"><?= number_format($metrics['active_vendors']) ?></h3>
+                    <h3 class="fw-bold mb-1 text-truncate text-dark" style="letter-spacing: -0.02em;"><?= number_format($metrics['active_vendors']) ?></h3>
                     <?php 
                         $active_pct = $metrics['total_vendors'] > 0 ? round(($metrics['active_vendors'] / $metrics['total_vendors']) * 100) : 0;
                     ?>
-                    <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">
-                        <?= $active_pct ?>% Engagement
+                    <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill extra-small fw-semibold">
+                        <?= $active_pct ?>% Vendor Engagement
                     </span>
                 </div>
             </div>
@@ -378,63 +372,65 @@ ob_start();
 
         <!-- Cumulative Expenditure -->
         <div class="col-12 col-md-4">
-            <div class="metric-card">
+            <div class="erp-card metric-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem; letter-spacing: 0.05em;">Cumulative Expenditure</span>
-                    <div class="metric-icon-wrapper" style="background: #F0F9FF; color: #0284C7;">
+                    <span class="text-uppercase fw-bold text-muted extra-small" style="letter-spacing: 0.05em;">Cumulative Outlay</span>
+                    <div class="metric-icon-box" style="background: #e0f2fe; color: #0369a1;">
                         <i class="bi bi-wallet2"></i>
                     </div>
                 </div>
                 <div>
-                    <h3 class="fw-bold mb-1 text-truncate">₹<?= number_format($metrics['grand_total_spend'], 2) ?></h3>
-                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">
-                        <?= $is_restricted ? 'Current Division' : 'All Divisions' ?>
+                    <h3 class="fw-bold mb-1 text-truncate text-dark" style="letter-spacing: -0.02em;">₹<?= number_format($metrics['grand_total_spend'], 2) ?></h3>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill extra-small fw-semibold">
+                        <?= $is_restricted ? 'Current Division Total' : 'System Wide Total' ?>
                     </span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Quick Navigation -->
-    <div class="row g-4 mb-4">
-        <div class="col-xl-12">
-            <div class="saas-card p-4">
-                <h6 class="fw-bold mb-4">Filter by Domain</h6>
+    <!-- Quick Domain Filters -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="erp-card p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-dark extra-small text-uppercase" style="letter-spacing: 0.04em;">Filter by Procurement Category</h6>
+                </div>
                 
                 <div class="row g-3">
                     <!-- IT & Computers -->
                     <div class="col-12 col-md-6 col-lg-3">
                         <a href="view_vendors.php?type=Computer" class="action-tile h-100">
-                            <div class="icon-box me-3"><i class="bi bi-cpu"></i></div>
+                            <div class="icon-box me-3"><i class="bi bi-pc-display"></i></div>
                             <div class="flex-grow-1">
-                                <div class="fw-semibold small">IT & Computers</div>
-                                <div class="text-muted" style="font-size: 0.75rem;">Hardware, Systems & Peripherals</div>
+                                <div class="fw-bold extra-small text-dark">IT & Computers</div>
+                                <div class="text-muted extra-small" style="font-size: 0.72rem;">Hardware & Peripherals</div>
                             </div>
-                            <i class="bi bi-chevron-right text-muted small"></i>
+                            <i class="bi bi-chevron-right text-muted extra-small"></i>
                         </a>
                     </div>
 
                     <!-- Furniture Assets -->
                     <div class="col-12 col-md-6 col-lg-3">
                         <a href="view_vendors.php?type=Furniture" class="action-tile h-100">
-                            <div class="icon-box me-3" style="background: #FEF3C7; color: #D97706;"><i class="bi bi-lamp"></i></div>
+                            <div class="icon-box me-3" style="background: #fef3c7; color: #92400e;"><i class="bi bi-boxes"></i></div>
                             <div class="flex-grow-1">
-                                <div class="fw-semibold small">Furniture Assets</div>
-                                <div class="text-muted" style="font-size: 0.75rem;">Desks, Chairs & Fixtures</div>
+                                <div class="fw-bold extra-small text-dark">Furniture Assets</div>
+                                <div class="text-muted extra-small" style="font-size: 0.72rem;">Desks, Chairs & Fixtures</div>
                             </div>
-                            <i class="bi bi-chevron-right text-muted small"></i>
+                            <i class="bi bi-chevron-right text-muted extra-small"></i>
                         </a>
                     </div>
 
                     <!-- Electrical Supplies -->
                     <div class="col-12 col-md-6 col-lg-3">
                         <a href="view_vendors.php?type=Electricals" class="action-tile h-100">
-                            <div class="icon-box me-3" style="background: #ECFDF5; color: #059669;"><i class="bi bi-lightning-charge"></i></div>
+                            <div class="icon-box me-3" style="background: #dcfce7; color: #15803d;"><i class="bi bi-plug-fill"></i></div>
                             <div class="flex-grow-1">
-                                <div class="fw-semibold small">Electrical Supplies</div>
-                                <div class="text-muted" style="font-size: 0.75rem;">Wiring, Components & Power</div>
+                                <div class="fw-bold extra-small text-dark">Electrical Supplies</div>
+                                <div class="text-muted extra-small" style="font-size: 0.72rem;">Wiring, Motors & Power</div>
                             </div>
-                            <i class="bi bi-chevron-right text-muted small"></i>
+                            <i class="bi bi-chevron-right text-muted extra-small"></i>
                         </a>
                     </div>
 
@@ -443,10 +439,10 @@ ob_start();
                         <div class="promo-card p-3 h-100 d-flex align-items-center">
                             <div class="d-flex justify-content-between align-items-center w-100">
                                 <div>
-                                    <div class="fw-bold small">Service Maintenance</div>
-                                    <div class="opacity-75" style="font-size: 0.75rem;">Review equipment logs</div>
+                                    <div class="fw-bold extra-small text-white">Maintenance</div>
+                                    <div class="opacity-75 extra-small" style="font-size: 0.7rem;">Service history & logs</div>
                                 </div>
-                                <a href="../services/view_services.php" class="btn btn-light btn-sm fw-semibold rounded-2 px-3 py-1 flex-shrink-0 ms-2" style="font-size: 0.75rem;">View Logs</a>
+                                <a href="../services/view_services.php" class="btn btn-light btn-sm fw-semibold rounded-2 px-2 py-1 flex-shrink-0 ms-2 extra-small">Logs</a>
                             </div>
                         </div>
                     </div>
@@ -458,21 +454,21 @@ ob_start();
     <!-- Main Table Section -->
     <div class="row">
         <div class="col-12">
-            <div class="saas-card">
-                <div class="p-3 px-4 border-bottom d-flex justify-content-between align-items-center bg-white">
+            <div class="erp-card overflow-hidden">
+                <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-white">
                     <div>
-                        <h6 class="fw-bold mb-0">Top Suppliers by Volume</h6>
-                        <small class="text-muted">Ranked by total financial contribution across inventories</small>
+                        <h6 class="fw-bold mb-0 text-dark">Top Suppliers by Procurement Volume</h6>
+                        <span class="text-muted extra-small">Ranked by total financial outlay across stock modules</span>
                     </div>
                 </div>
                 <div class="table-responsive">
-                    <table class="table saas-table mb-0">
+                    <table class="table erp-table mb-0">
                         <thead>
                             <tr>
                                 <th>Vendor Details</th>
                                 <th>Category</th>
-                                <th class="text-center">Order Volume</th>
-                                <th class="text-end" style="width: 250px;">Total Outlay</th>
+                                <th class="text-center">Order Units</th>
+                                <th class="text-end" style="width: 240px;">Total Expenditure</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -489,13 +485,13 @@ ob_start();
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center me-3 fw-bold text-primary flex-shrink-0" style="width: 38px; height: 38px; font-size: 0.85rem;">
+                                            <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center me-3 fw-bold text-primary flex-shrink-0" style="width: 36px; height: 36px; font-size: 0.8rem; border-color: var(--erp-border) !important;">
                                                 <?= strtoupper(substr($v['vendor_name'], 0, 2)) ?>
                                             </div>
                                             <div>
-                                                <div class="fw-semibold text-dark mb-0" style="font-size: 0.875rem;"><?= htmlspecialchars($v['vendor_name']) ?></div>
-                                                <div class="text-muted" style="font-size: 0.75rem;">
-                                                    <i class="bi bi-telephone me-1"></i><?= $v['phone_number'] ?: 'No Phone' ?>
+                                                <div class="fw-semibold text-dark mb-0 extra-small"><?= htmlspecialchars($v['vendor_name']) ?></div>
+                                                <div class="text-muted extra-small" style="font-size: 0.72rem;">
+                                                    <i class="bi bi-telephone me-1"></i><?= $v['phone_number'] ?: 'No Contact' ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -503,20 +499,20 @@ ob_start();
                                     <td>
                                         <span class="badge-category <?= $cat_class ?>"><?= htmlspecialchars($v['category']) ?></span>
                                     </td>
-                                    <td class="text-center fw-medium" style="font-size: 0.875rem;">
-                                        <span class="badge bg-light text-dark border px-2 py-1"><?= $v['total_orders'] ?> Units</span>
+                                    <td class="text-center fw-medium extra-small">
+                                        <span class="badge bg-light text-dark border px-2 py-1 rounded-2"><?= number_format($v['total_orders']) ?> Records</span>
                                     </td>
                                     <td class="text-end">
-                                        <div class="fw-bold text-dark" style="font-size: 0.875rem;">₹<?= number_format($v['total_spend'], 2) ?></div>
-                                        <div class="progress mt-1 ms-auto" style="height: 4px; width: 100px; background-color: #F1F5F9;">
-                                            <div class="progress-bar" style="width: <?= $pct ?>%; background-color: var(--saas-primary);"></div>
+                                        <div class="fw-bold text-dark extra-small">₹<?= number_format($v['total_spend'], 2) ?></div>
+                                        <div class="progress mt-1 ms-auto" style="height: 4px; width: 100px; background-color: #f1f5f9;">
+                                            <div class="progress-bar" style="width: <?= $pct ?>%; background-color: var(--erp-navy);"></div>
                                         </div>
                                     </td>
                                 </tr>
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="4" class="text-center py-4 text-muted">No vendor records currently available for this division.</td>
+                                    <td colspan="4" class="text-center py-4 text-muted extra-small">No vendor records currently available for this selection.</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -533,8 +529,8 @@ document.addEventListener("DOMContentLoaded", function() {
     if (chartEl) {
         const ctx = chartEl.getContext('2d');
         const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-        gradient.addColorStop(0, 'rgba(79, 70, 229, 0.25)');
-        gradient.addColorStop(1, 'rgba(79, 70, 229, 0.0)');
+        gradient.addColorStop(0, 'rgba(18, 59, 99, 0.25)');
+        gradient.addColorStop(1, 'rgba(18, 59, 99, 0.0)');
 
         new Chart(ctx, {
             type: 'line',
@@ -543,12 +539,12 @@ document.addEventListener("DOMContentLoaded", function() {
                 datasets: [{
                     label: 'Procurement Volume',
                     data: [12, 19, 15, 25, 22, 30, 45],
-                    borderColor: '#4F46E5',
+                    borderColor: '#123b63',
                     borderWidth: 2,
                     backgroundColor: gradient,
                     fill: true,
                     tension: 0.4,
-                    pointBackgroundColor: '#4F46E5',
+                    pointBackgroundColor: '#123b63',
                     pointRadius: 3
                 }]
             },
@@ -558,7 +554,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 plugins: { legend: { display: false } },
                 scales: {
                     x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-                    y: { grid: { color: '#F1F5F9' }, ticks: { font: { size: 11 } } }
+                    y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } }
                 }
             }
         });

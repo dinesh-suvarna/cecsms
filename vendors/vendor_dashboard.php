@@ -374,7 +374,7 @@ ob_start();
         <div class="col-12 col-md-4">
             <div class="erp-card metric-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="text-uppercase fw-bold text-muted extra-small" style="letter-spacing: 0.05em;">Cumulative Outlay</span>
+                    <span class="text-uppercase fw-bold text-muted extra-small" style="letter-spacing: 0.05em;">Total Expenditure</span>
                     <div class="metric-icon-box" style="background: #e0f2fe; color: #0369a1;">
                         <i class="bi bi-wallet2"></i>
                     </div>
@@ -428,7 +428,7 @@ ob_start();
                             <div class="icon-box me-3" style="background: #dcfce7; color: #15803d;"><i class="bi bi-plug-fill"></i></div>
                             <div class="flex-grow-1">
                                 <div class="fw-bold extra-small text-dark">Electrical Supplies</div>
-                                <div class="text-muted extra-small" style="font-size: 0.72rem;">Wiring, Motors & Power</div>
+                                <div class="text-muted extra-small" style="font-size: 0.72rem;">Fans, Lights </div>
                             </div>
                             <i class="bi bi-chevron-right text-muted extra-small"></i>
                         </a>
@@ -458,7 +458,7 @@ ob_start();
                 <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-white">
                     <div>
                         <h6 class="fw-bold mb-0 text-dark">Top Suppliers by Procurement Volume</h6>
-                        <span class="text-muted extra-small">Ranked by total financial outlay across stock modules</span>
+                        <span class="text-muted extra-small">Ranked by total spend across stock modules</span>
                     </div>
                 </div>
                 <div class="table-responsive">

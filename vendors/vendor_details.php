@@ -194,20 +194,63 @@ ob_start();
 ?>
 
 <style>
-    .fw-800 { font-weight: 800 !important; letter-spacing: -0.5px; }
-    .fw-600 { font-weight: 600 !important; }
-    .text-xxs { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06rem; }
-    
+    :root {
+        --erp-navy: #123b63;
+        --erp-navy-dark: #0b2942;
+        --erp-bg: #f3f5f7;
+        --erp-card-bg: #ffffff;
+        --erp-border: #d9e0e7;
+        --erp-text-main: #20384d;
+        --erp-text-muted: #64748b;
+        --erp-shadow-sm: 0 1px 3px rgba(20,45,70,.05);
+    }
+
+    body { 
+        background-color: var(--erp-bg); 
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: var(--erp-text-main);
+    }
+
     /* Tabs Styling */
-    .nav-pills .nav-link { color: #64748b; font-weight: 600; border-radius: 12px; padding: 12px 24px; border: 1px solid transparent; transition: all 0.2s; }
-    .nav-pills .nav-link.active { background: #0d6efd; color: white; box-shadow: 0 4px 12px rgba(7, 17, 110, 0.2); }
-    .nav-pills .nav-link:hover:not(.active) { background: #f1f5f9; border-color: #e2e8f0; }
+    .erp-tabs .nav-link { 
+        color: var(--erp-text-muted); 
+        font-weight: 600; 
+        border-radius: 6px; 
+        padding: 0.55rem 1.25rem; 
+        font-size: 0.85rem;
+        background: #ffffff;
+        border: 1px solid var(--erp-border); 
+        transition: all 0.2s ease; 
+    }
+    .erp-tabs .nav-link.active { 
+        background: var(--erp-navy); 
+        color: #ffffff; 
+        border-color: var(--erp-navy);
+        box-shadow: var(--erp-shadow-sm); 
+    }
+    .erp-tabs .nav-link:hover:not(.active) { 
+        background: #f8fafc; 
+        color: var(--erp-text-main); 
+    }
 
     /* Accordion Styling */
-    .accordion-item { border: 1px solid #e2e8f0 !important; border-radius: 16px !important; margin-bottom: 1rem; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
-    .accordion-button { background: white !important; padding: 1.25rem 1.5rem; }
-    .accordion-button:not(.collapsed) { border-bottom: 1px solid #f1f5f9; box-shadow: none; background: #fafafa !important; }
-    .accordion-button::after { background-size: 0.9rem; }
+    .accordion-item { 
+        border: 1px solid var(--erp-border) !important; 
+        border-radius: 8px !important; 
+        margin-bottom: 0.85rem; 
+        overflow: hidden; 
+        box-shadow: var(--erp-shadow-sm);
+        background: #ffffff;
+    }
+    .accordion-button { 
+        background: #ffffff !important; 
+        padding: 1rem 1.25rem; 
+    }
+    .accordion-button:not(.collapsed) { 
+        border-bottom: 1px solid var(--erp-border); 
+        box-shadow: none; 
+        background: #f8fafc !important; 
+    }
     
     /* Sticky Contact Bar */
     .vendor-info-bar {
@@ -215,72 +258,76 @@ ob_start();
         top: 0;
         z-index: 10;
         background-color: #f8fafc;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid var(--erp-border);
     }
 
     /* Scrollable Container */
     .table-scroll-container {
-        max-height: 480px;
+        max-height: 450px;
         overflow-y: auto;
-        scroll-snap-type: y proximity;
-        scroll-padding-top: 45px;
     }
 
-    /* Professional Table Styling */
+    /* Professional ERP Table Styling */
     .custom-vendor-table { width: 100%; border-collapse: separate; border-spacing: 0; }
     .custom-vendor-table thead th { 
         position: sticky;
         top: 0;
         z-index: 5;
-        background-color: #f1f5f9; 
-        color: #475569; 
-        font-size: 0.7rem; 
+        background-color: #f8fafc; 
+        color: var(--erp-text-muted); 
+        font-size: 0.68rem; 
         font-weight: 700; 
         text-transform: uppercase; 
         letter-spacing: 0.05em; 
         padding: 0.85rem 1rem; 
-        border-bottom: 2px solid #cbd5e1; 
+        border-bottom: 1px solid var(--erp-border); 
     }
 
     .custom-vendor-table tbody tr { 
-        scroll-snap-align: start; 
-        scroll-snap-stop: normal;
         transition: background-color 0.15s ease-in-out; 
     }
-    .custom-vendor-table tbody tr:hover { background-color: #cad2dd; }
+    .custom-vendor-table tbody tr:hover { background-color: #f1f5f9; }
     .custom-vendor-table tbody td { 
-        padding: 0.9rem 1rem; 
-        border-bottom: 1px solid #f1f5f9; 
-        font-size: 0.875rem; 
+        padding: 0.85rem 1rem; 
+        border-bottom: 1px solid var(--erp-border); 
+        font-size: 0.85rem; 
     }
     .custom-vendor-table tfoot td {
         background-color: #f8fafc;
-        border-top: 2px solid #cbd5e1;
-        padding: 0.9rem 1rem;
+        border-top: 2px solid var(--erp-border);
+        padding: 0.85rem 1rem;
+    }
+
+    .btn-erp-action {
+        border-radius: 6px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 0.35rem 0.85rem;
     }
 </style>
 
-<div class="container-fluid py-4">
+<div class="container-fluid p-0">
+    <!-- Header Block -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-800 text-dark mb-0">Vendor Directory</h4>
-            <p class="text-muted small mb-0">Comprehensive vendor data and service history organized for quick access.</p>
+            <h4 class="fw-bold tracking-tight mb-1" style="color: var(--erp-text-main); letter-spacing: -0.01em;">Categorized Vendor Directory</h4>
+            <p class="text-muted extra-small mb-0">Comprehensive vendor profiles and transaction history organized by stock domain.</p>
         </div>
-        <a href="view_vendors.php" class="btn btn-light rounded-pill px-4 fw-bold border shadow-sm">
-            <i class="bi bi-arrow-left me-2"></i>Back to Registry
+        <a href="view_vendors.php" class="btn btn-light btn-sm fw-semibold border rounded-2 px-3">
+            <i class="bi bi-arrow-left me-1"></i> Registry View
         </a>
     </div>
 
     <!-- Category Tabs -->
-    <ul class="nav nav-pills mb-4 gap-2" id="sectorTabs">
+    <ul class="nav nav-pills erp-tabs mb-4 gap-2" id="sectorTabs">
         <li class="nav-item">
-            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-computer">Computer</button>
+            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-computer"><i class="bi bi-pc-display me-1"></i> Computer</button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-furniture">Furniture</button>
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-furniture"><i class="bi bi-boxes me-1"></i> Furniture</button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-electrical">Electrical</button>
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-electrical"><i class="bi bi-plug-fill me-1"></i> Electrical</button>
         </li>
     </ul>
 
@@ -290,9 +337,9 @@ ob_start();
                 
                 <div class="accordion" id="acc-<?= strtolower($catName) ?>">
                     <?php if (empty($vendorList)): ?>
-                        <div class="text-center py-5 bg-white rounded-4 border">
-                            <i class="bi bi-inbox text-muted fs-1 opacity-50"></i>
-                            <p class="text-muted mb-0 mt-2">No vendors found in this category.</p>
+                        <div class="text-center py-5 bg-white rounded-2 border">
+                            <i class="bi bi-inbox text-muted fs-2 opacity-50"></i>
+                            <p class="text-muted extra-small mb-0 mt-2">No active vendors found in this category domain.</p>
                         </div>
                     <?php else: ?>
                         <?php foreach ($vendorList as $index => $data): 
@@ -302,23 +349,23 @@ ob_start();
                             $accId = "collapse-" . strtolower($catName) . "-" . $vendor['id'];
                             $targetTableId = "table-" . strtolower($catName) . "-" . $vendor['id'];
                         ?>
-                            <div class="accordion-item shadow-sm">
+                            <div class="accordion-item">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $accId ?>">
                                         <div class="row align-items-center w-100 me-3">
                                             <div class="col">
-                                                <div class="fw-800 text-dark fs-6"><?= htmlspecialchars($vendor['vendor_name']) ?></div>
-                                                <div class="text-muted text-xxs text-uppercase mt-1">
+                                                <div class="fw-bold text-dark extra-small"><?= htmlspecialchars($vendor['vendor_name']) ?></div>
+                                                <div class="text-muted extra-small mt-1" style="font-size: 0.72rem;">
                                                     <i class="bi bi-telephone me-1"></i> <?= htmlspecialchars($vendor['phone_number'] ?: 'No Phone') ?>
                                                 </div>
                                             </div>
                                             <div class="col-auto text-end">
-                                                <span class="d-block text-xxs text-muted text-uppercase">Total Spend</span>
-                                                <span class="fw-800 text-primary fs-6">₹<?= number_format($stats['spend'], 2) ?></span>
+                                                <span class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.65rem;">Total Outlay</span>
+                                                <span class="fw-bold text-primary extra-small">₹<?= number_format($stats['spend'], 2) ?></span>
                                             </div>
                                             <div class="col-auto text-end border-start ps-3 ms-3">
-                                                <span class="d-block text-xxs text-muted text-uppercase">Supplies</span>
-                                                <span class="fw-800 text-dark fs-6"><?= $stats['count'] ?></span>
+                                                <span class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.65rem;">Orders</span>
+                                                <span class="fw-bold text-dark extra-small"><?= $stats['count'] ?></span>
                                             </div>
                                         </div>
                                     </button>
@@ -327,7 +374,7 @@ ob_start();
                                     <div class="accordion-body p-0">
                                         <!-- Sticky Email, Address & Action Toolbar -->
                                         <div class="p-3 vendor-info-bar d-flex flex-wrap justify-content-between align-items-center gap-2">
-                                            <div class="row small text-muted g-2 flex-grow-1">
+                                            <div class="row extra-small text-muted g-2 flex-grow-1">
                                                 <div class="col-md-4">
                                                     <i class="bi bi-envelope me-2 text-secondary"></i><?= htmlspecialchars($vendor['email'] ?: 'No Email Specified') ?>
                                                 </div>
@@ -339,7 +386,7 @@ ob_start();
                                             <div class="d-flex gap-2">
                                                 <button 
                                                     type="button" 
-                                                    class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-print-vendor"
+                                                    class="btn btn-outline-secondary btn-erp-action btn-print-vendor"
                                                     data-container-id="<?= $accId ?>"
                                                     data-vendor-name="<?= htmlspecialchars($vendor['vendor_name'], ENT_QUOTES) ?>"
                                                     data-phone="<?= htmlspecialchars($vendor['phone_number'] ?? 'N/A', ENT_QUOTES) ?>"
@@ -347,7 +394,7 @@ ob_start();
                                                     data-address="<?= htmlspecialchars(preg_replace('/\s+/', ' ', $vendor['address'] ?? 'N/A'), ENT_QUOTES) ?>">
                                                     <i class="bi bi-printer me-1"></i> Print / PDF
                                                 </button>
-                                                <button onclick="exportTableToCSV('<?= $targetTableId ?>', '<?= preg_replace('/[^a-zA-Z0-9]/', '_', $vendor['vendor_name']) ?>_history.csv')" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                                                <button onclick="exportTableToCSV('<?= $targetTableId ?>', '<?= preg_replace('/[^a-zA-Z0-9]/', '_', $vendor['vendor_name']) ?>_history.csv')" class="btn btn-outline-success btn-erp-action">
                                                     <i class="bi bi-file-earmark-excel me-1"></i> Excel
                                                 </button>
                                             </div>
@@ -360,8 +407,8 @@ ob_start();
                                                     <tr>
                                                         <th class="ps-4">Transaction Date</th>
                                                         <th>Bill Reference</th>
-                                                        <th>Item Supplied</th>
-                                                        <th class="text-center">Quantity</th>
+                                                        <th>Item Description</th>
+                                                        <th class="text-center">Qty</th>
                                                         <th class="text-end">Unit Price</th>
                                                         <th class="text-end pe-4">Total Amount</th>
                                                     </tr>
@@ -369,8 +416,8 @@ ob_start();
                                                 <tbody>
                                                     <?php if (empty($history)): ?>
                                                         <tr>
-                                                            <td colspan="6" class="text-center py-4 text-muted">
-                                                                <i class="bi bi-folder-x me-2"></i>No historical transaction records.
+                                                            <td colspan="6" class="text-center py-4 text-muted extra-small">
+                                                                <i class="bi bi-folder-x me-1"></i>No transaction history recorded for this vendor.
                                                             </td>
                                                         </tr>
                                                     <?php else: ?>
@@ -380,21 +427,21 @@ ob_start();
                                                         ?>
                                                             <tr>
                                                                 <td class="ps-4">
-                                                                    <span class="fw-semibold text-dark"><?= $date_formatted ?></span>
+                                                                    <span class="fw-semibold text-dark extra-small"><?= $date_formatted ?></span>
                                                                 </td>
                                                                 <td>
-                                                                    <span class="fw-bold text-dark">#<?= htmlspecialchars($row['bill_no']) ?></span>
+                                                                    <span class="fw-semibold text-dark extra-small">#<?= htmlspecialchars($row['bill_no']) ?></span>
                                                                 </td>
                                                                 <td>
-                                                                    <span class="fw-600 text-dark"><?= htmlspecialchars($row['item_name']) ?></span>
+                                                                    <span class="fw-semibold text-dark extra-small"><?= htmlspecialchars($row['item_name']) ?></span>
                                                                 </td>
                                                                 <td class="text-center">
-                                                                    <span class="fw-bold text-dark"><?= $row['qty'] ?></span>
+                                                                    <span class="text-dark extra-small"><?= $row['qty'] ?></span>
                                                                 </td>
-                                                                <td class="text-end fw-bold text-dark">
+                                                                <td class="text-end fw-semibold text-dark extra-small">
                                                                     ₹<?= number_format($row['price'], 2) ?>
                                                                 </td>
-                                                                <td class="text-end pe-4 fw-800 text-dark">
+                                                                <td class="text-end pe-4 fw-bold text-dark extra-small">
                                                                     ₹<?= number_format($line_total, 2) ?>
                                                                 </td>
                                                             </tr>
@@ -404,8 +451,8 @@ ob_start();
                                                 <?php if (!empty($history)): ?>
                                                 <tfoot>
                                                     <tr>
-                                                        <td colspan="5" class="ps-4 fw-bold text-dark">Grand Total:</td>
-                                                        <td class="text-end pe-4 fw-800 text-primary fs-6">₹<?= number_format($stats['spend'], 2) ?></td>
+                                                        <td colspan="5" class="ps-4 fw-bold text-dark extra-small">Cumulative Outlay:</td>
+                                                        <td class="text-end pe-4 fw-bold text-primary extra-small">₹<?= number_format($stats['spend'], 2) ?></td>
                                                     </tr>
                                                 </tfoot>
                                                 <?php endif; ?>
@@ -509,7 +556,32 @@ function exportTableToCSV(tableId, filename) {
     document.body.removeChild(downloadLink);
 }
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const cat = urlParams.get('cat');
+    const vendorId = urlParams.get('vendor_id');
 
+    if (cat && vendorId) {
+        // 1. Activate the matching tab
+        const tabTrigger = document.querySelector(`button[data-bs-target="#tab-${cat}"]`);
+        if (tabTrigger) {
+            const tab = new bootstrap.Tab(tabTrigger);
+            tab.show();
+        }
+
+        // 2. Expand and scroll to the vendor accordion
+        const targetAccordionId = `collapse-${cat}-${vendorId}`;
+        const targetAccordion = document.getElementById(targetAccordionId);
+        if (targetAccordion) {
+            const collapse = new bootstrap.Collapse(targetAccordion, { show: true });
+            setTimeout(() => {
+                targetAccordion.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        }
+    }
+});
+</script>
 <?php 
 $content = ob_get_clean();
 include "../vendors/vendorlayout.php"; 

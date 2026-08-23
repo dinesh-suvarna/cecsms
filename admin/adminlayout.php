@@ -349,22 +349,19 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
                     <i class="bi bi-house-door"></i>
                 </a>
 
-                <!-- ERP Formatted Header Block -->
-                <div class="d-flex align-items-center gap-3">
-                    <div class="d-flex flex-column">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <h5 class="mb-0 fw-bold text-dark lh-1" style="font-size: 1.15rem; letter-spacing: -0.01em;">
-                                 <?= htmlspecialchars($page_title) ?>
-                            </h5>   
-                        </div>
-                        <span class="text-muted extra-small d-none d-md-inline" style="font-size: 0.72rem; letter-spacing: 0.02em;">
-                                System Administration & Control
-                        </span>
-                    </div>
+                <!-- Professional System Header -->
+                <div class="d-flex flex-column ms-1">
+                    <h5 class="mb-0 fw-bold text-dark lh-1" style="font-size: 1.15rem; letter-spacing: -0.01em;">
+                        Computer Equipment & Consumables Stock Management System
+                    </h5>   
+                    <span class="text-muted extra-small mt-1 d-none d-md-inline" style="font-size: 0.72rem; letter-spacing: 0.01em;">
+                        System Administration & Control
+                    </span>
                 </div>
             </div>
 
             <div class="d-flex align-items-center gap-3">
+                <!-- Notifications Dropdown -->
                 <div class="dropdown me-1">
                     <button class="btn btn-light position-relative border shadow-sm rounded-circle p-0 d-flex align-items-center justify-content-center" 
                             style="width: 36px; height: 36px;" data-bs-toggle="dropdown">
@@ -418,11 +415,13 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
                     </div>
                 </div>
 
-                <div class="d-none d-sm-flex align-items-center gap-2 text-muted extra-small border-end ">
+                <!-- Date Badge -->
+                <div class="d-none d-sm-flex align-items-center gap-2 text-muted extra-small pe-2">
                     <i class="bi bi-calendar3"></i>
                     <?= date('D, M j, Y') ?>
                 </div>
 
+                <!-- User Profile Pill -->
                 <div class="dropdown">
                     <div class="user-profile shadow-sm" data-bs-toggle="dropdown">
                         <div class="text-end d-none d-md-block">

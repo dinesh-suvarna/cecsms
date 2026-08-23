@@ -47,36 +47,219 @@ ob_start();
 ?>
 
 <style>
-    .fw-800 { font-weight: 800 !important; }
-    .stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; }
-    .accordion-button:after { background-size: 1rem; }
-    .perf-card { border-radius: 12px; border: 1px solid #f1f5f9; background: #f8fafc; padding: 10px 15px; text-align: center; }
-    .nav-pills .nav-link { font-weight: 700; color: #475569; border-radius: 8px; padding: 10px 20px; }
-    .nav-pills .nav-link.active { background-color: #0d6efd; color: #ffffff; }
+    /* ERP Design System Tokens */
+    :root {
+        --erp-navy: #123b63;
+        --erp-bg: #f8fafc;
+        --erp-card-bg: #ffffff;
+        --erp-border: #e2e8f0;
+        --erp-border-subtle: #f1f5f9;
+        --erp-text-main: #0f172a;
+        --erp-text-muted: #64748b;
+    }
+
+    /* Page Header */
+    .erp-header-title {
+        font-weight: 800;
+        color: var(--erp-navy);
+        letter-spacing: -0.02em;
+        font-size: 1.25rem;
+    }
+
+    .erp-header-sub {
+        font-size: 0.8125rem;
+        color: var(--erp-text-muted);
+    }
+
+    /* Vendor Details Tab Pill Design */
+    .vendor-nav-tabs {
+        border-bottom: none;
+        gap: 6px;
+    }
+
+    .vendor-nav-tabs .nav-link {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #64748b;
+        background-color: #f1f5f9;
+        border: 1px solid var(--erp-border);
+        border-radius: 8px;
+        padding: 8px 18px;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .vendor-nav-tabs .nav-link:hover {
+        color: var(--erp-navy);
+        background-color: #e2e8f0;
+    }
+
+    .vendor-nav-tabs .nav-link.active {
+        background-color: var(--erp-navy) !important;
+        color: #ffffff !important;
+        border-color: var(--erp-navy) !important;
+        box-shadow: 0 2px 4px rgba(18, 59, 99, 0.15);
+    }
+
+    /* Enterprise Accordion Card Styles */
+    .erp-accordion-item {
+        border: 1px solid var(--erp-border);
+        background: var(--erp-card-bg);
+        border-radius: 10px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    /* Highlighted state for active Service History inner card */
+   .perf-card.perf-card-active-service {
+        background-color: #e3e8ee; 
+        border-color: #cbd5e1;
+        border-left: 3px solid var(--erp-navy);
+    }
+
+    .erp-accordion-item:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .erp-accordion-button {
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 1rem 1.25rem;
+    }
+
+    .erp-accordion-button:not(.collapsed) {
+        border-bottom: 1px solid var(--erp-border-subtle);
+    }
+
+    /* Typography & Analytics Metrics */
+    .stat-label { 
+        font-size: 0.6875rem; 
+        text-transform: uppercase; 
+        letter-spacing: 0.05em; 
+        font-weight: 700;
+        color: var(--erp-text-muted); 
+        margin-bottom: 2px;
+    }
+
+    .vendor-title {
+        font-weight: 800;
+        color: var(--erp-navy);
+        font-size: 1rem;
+        letter-spacing: -0.01em;
+    }
+
+    .metric-value {
+        font-size: 0.875rem;
+        font-weight: 700;
+    }
+
+    /* Inner Performance Metric Cards */
+    .perf-card { 
+        border-radius: 8px; 
+        border: 1px solid var(--erp-border); 
+        background: #ffffff; 
+        padding: 12px 16px; 
+        text-align: left; 
+    }
+
+    .perf-card .metric-header {
+        font-size: 0.9375rem;
+        font-weight: 800;
+        color: var(--erp-text-main);
+    }
+
+    /* ERP Status Badges */
+    .erp-status-badge {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .erp-status-stable {
+        background-color: #f0fdf4;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .erp-status-warning {
+        background-color: #fffbeb;
+        color: #92400e;
+        border: 1px solid #fef08a;
+    }
+
+    .maint-pulse-badge {
+    font-size: 0.725rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px; /* Full pill shape */
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    }
+
+    /* Pulsing red dot */
+    .maint-pulse-badge::before {
+        content: '';
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        background-color: #dc2626;
+        border-radius: 50%;
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5);
+        animation: maint-pulse 1.8s infinite;
+    }
+
+@keyframes maint-pulse {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 5px rgba(220, 38, 38, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+    }
+}
+
+    .empty-state-card {
+        border: 1px dashed var(--erp-border);
+        background: var(--erp-card-bg);
+        border-radius: 10px;
+    }
 </style>
 
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="container-fluid p-0">
+    <!-- Header Controls -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
-            <h4 class="fw-800 text-dark mb-0">Vendor Performance Dashboard</h4>
-            <p class="text-muted small mb-0">Analytics grouped by core procurement sector.</p>
+            <h4 class="erp-header-title mb-0">Vendor Performance Analytics</h4>
+            <p class="erp-header-sub mb-0">Comparative procurement and operational performance matrix by sector.</p>
         </div>
         
         <!-- Category Navigation Tabs -->
-        <ul class="nav nav-pills" id="vendorCategoryTabs" role="tablist">
+        <ul class="nav nav-pills vendor-nav-tabs" id="vendorCategoryTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="computer-tab" data-bs-toggle="pill" data-bs-target="#tab-computer" type="button" role="tab">
-                    <i class="bi bi-laptop me-1"></i> Computer
+                    <i class="bi bi-laptop me-1.5"></i> Computer
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="furniture-tab" data-bs-toggle="pill" data-bs-target="#tab-furniture" type="button" role="tab">
-                    <i class="bi bi-desk me-1"></i> Furniture
+                    <i class="bi bi-desk me-1.5"></i> Furniture
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="electrical-tab" data-bs-toggle="pill" data-bs-target="#tab-electrical" type="button" role="tab">
-                    <i class="bi bi-lightning-charge me-1"></i> Electricals
+                    <i class="bi bi-lightning-charge me-1.5"></i> Electricals
                 </button>
             </li>
         </ul>
@@ -94,29 +277,38 @@ ob_start();
                 <?php if ($vendor_result->num_rows > 0): ?>
                     <div class="accordion" id="accordion-<?= $tab_id ?>">
                         <?php while($v = $vendor_result->fetch_assoc()): ?>
-                            <div class="accordion-item border-0 mb-3 shadow-sm rounded-4 overflow-hidden">
+                            <div class="accordion-item erp-accordion-item mb-3 overflow-hidden <?= $v['service_calls'] > 0 ? 'has-service-history' : '' ?>">
                                 <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed py-3" type="button" data-bs-toggle="collapse" data-bs-target="#v-<?= $tab_id ?>-<?= $v['id'] ?>">
-                                        <div class="row w-100 align-items-center">
+                                    <button class="accordion-button erp-accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#v-<?= $tab_id ?>-<?= $v['id'] ?>">
+                                        <div class="row w-100 align-items-center g-2">
                                             <div class="col-md-4">
-                                                <!-- <span class="badge bg-primary mb-1 small"><?= htmlspecialchars($v['category']) ?></span> -->
-                                                <div class="fw-800 text-dark fs-5"><?= htmlspecialchars($v['vendor_name']) ?></div>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="vendor-title"><?= htmlspecialchars($v['vendor_name']) ?></span>
+                                                    
+                                                    <!-- Collapsed Maintenance Warning Indicator -->
+                                                    <?php if ($v['repair_count'] > 0): ?>
+                                                        <span class="maint-pulse-badge" title="Active items under maintenance">
+                                                            <i class="bi bi-tools me-1"></i><?= $v['repair_count'] ?> 
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="small text-muted" style="font-size: 0.75rem;"><?= htmlspecialchars($v['email'] ?: 'No primary contact recorded') ?></div>
                                             </div>
                                             <div class="col-md-3">
-                                                <div class="stat-label">Total Spend (Stock)</div>
-                                                <div class="fw-bold text-primary">₹<?= number_format($v['total_spend'], 2) ?></div>
+                                                <div class="stat-label">Total Spend</div>
+                                                <div class="metric-value text-dark">₹<?= number_format($v['total_spend'], 2) ?></div>
                                             </div>
                                             <div class="col-md-3">
-                                                <div class="stat-label">Stock Entries</div>
-                                                <div class="fw-bold"><?= $v['total_orders'] ?> Items Procured</div>
+                                                <div class="stat-label">Stock Volume</div>
+                                                <div class="metric-value text-secondary"><?= $v['total_orders'] ?> Items Procured</div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="stat-label">Reliability</div>
+                                                <div class="stat-label">Status</div>
                                                 <?php 
                                                     if($v['service_calls'] > 5) {
-                                                        echo '<div class="text-warning fw-bold"><i class="bi bi-exclamation-triangle me-1"></i>High Maint.</div>';
+                                                        echo '<span class="erp-status-badge erp-status-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>High Maint.</span>';
                                                     } else {
-                                                        echo '<div class="text-success fw-bold"><i class="bi bi-shield-check me-1"></i>Stable</div>';
+                                                        echo '<span class="erp-status-badge erp-status-stable"><i class="bi bi-check-circle-fill me-1"></i>Stable</span>';
                                                     }
                                                 ?>
                                             </div>
@@ -124,27 +316,27 @@ ob_start();
                                     </button>
                                 </h2>
                                 <div id="v-<?= $tab_id ?>-<?= $v['id'] ?>" class="accordion-collapse collapse" data-bs-parent="#accordion-<?= $tab_id ?>">
-                                    <div class="accordion-body bg-white border-top">
+                                    <div class="accordion-body bg-white border-top p-3">
                                         <div class="row g-3">
                                             <div class="col-md-4">
-                                                <div class="perf-card">
+                                                <div class="perf-card <?= $v['service_calls'] > 0 ? 'perf-card-active-service' : '' ?>">
                                                     <div class="stat-label">Service History</div>
-                                                    <div class="h5 fw-800 mb-0"><?= $v['service_calls'] ?> Calls</div>
-                                                    <div class="small text-muted">₹<?= number_format($v['service_costs'], 2) ?> total service cost</div>
+                                                    <div class="metric-header"><?= $v['service_calls'] ?> Calls Logged</div>
+                                                    <div class="small text-muted mt-0.5">₹<?= number_format($v['service_costs'], 2) ?> cumulative spend</div>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="perf-card">
                                                     <div class="stat-label">Maintenance Load</div>
-                                                    <div class="h5 fw-800 mb-0 <?= $v['repair_count'] > 0 ? 'text-danger' : '' ?>"><?= $v['repair_count'] ?> Units</div>
-                                                    <div class="small text-muted">Assets currently in repair</div>
+                                                    <div class="metric-header <?= $v['repair_count'] > 0 ? 'text-danger' : '' ?>"><?= $v['repair_count'] ?> Active Units</div>
+                                                    <div class="small text-muted mt-0.5">Assets currently undergoing repair</div>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="perf-card">
-                                                    <div class="stat-label">Primary Email</div>
-                                                    <div class="h5 fw-800 mb-0" style="font-size: 0.9rem;"><?= htmlspecialchars($v['email'] ?: 'N/A') ?></div>
-                                                    <div class="small text-muted">For procurement & service logs</div>
+                                                    <div class="stat-label">Contact Details</div>
+                                                    <div class="metric-header text-truncate" style="font-size: 0.875rem;"><?= htmlspecialchars($v['email'] ?: 'N/A') ?></div>
+                                                    <div class="small text-muted mt-0.5">Official communication dispatch</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -154,10 +346,11 @@ ob_start();
                         <?php endwhile; ?>
                     </div>
                 <?php else: ?>
-                    <div class="card border-0 shadow-sm rounded-4 text-center py-5">
+                    <div class="empty-state-card text-center py-5">
                         <div class="card-body">
-                            <i class="bi bi-inbox fs-1 text-muted"></i>
-                            <h6 class="fw-bold mt-2 text-secondary">No vendors found in this category</h6>
+                            <i class="bi bi-inbox fs-2 text-muted mb-2 d-block"></i>
+                            <h6 class="fw-bold text-secondary mb-1">No Vendors Registered</h6>
+                            <p class="text-muted small mb-0">There are no records associated with this procurement category.</p>
                         </div>
                     </div>
                 <?php endif; ?>

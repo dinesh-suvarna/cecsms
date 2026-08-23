@@ -1,5 +1,6 @@
 <?php 
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 session_start();
 $page_title = "Component Registry";
 $page_icon  = "bi-boxes";
@@ -248,7 +249,7 @@ ob_start();
                                                 <div class="text-muted extra-small"><?= htmlspecialchars($row['category']) ?> • <?= htmlspecialchars($row['specification']) ?></div>
                                             </td>
                                             <td><span class="extra-small text-muted"><?= htmlspecialchars($row['vendor_name'] ?? 'Direct Stock') ?></span></td>
-                                            <td class="text-center extra-small fw-bold text-secondary">₹<?= number_format($row['unit_price'], 2) ?></td>
+                                            <td class="text-center extra-small fw-bold text-secondary"><?= inr($row['unit_price'], true) ?></td>
                                             <td class="text-center"><span class="stock-badge <?= $badge ?>"><?= $qty ?> <small>pcs</small></span></td>
                                             <td class="pe-3 text-end">
                                                 <button class="btn btn-icon edit-btn me-1" data-id="<?= $row['id'] ?>" data-name="<?= htmlspecialchars($row['item_name']) ?>" data-cat="<?= htmlspecialchars($row['category']) ?>" data-spec="<?= htmlspecialchars($row['specification']) ?>" data-qty="<?= $qty ?>" data-price="<?= $row['unit_price'] ?>" data-vendor="<?= $row['vendor_id'] ?>"><i class="bi bi-pencil"></i></button>

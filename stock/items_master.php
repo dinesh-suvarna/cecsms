@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 require_once "../includes/session.php";
 require_once "../admin/auth.php";
 
@@ -434,11 +435,11 @@ ob_start();
                                                         <?= $isSerial ? 'Serialized' : 'Non-Serialized' ?>
                                                     </span>
                                                 </td>
-                                                <td class="text-center fw-semibold text-dark"><?= number_format($row['total_purchased']) ?></td>
-                                                <td class="text-center text-danger fw-semibold"><?= number_format($row['total_dispatched']) ?></td>
+                                                <td class="text-center fw-semibold text-dark"><?= inr($row['total_purchased']) ?></td>
+                                                <td class="text-center text-danger fw-semibold"><?= inr($row['total_dispatched']) ?></td>
                                                 <td class="text-center">
                                                     <span class="badge-erp <?= ($available > 0 ? 'badge-erp-success' : 'badge-erp-danger') ?>">
-                                                        <?= number_format($available) ?>
+                                                        <?= inr($available) ?>
                                                     </span>
                                                 </td>
                                                 <td class="text-end pe-3">

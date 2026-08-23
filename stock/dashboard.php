@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 include "../includes/session.php";
+require_once __DIR__ . "/../includes/functions.php";
 
 // 1. FINANCIAL OVERVIEW
 $stock_stats = $conn->query("
@@ -206,7 +207,7 @@ ob_start();
             <div class="metric-box primary">
                 <div>
                     <span class="metric-label">Procurement Value</span>
-                    <div class="metric-value">₹<?= number_format($stock_stats['total_inventory_value'] / 100000, 2) ?>L</div>
+                    <div class="metric-value"><?= inr($stock_stats['total_inventory_value'] / 100000, true) ?>L</div>
                 </div>
                 <div class="metric-sub">
                     <i class="bi bi-wallet2"></i> Cumulative valuation across units
@@ -218,7 +219,7 @@ ob_start();
             <div class="metric-box success">
                 <div>
                     <span class="metric-label">30-Day Movement</span>
-                    <div class="metric-value"><?= number_format($velocity['moved_items'] ?? 0) ?> <span class="fs-6 text-muted fw-normal">Units</span></div>
+                    <div class="metric-value"><?= inr($velocity['moved_items'] ?? 0) ?> <span class="fs-6 text-muted fw-normal">Units</span></div>
                 </div>
                 <div class="metric-sub text-success">
                     <i class="bi bi-truck"></i> Total institutional allocations
@@ -230,7 +231,7 @@ ob_start();
             <div class="metric-box info">
                 <div>
                     <span class="metric-label">Total PCs Deployed</span>
-                    <div class="metric-value"><?= number_format($comp_stats['total_comps'] ?? 0) ?></div>
+                    <div class="metric-value"><?= inr($comp_stats['total_comps'] ?? 0) ?></div>
                 </div>
                 <div class="metric-sub">
                     <i class="bi bi-display"></i> Operational computers in field
@@ -291,9 +292,9 @@ ob_start();
                             ?>
                             <tr>
                                 <td class="ps-3 fw-semibold text-dark"><?= htmlspecialchars($row['institution_name']) ?></td>
-                                <td class="text-center fw-medium"><?= number_format($row['total_assets']) ?></td>
+                                <td class="text-center fw-medium"><?= inr($row['total_assets']) ?></td>
                                 <td class="text-center">
-                                    <span class="badge-erp badge-erp-purple"><?= number_format($row['computer_count']) ?></span>
+                                    <span class="badge-erp badge-erp-purple"><?= inr($row['computer_count']) ?></span>
                                 </td>
                                 <td class="pe-3">
                                     <div class="d-flex align-items-center gap-2">
@@ -352,7 +353,7 @@ ob_start();
                             <div class="fw-bold text-dark" style="font-size: .78rem;"><?= htmlspecialchars($cat['category']) ?></div>
                             <span class="text-muted" style="font-size: .68rem;">Allocated Dispatches</span>
                         </div>
-                        <span class="badge-erp badge-erp-info"><?= number_format($cat['total_qty']) ?> Units</span>
+                        <span class="badge-erp badge-erp-info"><?= inr($cat['total_qty']) ?> Units</span>
                     </div>
                     <?php 
                         endwhile;

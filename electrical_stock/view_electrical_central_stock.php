@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 session_start();
 
 // --- 1. SESSION & ROLE CHECK ---
@@ -168,8 +169,8 @@ ob_start();
                         </div>
                     </td>
                     <td>
-                        <div class="fw-bold text-dark">₹<?= number_format($row['unit_price'], 2) ?></div>
-                        <small class="text-muted">Total: ₹<?= number_format($row['unit_price'] * $row['total_qty'], 2) ?></small>
+                        <div class="fw-bold text-dark"><?= inr($row['unit_price'], true) ?></div>
+                        <small class="text-muted">Total: <?= inr($row['unit_price'] * $row['total_qty'], true) ?></small>
                     </td>
                     <td>
                         <div class="small fw-medium"><?= date('d M, Y', strtotime($row['bill_date'])) ?></div>

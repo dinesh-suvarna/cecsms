@@ -2,6 +2,7 @@
 session_start();
 if (!isset($_SESSION["user_id"])) { header("Location: login.php"); exit(); }
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 
 $page_title = "Global Purchase Audit Ledger";
 
@@ -13,23 +14,25 @@ $is_super_admin = ($role === 'SuperAdmin' || $division_id === 0);
 /**
  * Fetch Item-Grouped Transactions by Category Domain (Aggregated by Bill + Item)
  */
-function getItemLedgerData($conn, $category, $is_super_admin, $division_id) {
+function getItemLedgerData(mysqli $conn, string $category, bool $is_super_admin, int $division_id): array {
+    $stmt = null;
+
     if ($category === 'Computer') {
         if ($is_super_admin) {
             $query = "SELECT sd.bill_date as purchase_date, v.id as vendor_id, v.vendor_name, im.id as item_id, im.item_name, 'Computer' as category, sd.bill_no, 'COMP-' as prefix, 
                              SUM(sd.quantity) as qty, 
-                             AVG(sd.amount) as unit_price, 
+                             (SUM(sd.quantity * sd.amount) / SUM(sd.quantity)) as unit_price, 
                              SUM(sd.quantity * sd.amount) as total_amount 
                       FROM stock_details sd 
                       JOIN vendors v ON sd.vendor_id = v.id 
                       JOIN items_master im ON sd.stock_item_id = im.id 
-                      GROUP BY sd.bill_no, im.id, v.id, sd.bill_date 
-                      ORDER BY im.item_name ASC, sd.bill_date DESC";
+                      GROUP BY sd.bill_no, im.id, sd.vendor_id
+                      ORDER BY im.item_name ASC, MAX(sd.bill_date) DESC";
             $stmt = $conn->prepare($query);
         } else {
             $query = "SELECT sd.bill_date as purchase_date, v.id as vendor_id, v.vendor_name, im.id as item_id, im.item_name, 'Computer' as category, sd.bill_no, 'COMP-' as prefix, 
                              SUM(dd.quantity) as qty, 
-                             AVG(sd.amount) as unit_price, 
+                             (SUM(dd.quantity * sd.amount) / SUM(dd.quantity)) as unit_price, 
                              SUM(dd.quantity * sd.amount) as total_amount 
                       FROM stock_details sd 
                       JOIN vendors v ON sd.vendor_id = v.id 
@@ -37,25 +40,25 @@ function getItemLedgerData($conn, $category, $is_super_admin, $division_id) {
                       JOIN dispatch_details dd ON sd.id = dd.stock_detail_id 
                       JOIN dispatch_master dm ON dd.dispatch_id = dm.id 
                       WHERE dm.division_id = ? 
-                      GROUP BY sd.bill_no, im.id, v.id, sd.bill_date 
-                      ORDER BY im.item_name ASC, sd.bill_date DESC";
+                      GROUP BY sd.bill_no, im.id, sd.vendor_id
+                      ORDER BY im.item_name ASC, MAX(sd.bill_date) DESC";
             $stmt = $conn->prepare($query);
             $stmt->bind_param("i", $division_id);
         }
     } elseif ($category === 'Furniture') {
         if ($is_super_admin) {
-            $query = "SELECT fs.bill_date as purchase_date, v.id as vendor_id, v.vendor_name, fi.id as item_id, fi.item_name, 'Furniture' as category, fs.bill_no, 'FURN-' as prefix, 
+            $query = "SELECT MAX(fs.bill_date) as purchase_date, v.id as vendor_id, v.vendor_name, fi.id as item_id, fi.item_name, 'Furniture' as category, fs.bill_no, 'FURN-' as prefix, 
                              SUM(fs.total_qty) as qty, 
                              (SUM(fs.total_qty * fs.unit_price) / SUM(fs.total_qty)) as unit_price, 
                              SUM(fs.total_qty * fs.unit_price) as total_amount 
                       FROM furniture_stock fs 
                       JOIN vendors v ON fs.vendor_id = v.id 
                       JOIN furniture_items fi ON fs.furniture_item_id = fi.id 
-                      GROUP BY fs.bill_no, fi.id, v.id, fs.bill_date 
-                      ORDER BY fi.item_name ASC, fs.bill_date DESC";
+                      GROUP BY fs.bill_no, fi.id, fs.vendor_id
+                      ORDER BY fi.item_name ASC, MAX(fs.bill_date) DESC";
             $stmt = $conn->prepare($query);
         } else {
-            $query = "SELECT fs.bill_date as purchase_date, v.id as vendor_id, v.vendor_name, fi.id as item_id, fi.item_name, 'Furniture' as category, fs.bill_no, 'FURN-' as prefix, 
+            $query = "SELECT MAX(fs.bill_date) as purchase_date, v.id as vendor_id, v.vendor_name, fi.id as item_id, fi.item_name, 'Furniture' as category, fs.bill_no, 'FURN-' as prefix, 
                              SUM(fs.total_qty) as qty, 
                              (SUM(fs.total_qty * fs.unit_price) / SUM(fs.total_qty)) as unit_price, 
                              SUM(fs.total_qty * fs.unit_price) as total_amount 
@@ -64,25 +67,25 @@ function getItemLedgerData($conn, $category, $is_super_admin, $division_id) {
                       JOIN furniture_items fi ON fs.furniture_item_id = fi.id 
                       JOIN units u ON fs.unit_id = u.id 
                       WHERE u.division_id = ? 
-                      GROUP BY fs.bill_no, fi.id, v.id, fs.bill_date 
-                      ORDER BY fi.item_name ASC, fs.bill_date DESC";
+                      GROUP BY fs.bill_no, fi.id, fs.vendor_id
+                      ORDER BY fi.item_name ASC, MAX(fs.bill_date) DESC";
             $stmt = $conn->prepare($query);
             $stmt->bind_param("i", $division_id);
         }
-    } elseif ($category === 'Electrical') {
+    } elseif ($category === 'Electrical' || $category === 'Electricals') {
         if ($is_super_admin) {
-            $query = "SELECT es.bill_date as purchase_date, v.id as vendor_id, v.vendor_name, ei.id as item_id, ei.item_name, 'Electrical' as category, es.bill_no, 'ELEC-' as prefix, 
+            $query = "SELECT MAX(es.bill_date) as purchase_date, v.id as vendor_id, v.vendor_name, ei.id as item_id, ei.item_name, 'Electricals' as category, es.bill_no, 'ELEC-' as prefix, 
                              SUM(es.total_qty) as qty, 
                              (SUM(es.total_qty * es.unit_price) / SUM(es.total_qty)) as unit_price, 
                              SUM(es.total_qty * es.unit_price) as total_amount 
                       FROM electrical_stock es 
                       JOIN vendors v ON es.vendor_id = v.id 
                       JOIN electrical_items ei ON es.electrical_item_id = ei.id 
-                      GROUP BY es.bill_no, ei.id, v.id, es.bill_date 
-                      ORDER BY ei.item_name ASC, es.bill_date DESC";
+                      GROUP BY es.bill_no, ei.id, es.vendor_id
+                      ORDER BY ei.item_name ASC, MAX(es.bill_date) DESC";
             $stmt = $conn->prepare($query);
         } else {
-            $query = "SELECT es.bill_date as purchase_date, v.id as vendor_id, v.vendor_name, ei.id as item_id, ei.item_name, 'Electrical' as category, es.bill_no, 'ELEC-' as prefix, 
+            $query = "SELECT MAX(es.bill_date) as purchase_date, v.id as vendor_id, v.vendor_name, ei.id as item_id, ei.item_name, 'Electricals' as category, es.bill_no, 'ELEC-' as prefix, 
                              SUM(es.total_qty) as qty, 
                              (SUM(es.total_qty * es.unit_price) / SUM(es.total_qty)) as unit_price, 
                              SUM(es.total_qty * es.unit_price) as total_amount 
@@ -91,15 +94,20 @@ function getItemLedgerData($conn, $category, $is_super_admin, $division_id) {
                       JOIN electrical_items ei ON es.electrical_item_id = ei.id 
                       JOIN units u ON es.unit_id = u.id 
                       WHERE u.division_id = ? 
-                      GROUP BY es.bill_no, ei.id, v.id, es.bill_date 
-                      ORDER BY ei.item_name ASC, es.bill_date DESC";
+                      GROUP BY es.bill_no, ei.id, es.vendor_id
+                      ORDER BY ei.item_name ASC, MAX(es.bill_date) DESC";
             $stmt = $conn->prepare($query);
             $stmt->bind_param("i", $division_id);
         }
     }
 
+    if (!$stmt) {
+        return [];
+    }
+
     $stmt->execute();
     $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
 
     // Grouping by Item ID
     $grouped = [];
@@ -107,15 +115,15 @@ function getItemLedgerData($conn, $category, $is_super_admin, $division_id) {
         $itemId = $row['item_id'];
         if (!isset($grouped[$itemId])) {
             $grouped[$itemId] = [
-                'item_name' => $row['item_name'],
-                'total_qty' => 0,
+                'item_name'   => $row['item_name'],
+                'total_qty'   => 0,
                 'total_spend' => 0,
-                'bills' => []
+                'bills'       => []
             ];
         }
-        $grouped[$itemId]['total_qty'] += $row['qty'];
+        $grouped[$itemId]['total_qty']   += $row['qty'];
         $grouped[$itemId]['total_spend'] += $row['total_amount'];
-        $grouped[$itemId]['bills'][] = $row;
+        $grouped[$itemId]['bills'][]      = $row;
     }
     return $grouped;
 }
@@ -213,7 +221,7 @@ ob_start();
                                             </div>
                                             <div class="col-auto text-end">
                                                 <span class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.65rem;">Total Outlay</span>
-                                                <span class="fw-bold text-primary extra-small">₹<?= number_format($itemData['total_spend'], 2) ?></span>
+                                                <span class="fw-bold text-primary extra-small"><?= inr($itemData['total_spend'], true) ?></span>
                                             </div>
                                             <div class="col-auto text-end border-start ps-3 ms-3">
                                                 <span class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.65rem;">Total Units</span>
@@ -248,8 +256,8 @@ ob_start();
                                                             </td>
                                                             <td class="fw-semibold text-dark extra-small"><?= htmlspecialchars($row['vendor_name']) ?></td>
                                                             <td class="text-center fw-bold text-dark extra-small"><?= number_format($row['qty'], 0) ?></td>
-                                                            <td class="text-end fw-semibold text-dark extra-small">₹<?= number_format($row['unit_price'], 2) ?></td>
-                                                            <td class="text-end fw-bold text-primary extra-small">₹<?= number_format($row['total_amount'], 2) ?></td>
+                                                            <td class="text-end fw-semibold text-dark extra-small"><?= inr($row['unit_price'], true) ?></td>
+                                                            <td class="text-end fw-bold text-primary extra-small"><?= inr($row['total_amount'], true) ?></td>
                                                             <td class="text-center pe-4">
                                                                 <!-- Deep Link directly to Vendor Accordion in Vendor Directory -->
                                                                 <a href="vendor_details.php?cat=<?= strtolower($catName) ?>&vendor_id=<?= $row['vendor_id'] ?>" 

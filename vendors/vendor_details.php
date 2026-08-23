@@ -6,6 +6,7 @@ if (!isset($_SESSION["user_id"])) {
 }
 
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 
 $page_title = "Categorized Vendor Directory";
 
@@ -370,7 +371,7 @@ ob_start();
                                             </div>
                                             <div class="col-auto text-end">
                                                 <span class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.65rem;">Total Spend</span>
-                                                <span class="fw-bold text-primary extra-small">₹<?= number_format($stats['spend'], 2) ?></span>
+                                                <span class="fw-bold text-primary extra-small"><?= inr($stats['spend'], true) ?></span>
                                             </div>
                                             <div class="col-auto text-end border-start ps-3 ms-3">
                                                 <span class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.65rem;">Orders</span>
@@ -448,10 +449,10 @@ ob_start();
                                                                     <span class="text-dark extra-small"><?= $row['qty'] ?></span>
                                                                 </td>
                                                                 <td class="text-end fw-semibold text-dark extra-small">
-                                                                    ₹<?= number_format($row['price'], 2) ?>
+                                                                    <?= inr($row['price'], true) ?>
                                                                 </td>
                                                                 <td class="text-end pe-4 fw-bold text-dark extra-small">
-                                                                    ₹<?= number_format($line_total, 2) ?>
+                                                                    <?= inr($line_total, true) ?>
                                                                 </td>
                                                             </tr>
                                                         <?php endforeach; ?>
@@ -461,7 +462,7 @@ ob_start();
                                                 <tfoot>
                                                     <tr>
                                                         <td colspan="5" class="ps-4 fw-bold text-dark extra-small">Total Expenditure:</td>
-                                                        <td class="text-end pe-4 fw-bold text-primary extra-small">₹<?= number_format($stats['spend'], 2) ?></td>
+                                                        <td class="text-end pe-4 fw-bold text-primary extra-small"><?= inr($stats['spend'], true) ?></td>
                                                     </tr>
                                                 </tfoot>
                                                 <?php endif; ?>

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 include "../includes/session.php";
 
 date_default_timezone_set('Asia/Kolkata'); 
@@ -376,7 +377,7 @@ ob_start();
         <div class="col-md-4">
             <div class="kpi-card">
                 <div class="text-muted small fw-bold text-uppercase">Total Computer Records</div>
-                <div class="h3 fw-bold my-1 text-primary"><?= number_format($total_systems) ?></div>
+                <div class="h3 fw-bold my-1 text-primary"><?= inr($total_systems) ?></div>
                 <div class="small text-muted"><i class="bi bi-pc-display me-1"></i> Listed individual assets</div>
             </div>
         </div>

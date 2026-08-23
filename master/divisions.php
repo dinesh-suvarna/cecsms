@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 require_once "../includes/session.php";
 
 $role = $_SESSION['role'];
@@ -365,7 +366,7 @@ ob_start();
         <div class="inst-toolbar">
             <div>
                 <span class="inst-toolbar-title">Department Directory Records</span>
-                <span class="inst-toolbar-count ms-2"><?= number_format($totalRows) ?> total</span>
+                <span class="inst-toolbar-count ms-2"><?= inr($totalRows) ?> total</span>
             </div>
 
             <form method="GET" class="m-0 d-flex gap-2 align-items-center">

@@ -134,7 +134,7 @@ ob_start();
                         <span class="badge bg-white bg-opacity-20 rounded-pill">System Online</span>
                     </div>
                     <p class="mt-4 mb-0 opacity-75 fw-medium">Live Electrical Units</p>
-                    <h1 class="display-1 fw-bold mb-0"><?= number_format($total_assets) ?></h1>
+                    <h1 class="display-1 fw-bold mb-0"><?= inr($total_assets) ?></h1>
                 </div>
                 <div class="mt-4 pt-3 border-top border-white border-opacity-10">
                     <div class="d-flex align-items-center gap-2">
@@ -176,7 +176,7 @@ ob_start();
                                 </div>
                                 <div class="d-flex align-items-center gap-3">
                                     <span class="text-muted small d-none d-sm-block">Quantity:</span>
-                                    <div class="count-pill"><?= number_format($cat['count']) ?></div>
+                                    <div class="count-pill"><?= inr($cat['count']) ?></div>
                                 </div>
                             </div>
                         <?php endwhile; else: ?>

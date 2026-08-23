@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 require_once "../includes/session.php";
 require_once "../admin/auth.php";
 requireRole([ROLE_SUPERADMIN]);
@@ -1021,7 +1022,7 @@ ob_start();
             </div>
 
             <div class="inst-summary-value">
-                <?= number_format($totalInstitutions) ?>
+                <?= inr($totalInstitutions) ?>
             </div>
 
         </div>
@@ -1034,7 +1035,7 @@ ob_start();
             </div>
 
             <div class="inst-summary-value active">
-                <?= number_format($activeInstitutions) ?>
+                <?= inr($activeInstitutions) ?>
             </div>
 
         </div>
@@ -1047,7 +1048,7 @@ ob_start();
             </div>
 
             <div class="inst-summary-value">
-                <?= number_format($inactiveInstitutions) ?>
+                <?= inr($inactiveInstitutions) ?>
             </div>
 
         </div>
@@ -1249,7 +1250,7 @@ ob_start();
                 </span>
 
                 <span class="inst-toolbar-count ms-2">
-                    <?= number_format($totalInstitutions) ?> records
+                    <?= inr($totalInstitutions) ?> records
                 </span>
 
             </div>

@@ -2,6 +2,7 @@
 session_start();
 if (!isset($_SESSION["user_id"])) { header("Location: login.php"); exit(); }
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 
 $page_title = "Vendor Intelligence Dashboard";
 
@@ -341,7 +342,7 @@ ob_start();
                     </div>
                 </div>
                 <div>
-                    <h3 class="fw-bold mb-1 text-truncate text-dark" style="letter-spacing: -0.02em;"><?= number_format($metrics['total_vendors']) ?></h3>
+                    <h3 class="fw-bold mb-1 text-truncate text-dark" style="letter-spacing: -0.02em;"><?= inr($metrics['total_vendors']) ?></h3>
                     <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill extra-small fw-semibold">
                         <i class="bi bi-check-circle me-1"></i>Active In System
                     </span>
@@ -359,7 +360,7 @@ ob_start();
                     </div>
                 </div>
                 <div>
-                    <h3 class="fw-bold mb-1 text-truncate text-dark" style="letter-spacing: -0.02em;"><?= number_format($metrics['active_vendors']) ?></h3>
+                    <h3 class="fw-bold mb-1 text-truncate text-dark" style="letter-spacing: -0.02em;"><?= inr($metrics['active_vendors']) ?></h3>
                     <?php 
                         $active_pct = $metrics['total_vendors'] > 0 ? round(($metrics['active_vendors'] / $metrics['total_vendors']) * 100) : 0;
                     ?>
@@ -380,7 +381,7 @@ ob_start();
                     </div>
                 </div>
                 <div>
-                    <h3 class="fw-bold mb-1 text-truncate text-dark" style="letter-spacing: -0.02em;">₹<?= number_format($metrics['grand_total_spend'], 2) ?></h3>
+                    <h3 class="fw-bold mb-1 text-truncate text-dark" style="letter-spacing: -0.02em;"><?= inr($metrics['grand_total_spend'], true) ?></h3>
                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill extra-small fw-semibold">
                         <?= $is_restricted ? 'Current Division Total' : 'System Wide Total' ?>
                     </span>
@@ -500,10 +501,10 @@ ob_start();
                                         <span class="badge-category <?= $cat_class ?>"><?= htmlspecialchars($v['category']) ?></span>
                                     </td>
                                     <td class="text-center fw-medium extra-small">
-                                        <span class="badge bg-light text-dark border px-2 py-1 rounded-2"><?= number_format($v['total_orders']) ?> Records</span>
+                                        <span class="badge bg-light text-dark border px-2 py-1 rounded-2"><?= inr($v['total_orders']) ?> Records</span>
                                     </td>
                                     <td class="text-end">
-                                        <div class="fw-bold text-dark extra-small">₹<?= number_format($v['total_spend'], 2) ?></div>
+                                        <div class="fw-bold text-dark extra-small"><?= inr($v['total_spend'], true) ?></div>
                                         <div class="progress mt-1 ms-auto" style="height: 4px; width: 100px; background-color: #f1f5f9;">
                                             <div class="progress-bar" style="width: <?= $pct ?>%; background-color: var(--erp-navy);"></div>
                                         </div>

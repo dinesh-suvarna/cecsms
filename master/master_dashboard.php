@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 require_once "../includes/session.php";
 
 $role = $_SESSION['role'];
@@ -813,7 +814,7 @@ $avail_percent = ($total_assets > 0)
                 </div>
 
                 <div class="master-kpi-value">
-                    <?= number_format($total_institutions) ?>
+                    <?= inr($total_institutions) ?>
                 </div>
 
             </div>
@@ -857,7 +858,7 @@ $avail_percent = ($total_assets > 0)
                 </div>
 
                 <div class="master-kpi-value">
-                    <?= number_format($total_divisions) ?>
+                    <?= inr($total_divisions) ?>
                 </div>
 
             </div>
@@ -901,7 +902,7 @@ $avail_percent = ($total_assets > 0)
                 </div>
 
                 <div class="master-kpi-value">
-                    <?= number_format($total_units) ?>
+                    <?= inr($total_units) ?>
                 </div>
 
             </div>

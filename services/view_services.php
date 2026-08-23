@@ -6,6 +6,7 @@ if (!isset($_SESSION["user_id"])) {
 }
 
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 
 $page_title = "Service Records";
 $page_icon  = "bi-card-checklist";
@@ -131,7 +132,7 @@ ob_start();
                 </div>
                 <div>
                     <span class="text-muted fw-bold text-uppercase d-block" style="font-size: 0.68rem; letter-spacing: 0.05em;">Total Expenditure</span>
-                    <h4 class="fw-bold text-dark mb-0">₹ <?= number_format($total, 2) ?></h4>
+                    <h4 class="fw-bold text-dark mb-0"><?= inr($total, true) ?></h4>
                 </div>
             </div>
         </div>
@@ -212,7 +213,7 @@ ob_start();
                                 </a>
                                 <div class="text-end border-start ps-3">
                                     <span class="d-block text-muted text-uppercase fw-bold" style="font-size: 0.6rem;">Total</span>
-                                    <span class="fw-bold text-dark">₹ <?= number_format($data['total_amount'], 2) ?></span>
+                                    <span class="fw-bold text-dark"><?= inr($data['total_amount'], true) ?></span>
                                 </div>
                             </div>
                         </div>
@@ -286,7 +287,7 @@ ob_start();
                                         </td>
 
                                         <td class="fw-bold text-dark">
-                                            ₹ <?= number_format($row['amount'], 2) ?>
+                                            <?= inr($row['amount'], true) ?>
                                         </td>
 
                                         <td>

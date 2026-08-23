@@ -156,7 +156,7 @@ ob_start();
                 <div>
                     <span class="badge bg-success px-3 py-2 rounded-pill mb-3">Live Sync Active</span>
                     <p class="opacity-75 mb-1 fw-medium">Total Furniture Managed</p>
-                    <h1 class="display-3 fw-bold mb-0"><?= number_format($total_assets) ?></h1>
+                    <h1 class="display-3 fw-bold mb-0"><?= inr($total_assets) ?></h1>
                 </div>
                 <div class="mt-4 pt-3 border-top border-white border-opacity-10 d-flex align-items-center gap-3">
                     <div class="spinner-grow spinner-grow-sm text-success" role="status"></div>
@@ -191,7 +191,7 @@ ob_start();
                                 </div>
                                 <span class="fw-bold text-dark item-name"><?= htmlspecialchars($cat['item_name']) ?></span>
                             </div>
-                            <div class="count-pill"><?= number_format($cat['count']) ?></div>
+                            <div class="count-pill"><?= inr($cat['count']) ?></div>
                         </div>
                     <?php endwhile; else: ?>
                         <p class="text-center text-muted py-4">No categories found.</p>

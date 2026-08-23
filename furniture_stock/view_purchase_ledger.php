@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 session_start();
 
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
@@ -132,16 +133,16 @@ ob_start();
                                                                     <tr class="small">
                                                                         <td class="ps-2"><?= htmlspecialchars($item['item_name']) ?></td>
                                                                         <td class="text-center"><?= $item['qty'] + 0 ?></td>
-                                                                        <td class="text-end">₹<?= number_format($item['unit_price'], 2) ?></td>
+                                                                        <td class="text-end"><?= inr($item['unit_price'], true) ?></td>
                                                                         <td class="text-end"><?= $item['gst_percent'] ?>%</td>
-                                                                        <td class="text-end pe-3 fw-bold">₹<?= number_format($item['grand_total'], 2) ?></td>
+                                                                        <td class="text-end pe-3 fw-bold"><?= inr($item['grand_total'], true) ?></td>
                                                                     </tr>
                                                                     <?php endwhile; ?>
                                                                 </tbody>
                                                                 <tfoot class="table-light fw-bold small">
                                                                     <tr>
                                                                         <td colspan="4" class="text-end">Final Total:</td>
-                                                                        <td class="text-end pe-3 text-primary">₹<?= number_format($sum_total - $row['discount_amount'], 2) ?></td>
+                                                                        <td class="text-end pe-3 text-primary"><?= inr($sum_total - $row['discount_amount'], true) ?></td>
                                                                     </tr>
                                                                 </tfoot>
                                                             </table>

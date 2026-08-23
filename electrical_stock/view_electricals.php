@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 session_start();
 
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
@@ -134,8 +135,8 @@ ob_start();
                                 <i class="bi bi-geo-alt-fill me-2"></i>
                                 <span class="fw-bold me-auto"><?= htmlspecialchars(strtoupper($division_name)) ?></span>
                                 <div class="mt-2 mt-md-0 me-3">
-                                    <span class="report-badge bg-qty">Qty: <?= number_format($div_total_qty) ?></span>
-                                    <span class="report-badge bg-invested">Invested: ₹<?= number_format($div_total_val, 2) ?></span>
+                                    <span class="report-badge bg-qty">Qty: <?= inr($div_total_qty) ?></span>
+                                    <span class="report-badge bg-invested">Invested: <?= inr($div_total_val, true) ?></span>
                                 </div>
                             </div>
                         </button>
@@ -160,7 +161,7 @@ ob_start();
                                                     <?= htmlspecialchars($unit_label) ?>
                                                 </div>
                                                 <div class="text-dark small fw-bold">
-                                                    Unit Total: ₹<?= number_format($unit_total_val, 2) ?>
+                                                    Unit Total: <?= inr($unit_total_val, true) ?>
                                                 </div>
                                             </div>
                                         </button>
@@ -184,7 +185,7 @@ ob_start();
                                                             <tr>
                                                                 <td class="ps-4 fw-bold text-dark"><?= htmlspecialchars($row['item_name']) ?></td>
                                                                 <td class="text-center fw-bold"><?= $row['total_qty'] ?></td>
-                                                                <td class="text-end fw-bold text-primary">₹<?= number_format($row['total_investment'], 2) ?></td>
+                                                                <td class="text-end fw-bold text-primary"><?= inr($row['total_investment'], true) ?></td>
                                                                 <td class="small text-muted fw-bold"><?= htmlspecialchars($row['vendor_name']) ?></td>
                                                                 <td>
                                                                     <div class="x-small fw-bold"><?= htmlspecialchars($row['combined_bills']) ?></div>

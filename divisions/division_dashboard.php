@@ -280,7 +280,7 @@ ob_start();
                     <div class="icon-shape bg-blue-soft me-3"><i class="bi bi-layers"></i></div>
                     <div>
                         <small class="text-muted fw-bold text-uppercase extra-small">Total Assets</small>
-                        <h4 class="fw-bold mb-0 text-dark"><?= number_format($stats['total']) ?></h4>
+                        <h4 class="fw-bold mb-0 text-dark"><?= inr($stats['total']) ?></h4>
                     </div>
                 </div>
             </div>
@@ -291,7 +291,7 @@ ob_start();
                     <div class="icon-shape bg-emerald-soft me-3"><i class="bi bi-check-circle"></i></div>
                     <div>
                         <small class="text-muted fw-bold text-uppercase extra-small">Active</small>
-                        <h4 class="fw-bold mb-0 text-success"><?= number_format($stats['active']) ?></h4>
+                        <h4 class="fw-bold mb-0 text-success"><?= inr($stats['active']) ?></h4>
                     </div>
                 </div>
             </div>
@@ -302,7 +302,7 @@ ob_start();
                     <div class="icon-shape bg-amber-soft me-3"><i class="bi bi-clock-history"></i></div>
                     <div>
                         <small class="text-muted fw-bold text-uppercase extra-small">Pending</small>
-                        <h4 class="fw-bold mb-0 text-warning"><?= number_format($stats['pending']) ?></h4>
+                        <h4 class="fw-bold mb-0 text-warning"><?= inr($stats['pending']) ?></h4>
                     </div>
                 </div>
             </div>
@@ -313,7 +313,7 @@ ob_start();
                     <div class="icon-shape bg-purple-soft me-3"><i class="bi bi-tools"></i></div>
                     <div>
                         <small class="text-muted fw-bold text-uppercase extra-small">In Repair</small>
-                        <h4 class="fw-bold mb-0 text-dark"><?= number_format($stats['in_repair']) ?></h4>
+                        <h4 class="fw-bold mb-0 text-dark"><?= inr($stats['in_repair']) ?></h4>
                     </div>
                 </div>
             </div>

@@ -2,13 +2,14 @@
 session_start();
 if (!isset($_SESSION["user_id"])) { header("Location: login.php"); exit(); }
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 
 $page_title = "Vendor Performance Analytics";
 
 /**
  * Helper function to retrieve vendor analytics filtered by sector category
  */
-function getVendorAnalyticsByCategory($conn, $category) {
+function getVendorAnalyticsByCategory(mysqli $conn, string $category) {
     $stmt = $conn->prepare("
         SELECT 
             v.id, v.vendor_name, v.category, v.email,
@@ -296,7 +297,7 @@ ob_start();
                                             </div>
                                             <div class="col-md-3">
                                                 <div class="stat-label">Total Spend</div>
-                                                <div class="metric-value text-dark">₹<?= number_format($v['total_spend'], 2) ?></div>
+                                                <div class="metric-value text-dark"><?= inr($v['total_spend'], true) ?></div>
                                             </div>
                                             <div class="col-md-3">
                                                 <div class="stat-label">Stock Volume</div>
@@ -322,7 +323,7 @@ ob_start();
                                                 <div class="perf-card <?= $v['service_calls'] > 0 ? 'perf-card-active-service' : '' ?>">
                                                     <div class="stat-label">Service History</div>
                                                     <div class="metric-header"><?= $v['service_calls'] ?> Calls Logged</div>
-                                                    <div class="small text-muted mt-0.5">₹<?= number_format($v['service_costs'], 2) ?> cumulative spend</div>
+                                                    <div class="small text-muted mt-0.5"><?= inr($v['service_costs'], true) ?> cumulative spend</div>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">

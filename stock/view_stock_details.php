@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/functions.php";
 $page_title = "View Stock Details";
 $page_icon  = "bi-clipboard-data";
 
@@ -414,9 +415,9 @@ ob_start();
                                                                                 <span class="text-muted fst-italic" style="font-size: 0.85rem;">Non-Serialized (Bulk)</span>
                                                                             <?php endif; ?>
                                                                         </td>
-                                                                        <td class="text-center fw-semibold"><?= number_format($row['total_quantity']) ?></td>
-                                                                        <td class="text-center text-danger fw-semibold"><?= number_format($row['dispatched_qty']) ?></td>
-                                                                        <td class="text-center text-success fw-semibold"><?= number_format($remainingQty) ?></td>
+                                                                        <td class="text-center fw-semibold"><?= inr($row['total_quantity']) ?></td>
+                                                                        <td class="text-center text-danger fw-semibold"><?= inr($row['dispatched_qty']) ?></td>
+                                                                        <td class="text-center text-success fw-semibold"><?= inr($remainingQty) ?></td>
                                                                         <td class="text-end fw-semibold">₹<?= number_format((float)$row['amount'], 2) ?></td>
                                                                         <td class="text-center">
                                                                             <?php if ($dynamicStatus === 'dispatched'): ?>

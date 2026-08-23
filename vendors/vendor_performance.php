@@ -254,7 +254,7 @@ ob_start();
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="furniture-tab" data-bs-toggle="pill" data-bs-target="#tab-furniture" type="button" role="tab">
-                    <i class="bi bi-desk me-1.5"></i> Furniture
+                    <i class="bi bi-box-seam me-1.5"></i> Furniture
                 </button>
             </li>
             <li class="nav-item" role="presentation">

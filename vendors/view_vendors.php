@@ -13,204 +13,293 @@ if (isset($_SESSION['success'])) {
     unset($_SESSION['success']);
 }
 
-$category_type = $_GET['type'] ?? 'Computer'; 
+$active_tab = $_GET['type'] ?? 'Computer'; 
 $page_title = "Service Partners";
 
-// --- UNIFIED FETCH LOGIC FOR ALL ROLES ---
-$stmt = $conn->prepare("SELECT * FROM vendors WHERE category = ? ORDER BY vendor_name ASC");
-$stmt->bind_param("s", $category_type);
+// --- FETCH ALL VENDORS FOR GLOBAL SEARCH & TAB ISOLATION ---
+$stmt = $conn->prepare("SELECT * FROM vendors ORDER BY vendor_name ASC");
 $stmt->execute();
-$result = $stmt->get_result();
+$all_vendors = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// Group vendors by category
+$grouped_vendors = [
+    'Computer' => [],
+    'Furniture' => [],
+    'Electricals' => []
+];
+
+foreach ($all_vendors as $vendor) {
+    $cat = $vendor['category'] ?? 'Computer';
+    if (isset($grouped_vendors[$cat])) {
+        $grouped_vendors[$cat][] = $vendor;
+    } else {
+        $grouped_vendors['Computer'][] = $vendor;
+    }
+}
 
 ob_start();
 ?>
 
 <style>
-    .fw-800 { font-weight: 800 !important; letter-spacing: -0.5px; }
-    .text-xxs { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05rem; }
-    
+    :root {
+        --erp-navy: #123b63;
+        --erp-navy-dark: #0b2942;
+        --erp-bg: #f3f5f7;
+        --erp-card-bg: #ffffff;
+        --erp-border: #d9e0e7;
+        --erp-text-main: #20384d;
+        --erp-text-muted: #64748b;
+        --erp-shadow-sm: 0 1px 3px rgba(20,45,70,.05);
+    }
+
+    body { 
+        background-color: var(--erp-bg); 
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: var(--erp-text-main);
+    }
+
     .badge-category {
-        background: #eef2ff;
-        color: #4338ca;
-        border: 1px solid #c7d2fe;
-        padding: 4px 12px;
-        border-radius: 6px;
+        background: #edf3f8;
+        color: var(--erp-navy);
+        border: 1px solid var(--erp-border);
+        padding: 3px 8px;
+        border-radius: 4px;
         font-weight: 700;
         text-transform: uppercase;
-        font-size: 0.7rem;
+        font-size: 0.68rem;
     }
 
-    .nav-pills .nav-link { 
-        border-radius: 12px; 
-        color: #64748b; 
+    .erp-tabs .nav-link { 
+        border-radius: 6px; 
+        color: var(--erp-text-muted); 
         font-weight: 600; 
-        padding: 10px 24px;
-        transition: all 0.25s ease;
-        border: 1px solid #f1f5f9;
-        background: #f8fafc;
+        padding: 0.5rem 1.25rem;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+        border: 1px solid var(--erp-border);
+        background: #ffffff;
     }
-    .nav-pills .nav-link.active { 
-        background: #0d6efd; 
-        color: #fff; 
-        border-color: #0d6efd;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    }
-
-    .dataTables_wrapper .dataTables_filter { float: none; text-align: left; }
-    .dataTables_wrapper .dataTables_length { margin-bottom: 0; }
-    
-    .search-container {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 15px 20px;
-        border: 1px solid #e2e8f0;
+    .erp-tabs .nav-link.active { 
+        background: var(--erp-navy); 
+        color: #ffffff; 
+        border-color: var(--erp-navy);
+        box-shadow: var(--erp-shadow-sm);
     }
 
-    .custom-search-input {
-        border-radius: 8px !important;
-        border: 1px solid #cbd5e1 !important;
-        padding: 8px 12px !important;
-        width: 300px !important;
-        background: white !important;
+    .global-search-wrapper {
+        position: relative;
+        max-width: 420px;
     }
 
-    .table thead th { background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; }
-    .vendor-row { transition: background-color 0.2s; border-bottom: 1px solid #f1f5f9 !important; }
-    .vendor-row:hover { background-color: #f8fafc !important; }
+    .global-search-input {
+        border-radius: 6px;
+        border: 1px solid var(--erp-border);
+        padding: 0.55rem 0.85rem 0.55rem 2.25rem;
+        font-size: 0.85rem;
+        width: 100%;
+        background: #ffffff;
+        transition: all 0.15s ease;
+    }
+
+    .global-search-input:focus {
+        border-color: var(--erp-navy);
+        box-shadow: 0 0 0 3px rgba(18, 59, 99, 0.12);
+        outline: none;
+    }
+
+    .global-search-icon {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--erp-text-muted);
+        font-size: 0.85rem;
+    }
+
+    .table thead th { 
+        background-color: #f8fafc; 
+        border-bottom: 1px solid var(--erp-border);
+        color: var(--erp-text-muted);
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.85rem 1rem;
+    }
+
+    .vendor-row { transition: background-color 0.15s ease; border-bottom: 1px solid var(--erp-border) !important; }
+    .vendor-row:hover { background-color: #f1f5f9 !important; }
+    .vendor-row.search-match { background-color: #e0f2fe !important; }
 
     .vendor-avatar {
-        width: 48px; height: 42px;
-        background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
-        color: #4338ca;
+        width: 38px; height: 38px;
+        background: #edf3f8;
+        color: var(--erp-navy);
         font-weight: 700;
         display: flex; align-items: center; justify-content: center;
-        border-radius: 12px;
-        font-size: 0.85rem;
+        border-radius: 6px;
+        border: 1px solid var(--erp-border);
+        font-size: 0.78rem;
     }
 
     .vendor-name-btn { 
         background: none; border: none; padding: 0; text-align: left;
-        color: #1e293b; font-weight: 700; font-size: 0.95rem;
+        color: var(--erp-text-main); font-weight: 700; font-size: 0.875rem;
+    }
+    .vendor-name-btn:hover {
+        color: var(--erp-navy);
+        text-decoration: underline;
     }
 
     .btn-action {
-        width: 36px; height: 36px; display: inline-flex; 
+        width: 32px; height: 32px; display: inline-flex; 
         align-items: center; justify-content: center;
-        border-radius: 10px; border: 1px solid #e2e8f0; background: white;
+        border-radius: 6px; border: 1px solid var(--erp-border); background: #ffffff;
+        font-size: 0.85rem;
+    }
+
+    .btn-erp-primary {
+        background: var(--erp-navy);
+        border-color: var(--erp-navy);
+        color: #ffffff;
+        font-weight: 600;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
     }
 
     .detail-card {
         background: #f8fafc;
-        border-radius: 16px;
-        padding: 15px 20px;
+        border: 1px solid var(--erp-border);
+        border-radius: 6px;
+        padding: 12px 16px;
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 2px;
     }
 
     .detail-label {
-        font-size: 0.7rem;
-        color: #94a3b8;
-        font-weight: 800;
+        font-size: 0.68rem;
+        color: var(--erp-text-muted);
+        font-weight: 700;
         text-transform: uppercase;
         display: block;
     }
 
     .detail-value {
-        font-size: 0.95rem;
-        color: #1e293b;
+        font-size: 0.875rem;
+        color: var(--erp-text-main);
         font-weight: 600;
         display: block;
         word-break: break-word;
     }
 </style>
 
-<div class="container-fluid py-4">
-    <!-- Header -->
+<div class="container-fluid p-0">
+    <!-- Header Block -->
     <div class="row mb-4 align-items-center">
         <div class="col">
-            <h4 class="fw-800 text-dark mb-1">Service Partners</h4>
-            <p class="text-muted small mb-0 d-flex align-items-center gap-2">
-                Managing <span class="badge-category"><?= htmlspecialchars($category_type) ?></span> vendor relationships
-            </p>
+            <h4 class="fw-bold mb-1" style="color: var(--erp-text-main);">Service Partners</h4>
+            <p class="text-muted extra-small mb-0">Unified vendor directory with global cross-category lookup.</p>
         </div>
-        <div class="col-auto">
-            <a href="vendor_manager.php?type=<?= urlencode($category_type) ?>" class="btn btn-primary rounded-3 px-4 py-2 fw-bold shadow-sm">
-                <i class="bi bi-plus-lg me-2"></i>Register <?= htmlspecialchars($category_type) ?> Vendor
+        <div class="col-auto d-flex gap-2">
+            <!-- Global Cross-Category Search Bar -->
+            <div class="global-search-wrapper">
+                <i class="bi bi-search global-search-icon"></i>
+                <input type="text" id="globalVendorSearch" class="global-search-input" placeholder="Search vendors...">
+            </div>
+            <a href="vendor_manager.php?type=<?= urlencode($active_tab) ?>" class="btn btn-erp-primary shadow-sm" id="btnRegisterVendor">
+                <i class="bi bi-plus-lg me-1"></i> Register Vendor
             </a>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-        <!-- Tabs: Accessible across all roles -->
-        <div class="card-header bg-white border-0 p-4 pb-0">
-            <ul class="nav nav-pills gap-2" id="vendorTabs">
-                <?php 
-                $tabs = ['Computer', 'Furniture', 'Electricals'];
-                foreach($tabs as $tab): 
-                ?>
-                <li class="nav-item">
-                    <a class="nav-link <?= ($tab === $category_type) ? 'active' : '' ?>" 
-                       href="?type=<?= urlencode($tab) ?>"><?= $tab ?></a>
-                </li>
+    <div class="card border rounded-2 shadow-sm overflow-hidden" style="background: var(--erp-card-bg); border-color: var(--erp-border) !important;">
+        <!-- Category Navigation Tabs -->
+        <div class="card-header bg-white border-bottom p-3 pb-3" style="border-color: var(--erp-border) !important;">
+            <ul class="nav nav-pills erp-tabs gap-2" id="vendorTabs">
+                <?php foreach (['Computer', 'Furniture', 'Electricals'] as $tab): ?>
+                    <li class="nav-item">
+                        <button class="nav-link <?= ($tab === $active_tab) ? 'active' : '' ?>" 
+                                data-bs-toggle="pill" 
+                                data-bs-target="#tab-<?= strtolower($tab) ?>" 
+                                data-category="<?= $tab ?>">
+                            <?= $tab ?> 
+                            <span class="badge bg-light text-dark border ms-1 extra-small"><?= count($grouped_vendors[$tab]) ?></span>
+                        </button>
+                    </li>
                 <?php endforeach; ?>
             </ul>
         </div>
 
-        <!-- Table UI -->
+        <!-- Tab Panes & Tables -->
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table align-middle mb-0" id="saasVendorTable">
-                    <thead>
-                        <tr class="text-muted text-xxs text-uppercase">
-                            <th class="ps-4 py-3">Reference</th>
-                            <th class="py-3">Vendor Information</th>
-                            <th class="py-3">Primary Contact</th>
-                            <th class="text-end pe-4 py-3">Operations</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php 
-                        $count = 1;
-                        while($row = $result->fetch_assoc()): 
-                            $words = explode(" ", $row['vendor_name']);
-                            $initials = "";
-                            foreach ($words as $w) { $initials .= strtoupper(substr($w, 0, 1)); }
-                            $initials = substr($initials, 0, 3);
-                        ?>
-                        <tr class="vendor-row">
-                            <td class="ps-4">
-                                <span class="badge bg-light text-muted rounded-pill">#<?= str_pad($count++, 2, '0', STR_PAD_LEFT); ?></span>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="vendor-avatar"><?= $initials ?></div>
-                                    <div>
-                                        <button class="vendor-name-btn" onclick='viewVendorDetails(<?= json_encode($row) ?>)'>
-                                            <?= htmlspecialchars($row['vendor_name']); ?>
-                                        </button>
-                                        <div class="text-muted" style="font-size: 0.75rem;"><?= htmlspecialchars($row['email'] ?: 'No email provided'); ?></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="fw-600 text-dark" style="font-size: 0.85rem;"><?= htmlspecialchars($row['contact_person'] ?: 'N/A'); ?></div>
-                                <div class="text-muted small"><?= htmlspecialchars($row['phone_number'] ?: '--'); ?></div>
-                            </td>
-                            <td class="text-end pe-4">
-                                <a href="vendor_manager.php?edit=<?= $row['id'] ?>&type=<?= urlencode($category_type) ?>" 
-                                   class="btn-action text-primary me-1" title="Edit Vendor">
-                                    <i class="bi bi-pencil-square"></i>
-                                </a>
-                                <button class="btn-action text-danger delete-vendor-btn" 
-                                        data-id="<?= $row['id']; ?>" data-name="<?= htmlspecialchars($row['vendor_name']); ?>" title="Delete">
-                                    <i class="bi bi-trash3"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        <?php endwhile; ?>
-                    </tbody>
-                </table>
+            <div class="tab-content">
+                <?php foreach ($grouped_vendors as $cat => $vendors): ?>
+                    <div class="tab-pane fade <?= ($cat === $active_tab) ? 'show active' : '' ?>" id="tab-<?= strtolower($cat) ?>">
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0 vendor-table" id="table-<?= strtolower($cat) ?>">
+                                <thead>
+                                    <tr>
+                                        <th class="ps-4 py-3">Ref</th>
+                                        <th class="py-3">Vendor Information</th>
+                                        <th class="py-3">Primary Contact</th>
+                                        <th class="text-end pe-4 py-3">Operations</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($vendors)): ?>
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted extra-small">No vendors registered in <?= $cat ?> stock.</td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php 
+                                        $count = 1;
+                                        foreach ($vendors as $row): 
+                                            $words = explode(" ", $row['vendor_name']);
+                                            $initials = "";
+                                            foreach ($words as $w) { $initials .= strtoupper(substr($w, 0, 1)); }
+                                            $initials = substr($initials, 0, 3);
+                                        ?>
+                                        <tr class="vendor-row" data-vendor-id="<?= $row['id'] ?>">
+                                            <td class="ps-4">
+                                                <span class="badge bg-light text-muted border px-2 py-1 extra-small">#<?= str_pad($count++, 2, '0', STR_PAD_LEFT); ?></span>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-3">
+                                                    <div class="vendor-avatar"><?= $initials ?></div>
+                                                    <div>
+                                                        <button class="vendor-name-btn" onclick='viewVendorDetails(<?= json_encode($row) ?>)'>
+                                                            <?= htmlspecialchars($row['vendor_name']); ?>
+                                                        </button>
+                                                        <div class="text-muted extra-small" style="font-size: 0.75rem;"><?= htmlspecialchars($row['email'] ?: 'No email provided'); ?></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="fw-semibold text-dark extra-small"><?= htmlspecialchars($row['contact_person'] ?: 'N/A'); ?></div>
+                                                <div class="text-muted extra-small"><?= htmlspecialchars($row['phone_number'] ?: '--'); ?></div>
+                                            </td>
+                                            <td class="text-end pe-4">
+                                                <a href="vendor_manager.php?edit=<?= $row['id'] ?>&type=<?= urlencode($cat) ?>" 
+                                                   class="btn-action text-primary me-1" title="Edit Vendor">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </a>
+                                                <button class="btn-action text-danger delete-vendor-btn" 
+                                                        data-id="<?= $row['id']; ?>" 
+                                                        data-type="<?= urlencode($cat); ?>"
+                                                        data-name="<?= htmlspecialchars($row['vendor_name']); ?>" title="Delete">
+                                                    <i class="bi bi-trash3"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>
@@ -219,11 +308,11 @@ ob_start();
 <!-- VENDOR DETAILS MODAL -->
 <div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
-            <div class="modal-body p-5">
+        <div class="modal-content rounded-2 border-0 shadow-lg">
+            <div class="modal-body p-4 p-md-5">
                 <div class="text-center mb-4">
-                    <div class="vendor-avatar mx-auto mb-3" style="width: 64px; height: 64px; font-size: 1.2rem; display: flex; align-items: center; justify-content: center;" id="det_initial">?</div>
-                    <h4 class="fw-800 text-dark mb-1" id="det_name">Vendor Name</h4>
+                    <div class="vendor-avatar mx-auto mb-3" style="width: 56px; height: 56px; font-size: 1.1rem;" id="det_initial">?</div>
+                    <h5 class="fw-bold text-dark mb-1" id="det_name">Vendor Name</h5>
                     <span class="badge-category" id="det_cat">Category</span>
                 </div>
 
@@ -255,7 +344,7 @@ ob_start();
                 </div>
 
                 <div class="mt-4 pt-2">
-                    <button type="button" class="btn btn-light w-100 rounded-pill py-2 fw-bold" data-bs-dismiss="modal">Close Profile</button>
+                    <button type="button" class="btn btn-light border w-100 rounded-2 py-2 fw-semibold extra-small" data-bs-dismiss="modal">Close Profile</button>
                 </div>
             </div>
         </div>
@@ -269,59 +358,101 @@ ob_start();
 
 <script>
 let vendorModal;
+let dataTables = {};
 
 $(document).ready(function() {
     if(document.getElementById('detailsModal')){
         vendorModal = new bootstrap.Modal(document.getElementById('detailsModal'));
     }
 
-    if ($.fn.DataTable.isDataTable('#saasVendorTable')) {
-        $('#saasVendorTable').DataTable().destroy();
-    }
+    // Initialize individual DataTables per Category Tab
+    $('.vendor-table').each(function() {
+        let tableId = $(this).attr('id');
+        dataTables[tableId] = $(this).DataTable({
+            "dom": 'rt<"p-3 d-flex justify-content-between align-items-center extra-small text-muted"ip>',
+            "pageLength": 10,
+            "order": [[1, 'asc']],
+            "columnDefs": [
+                { "orderable": false, "targets": [0, 3] }
+            ]
+        });
+    });
 
-    $('#saasVendorTable').DataTable({
-        "dom": '<"search-container d-flex justify-content-between align-items-center m-4"lf>rt<"p-4 d-flex justify-content-between align-items-center"ip>',
-        "language": { 
-            "lengthMenu": "Show _MENU_ entries",
-            "search": "", 
-            "searchPlaceholder": "Filter vendors...",
-            "paginate": {
-                "previous": "<i class='bi bi-chevron-left'></i>",
-                "next": "<i class='bi bi-chevron-right'></i>"
+    // Track active category and tab pane
+    let defaultTabPaneId = $('#vendorTabs button.active').data('bs-target') || ('#tab-' + '<?= strtolower($active_tab) ?>');
+
+    // Update defaultTabPaneId when user manually clicks a tab
+    $('#vendorTabs button').on('click', function() {
+        defaultTabPaneId = $(this).data('bs-target');
+        let cat = $(this).data('category');
+        $('#btnRegisterVendor').attr('href', 'vendor_manager.php?type=' + encodeURIComponent(cat));
+    });
+
+    // GLOBAL SEARCH LOGIC ACROSS ALL TABS
+    $('#globalVendorSearch').on('keyup input', function() {
+        let query = $(this).val().trim();
+        
+        // 1. Filter all DataTables instances
+        $.each(dataTables, function(id, table) {
+            table.search(query).draw();
+        });
+
+        if (query.length > 0) {
+            let currentActiveTabPaneId = $('#vendorTabs button.active').data('bs-target');
+            let currentActiveTableId = $(currentActiveTabPaneId).find('.vendor-table').attr('id');
+            
+            let activeMatchCount = dataTables[currentActiveTableId] ? dataTables[currentActiveTableId].rows({ search: 'applied' }).count() : 0;
+
+            // If active tab has NO matches, switch to the first tab that does
+            if (activeMatchCount === 0) {
+                $.each(dataTables, function(tableId, table) {
+                    let matchingRows = table.rows({ search: 'applied' }).count();
+                    
+                    if (matchingRows > 0) {
+                        let parentPaneId = $('#' + tableId).closest('.tab-pane').attr('id');
+                        // FIXED: Added '#' prefix to parentPaneId
+                        let targetTabButton = $('#vendorTabs button[data-bs-target="#' + parentPaneId + '"]');
+                        
+                        if (targetTabButton.length) {
+                            let tabTrigger = bootstrap.Tab.getOrCreateInstance(targetTabButton[0]);
+                            tabTrigger.show();
+                        }
+                        return false; // Stop checking further tabs
+                    }
+                });
             }
-        },
-        "pageLength": 10,
-        "order": [[1, 'asc']],
-        "columnDefs": [
-            { "orderable": false, "targets": [0, 3] }
-        ],
-        "drawCallback": function() {
-            $('.dataTables_filter input').addClass('form-control custom-search-input');
-            $('.dataTables_length select').addClass('form-select form-select-sm d-inline-block w-auto');
-            $('.dataTables_length label').addClass('d-flex align-items-center');
-            $('.dataTables_filter label').addClass('d-flex align-items-center');
+        } else {
+            // 2. SEARCH CLEARED: Revert back to the default tab
+            let defaultTabButton = $('#vendorTabs button[data-bs-target="' + defaultTabPaneId + '"]');
+            if (defaultTabButton.length && !defaultTabButton.hasClass('active')) {
+                let tabTrigger = bootstrap.Tab.getOrCreateInstance(defaultTabButton[0]);
+                tabTrigger.show();
+            }
         }
     });
 
-    $('.delete-vendor-btn').on('click', function() {
+    // Delete confirmation handler
+    $(document).on('click', '.delete-vendor-btn', function() {
         const id = $(this).data('id');
         const name = $(this).data('name');
+        const cat = $(this).data('type');
+
         Swal.fire({
             title: 'Terminate Partner?',
             text: `Are you sure you want to remove ${name}? This cannot be undone.`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#0f172a',
+            confirmButtonColor: '#123b63',
             cancelButtonColor: '#f1f5f9',
             cancelButtonText: '<span style="color: #64748b">Keep Partner</span>',
             confirmButtonText: 'Yes, Remove',
             customClass: {
-                confirmButton: 'rounded-pill px-4',
-                cancelButton: 'rounded-pill px-4'
+                confirmButton: 'rounded-2 px-4',
+                cancelButton: 'rounded-2 px-4'
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = `delete_vendor.php?id=${id}&type=<?= urlencode($category_type) ?>`;
+                window.location.href = `delete_vendor.php?id=${id}&type=${cat}`;
             }
         });
     });

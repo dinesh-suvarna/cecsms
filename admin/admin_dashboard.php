@@ -23,7 +23,7 @@ $role = $_SESSION['role'] ?? '';
 }
 
 .dashboard-wrapper {
-    padding: 28px 0 36px;
+    padding: 26px 0 36px;
     background: var(--bg-surface);
     min-height: 100vh;
 }

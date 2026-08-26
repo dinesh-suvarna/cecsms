@@ -773,7 +773,7 @@ $avail_percent = ($total_assets > 0)
             </h3>
 
             <p class="master-header-subtitle">
-                Overview of institutional master data and system configuration
+                Overview of institutional master data and facility configuration
             </p>
         </div>
 

@@ -15,6 +15,25 @@ if (!function_exists('notify')) {
 $page_title = "Asset Registry";
 $page_icon  = "bi-boxes";
 
+/* ---------- HELPER: DYNAMIC CATEGORY ICONS ---------- */
+function getCategoryIcon(string $category): string {
+    $cat = strtolower(trim($category));
+    if (str_contains($cat, 'computer') || str_contains($cat, 'pc') || str_contains($cat, 'laptop')) {
+        return 'bi-pc-display';
+    } elseif (str_contains($cat, 'accessory') || str_contains($cat, 'peripherals')) {
+        return 'bi-keyboard';
+    } elseif (str_contains($cat, 'network') || str_contains($cat, 'router') || str_contains($cat, 'switch')) {
+        return 'bi-diagram-3';
+    } elseif (str_contains($cat, 'component') || str_contains($cat, 'hardware')) {
+        return 'bi-cpu';
+    } elseif (str_contains($cat, 'furniture')) {
+        return 'bi-lamp';
+    } elseif (str_contains($cat, 'mobile') || str_contains($cat, 'phone')) {
+        return 'bi-phone';
+    }
+    return 'bi-box-seam';
+}
+
 /* ---------- UPDATE ---------- */
 if(isset($_POST['update'])){
     $id   = intval($_POST['id']);
@@ -100,18 +119,27 @@ $query = "
 ";
 $itemsResult = $conn->query($query);
 
-/* Group items by category */
+/* Group items by category & compute stats */
 $categories = [];
+$totalItems = 0;
+$totalSerial = 0;
+$totalNonSerial = 0;
+
 while ($row = $itemsResult->fetch_assoc()) {
     $cat = !empty($row['category']) ? $row['category'] : 'Uncategorized';
     $categories[$cat][] = $row;
+    $totalItems++;
+    if (($row['stock_type'] ?? '') === 'serial') {
+        $totalSerial++;
+    } else {
+        $totalNonSerial++;
+    }
 }
 
 ob_start();
 ?>
 
 <style>
-/* Enterprise UI Theme Tokens */
 :root {
     --erp-navy: #173f63;
     --erp-navy-dark: #102f4a;
@@ -123,14 +151,13 @@ ob_start();
     --erp-shadow: 0 1px 3px rgba(20, 40, 60, .06);
 }
 
-/* Page Layout Container */
 .erp-page-container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 24px 20px 40px;
 }
 
-/* Header Styling */
+/* Header */
 .inst-header {
     display: flex;
     justify-content: space-between;
@@ -142,101 +169,112 @@ ob_start();
 }
 .inst-header-left { display: flex; align-items: center; gap: 14px; }
 .inst-header-icon {
-    width: 42px; height: 42px;
+    width: 48px; height: 48px;
     display: flex; align-items: center; justify-content: center;
-    background: #edf3f8; border: 1px solid #dce6ee; border-radius: 5px;
-    color: var(--erp-navy); font-size: 1.1rem;
+    background: linear-gradient(135deg, #edf3f8 0%, #e2ecf5 100%);
+    border: 1px solid #cddde9; border-radius: 8px;
+    color: var(--erp-navy); font-size: 1.35rem;
+    box-shadow: 0 2px 4px rgba(23, 63, 99, 0.05);
 }
-.inst-header h3 { margin: 0; color: var(--erp-navy-dark); font-size: 1.18rem; font-weight: 650; }
-.inst-header p { margin: 3px 0 0; color: var(--erp-muted); font-size: .76rem; }
+.inst-header h3 { margin: 0; color: var(--erp-navy-dark); font-size: 1.25rem; font-weight: 700; }
+.inst-header p { margin: 3px 0 0; color: var(--erp-muted); font-size: .8rem; }
 
-/* Panels & Containers */
+/* Enhanced Stat Cards */
+.stat-widget-card {
+    background: #ffffff;
+    border: 1px solid var(--erp-border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    box-shadow: var(--erp-shadow);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.stat-widget-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(20, 40, 60, .08);
+}
+.stat-widget-card::before {
+    content: '';
+    position: absolute;
+    top: 0; 
+    left: 0; 
+    bottom: 0;
+    width: 4px; /* Adjust thickness as needed */
+    background: var(--card-accent, var(--erp-navy));
+}
+.stat-widget-card .title { 
+    font-size: 0.7rem; 
+    text-transform: uppercase; 
+    font-weight: 700; 
+    color: var(--erp-muted); 
+    letter-spacing: 0.5px; 
+}
+.stat-widget-card .value { 
+    font-size: 1.4rem; 
+    font-weight: 700; 
+    color: var(--erp-navy-dark); 
+    margin-top: 4px; 
+}
+.stat-widget-icon {
+    position: absolute;
+    right: 14px;
+    bottom: 12px;
+    font-size: 1.6rem;
+    opacity: 0.15;
+    color: var(--card-accent, var(--erp-navy));
+}
+
+/* Panels & Accordion */
 .inst-panel {
     background: #ffffff;
     border: 1px solid var(--erp-border);
-    border-radius: 5px;
+    border-radius: 8px;
     box-shadow: var(--erp-shadow);
 }
-.inst-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 18px;
-    border-bottom: 1px solid var(--erp-border);
-    background: #f5f7f9;
-}
-.inst-panel-title { color: var(--erp-navy-dark); font-size: .82rem; font-weight: 650; }
-
-/* Toolbar */
-.erp-toolbar {
-    background: #ffffff;
-    border: 1px solid var(--erp-border);
-    border-radius: 5px;
-    padding: 8px 12px;
-    box-shadow: var(--erp-shadow);
-}
-
-/* Buttons */
-.btn-erp-primary {
-    height: 34px; background: var(--erp-navy); border: 1px solid var(--erp-navy);
-    color: #fff; border-radius: 4px !important; font-size: .76rem; font-weight: 600;
-    display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
-}
-.btn-erp-primary:hover { background: var(--erp-navy-dark); color: #fff; }
-
-.btn-erp-cancel {
-    height: 34px; border: 1px solid #c8d2db; background: #fff;
-    color: #596b7a; border-radius: 4px !important; font-size: .76rem; font-weight: 600;
-    display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
-}
-.btn-erp-cancel:hover { background: #f5f7f9; color: #334451; }
-
-/* Accordion Stack */
 .cat-stack-card {
     border: 1px solid var(--erp-border) !important;
-    border-radius: 5px !important;
-    margin-bottom: 0.75rem;
+    border-radius: 8px !important;
+    margin-bottom: 0.85rem;
     background: #ffffff;
     box-shadow: var(--erp-shadow);
     overflow: hidden;
+    transition: border-color 0.15s ease;
 }
-
+.cat-stack-card:hover {
+    border-color: #b0c2d1 !important;
+}
 .cat-header-btn {
     background-color: #ffffff !important;
     border: none;
-    padding: 0.85rem 1.15rem;
+    padding: 0.95rem 1.25rem;
     box-shadow: none !important;
 }
 .cat-header-btn:not(.collapsed) {
-    background-color: #f5f7f9 !important;
+    background-color: #f8fafc !important;
     border-bottom: 1px solid var(--erp-border);
 }
-
 .cat-icon-box {
-    width: 32px;
-    height: 32px;
-    border-radius: 4px;
-    background: #edf3f8;
-    border: 1px solid #dce6ee;
+    width: 36px; height: 36px;
+    border-radius: 6px;
+    background: #f0f5fa;
+    border: 1px solid #d4e2ed;
     color: var(--erp-navy);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.9rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1rem;
 }
 
-/* Data Tables */
-.table-erp { font-size: .78rem; margin: 0; }
+/* Data Tables & Badges */
+.table-erp { font-size: .8rem; margin: 0; }
 .table-erp thead th {
-    background: #f5f7f9; color: #536575; font-size: .65rem; font-weight: 700;
+    background: #f5f7f9; color: #536575; font-size: .67rem; font-weight: 700;
     text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--erp-border);
-    padding: 9px 16px;
+    padding: 10px 16px;
 }
-.table-erp tbody td { padding: 9px 16px; border-bottom: 1px solid var(--erp-border); vertical-align: middle; }
+.table-erp tbody td { padding: 10px 16px; border-bottom: 1px solid var(--erp-border); vertical-align: middle; }
 .table-erp tbody tr:last-child td { border-bottom: none; }
 
-/* Badges & Pills */
-.badge-erp { font-size: .65rem; font-weight: 600; padding: 3px 8px; border-radius: 4px; display: inline-block; }
+.badge-erp { font-size: .67rem; font-weight: 600; padding: 4px 8px; border-radius: 4px; display: inline-block; }
 .badge-erp-neutral { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 .badge-erp-success { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
 .badge-erp-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
@@ -244,35 +282,38 @@ ob_start();
 .type-pill {
     font-size: 0.65rem;
     font-weight: 700;
-    padding: 2px 8px;
+    padding: 3px 8px;
     border-radius: 4px;
     text-transform: uppercase;
 }
 .pill-serial { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 .pill-nonserial { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 
-/* Action Buttons */
+/* Buttons */
+.btn-erp-primary {
+    height: 38px; background: var(--erp-navy); border: 1px solid var(--erp-navy);
+    color: #fff; border-radius: 6px !important; font-size: .78rem; font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.btn-erp-primary:hover { background: var(--erp-navy-dark); color: #fff; }
+
+.btn-erp-cancel {
+    height: 38px; border: 1px solid #c8d2db; background: #fff;
+    color: #596b7a; border-radius: 6px !important; font-size: .78rem; font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+}
+.btn-erp-cancel:hover { background: #f5f7f9; color: #334451; }
+
 .action-btn-erp {
-    width: 28px;
-    height: 28px;
+    width: 30px; height: 30px;
     border-radius: 4px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #64748b;
-    border: 1px solid var(--erp-border);
-    background: #ffffff;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #64748b; border: 1px solid var(--erp-border); background: #ffffff;
     transition: all 0.15s ease;
 }
-.action-btn-erp:hover {
-    background: #f5f7f9;
-    color: var(--erp-navy-dark);
-}
-.action-btn-erp.danger:hover {
-    background: #fef2f2;
-    color: #dc2626;
-    border-color: #fecaca;
-}
+.action-btn-erp:hover { background: #f5f7f9; color: var(--erp-navy-dark); }
+.action-btn-erp.danger:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 
 #editModal { z-index: 1056 !important; }
 
@@ -289,9 +330,9 @@ ob_start();
 [data-bs-theme="dark"] .inst-header h3 { color: #edf3f7; }
 [data-bs-theme="dark"] .inst-header-icon { background: #203445; border-color: #33495a; color: #b8d0e2; }
 [data-bs-theme="dark"] .inst-panel,
+[data-bs-theme="dark"] .stat-widget-card,
 [data-bs-theme="dark"] .erp-toolbar,
 [data-bs-theme="dark"] .cat-stack-card { background: #142230 !important; }
-[data-bs-theme="dark"] .inst-panel-header,
 [data-bs-theme="dark"] .cat-header-btn:not(.collapsed) { background: #101a24 !important; border-color: var(--erp-border); }
 [data-bs-theme="dark"] .cat-header-btn { background-color: #142230 !important; }
 [data-bs-theme="dark"] .table-erp thead th { background: #101a24; border-color: var(--erp-border); color: var(--erp-muted); }
@@ -307,10 +348,13 @@ ob_start();
     <div class="inst-header">
         <div class="inst-header-left">
             <div class="inst-header-icon">
-                <i class="bi <?= $page_icon ?>"></i>
+                <i class="bi bi-box-seam-fill"></i>
             </div>
             <div>
-                <h3><?= htmlspecialchars($page_title) ?></h3>
+                <div class="d-flex align-items-center gap-2">
+                    <h3 class="mb-0"><?= htmlspecialchars($page_title) ?></h3>
+                    <!-- <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.65rem; font-weight: 700;">LIVE CATALOG</span> -->
+                </div>
                 <p>Master catalog of registerable assets, grouped by category.</p>
             </div>
         </div>
@@ -319,11 +363,43 @@ ob_start();
         </button>
     </div>
 
+    <!-- STATS SUMMARY BAR -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="stat-widget-card" style="--card-accent: #64748b;">
+                <div class="title">Total Categories</div>
+                <div class="value"><?= count($categories) ?></div>
+                <i class="bi bi-tags-fill stat-widget-icon"></i>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-widget-card" style="--card-accent: #173f63;">
+                <div class="title">Total Items</div>
+                <div class="value"><?= $totalItems ?></div>
+                <i class="bi bi-boxes stat-widget-icon"></i>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-widget-card" style="--card-accent: #2563eb;">
+                <div class="title">Serialized Items</div>
+                <div class="value text-primary"><?= $totalSerial ?></div>
+                <i class="bi bi-qr-code stat-widget-icon"></i>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-widget-card" style="--card-accent: #16a34a;">
+                <div class="title">Non-Serialized Items</div>
+                <div class="value text-success"><?= $totalNonSerial ?></div>
+                <i class="bi bi-stack stat-widget-icon"></i>
+            </div>
+        </div>
+    </div>
+
     <!-- COLLAPSIBLE ADD FORM -->
     <div class="collapse mb-4" id="addAssetCollapse">
         <div class="inst-panel p-4">
             <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-                <div class="inst-panel-title">
+                <div class="inst-panel-title fw-bold text-dark">
                     <i class="bi bi-plus-circle me-1.5 text-primary"></i> Register New Asset Type
                 </div>
                 <button type="button" class="btn-close small" data-bs-toggle="collapse" data-bs-target="#addAssetCollapse"></button>
@@ -363,7 +439,7 @@ ob_start();
     </div>
 
     <!-- SEARCH TOOLBAR -->
-    <div class="erp-toolbar mb-3">
+    <div class="erp-toolbar mb-3 p-2 bg-white rounded-3 border">
         <div class="row g-2 align-items-center">
             <div class="col flex-grow-1">
                 <div class="input-group input-group-sm">
@@ -387,19 +463,20 @@ ob_start();
         <?php if (!empty($categories)): ?>
             <?php foreach ($categories as $catName => $catItems): 
                 $catId = "cat_" . md5($catName);
+                $catIcon = getCategoryIcon($catName);
             ?>
                 <div class="accordion-item cat-stack-card">
                     <h2 class="accordion-header">
                         <button class="accordion-button cat-header-btn collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $catId ?>">
                             <div class="d-flex justify-content-between align-items-center w-100 me-2">
                                 <div class="d-flex align-items-center gap-2.5">
-                                    <div class="cat-icon-box">
-                                        <i class="bi bi-folder2-open"></i>
+                                    <div class="cat-icon-box me-2">
+                                        <i class="bi <?= $catIcon ?>"></i>
                                     </div>
                                     <span class="fw-bold text-dark fs-6"><?= htmlspecialchars($catName) ?></span>
                                 </div>
                                 <span class="badge-erp badge-erp-neutral">
-                                    <?= count($catItems) ?> Items
+                                    <i class="bi bi-layers me-1 text-muted"></i><?= count($catItems) ?> Items
                                 </span>
                             </div>
                         </button>
@@ -407,15 +484,15 @@ ob_start();
                     <div id="<?= $catId ?>" class="accordion-collapse collapse" data-bs-parent="#categoryAccordion" data-parent-id="#categoryAccordion">
                         <div class="accordion-body p-0 bg-white border-top">
                             <div class="table-responsive">
-                                <table class="table table-erp align-middle text-nowrap">
+                                <table class="table table-erp align-middle">
                                     <thead>
                                         <tr>
-                                            <th>Asset Name</th>
-                                            <th>Tracking Type</th>
-                                            <th class="text-center">Total In</th>
-                                            <th class="text-center">Dispatched</th>
-                                            <th class="text-center">Available</th>
-                                            <th class="text-end pe-3">Actions</th>
+                                            <th style="min-width: 220px;">Asset Name</th>
+                                            <th style="min-width: 150px;">Tracking Type</th>
+                                            <th class="text-center" style="min-width: 100px;">Total In</th>
+                                            <th class="text-center" style="min-width: 100px;">Dispatched</th>
+                                            <th class="text-center" style="min-width: 110px;">Available</th>
+                                            <th class="text-end pe-3" style="min-width: 90px;">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -432,7 +509,7 @@ ob_start();
                                                 </td>
                                                 <td>
                                                     <span class="type-pill <?= $isSerial ? 'pill-serial' : 'pill-nonserial' ?>">
-                                                        <?= $isSerial ? 'Serialized' : 'Non-Serialized' ?>
+                                                        <i class="bi <?= $isSerial ? 'bi-qr-code' : 'bi-boxes' ?> me-1"></i><?= $isSerial ? 'Serialized' : 'Non-Serialized' ?>
                                                     </span>
                                                 </td>
                                                 <td class="text-center fw-semibold text-dark"><?= inr($row['total_purchased']) ?></td>
@@ -475,7 +552,7 @@ ob_start();
 <!-- EDIT MODAL STRUCTURE -->
 <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-2 border shadow-sm">
+        <div class="modal-content rounded-3 border shadow-sm">
             <form method="POST" id="editForm">
                 <div class="modal-header border-bottom p-3">
                     <h6 class="fw-bold m-0" id="editModalLabel"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Item Details</h6>
@@ -484,11 +561,11 @@ ob_start();
                 <div class="modal-body p-3">
                     <input type="hidden" name="id" id="eid">
                     <div class="mb-3">
-                        <label class="small fw-semibold text-secondary">Item Name</label>
+                        <label class="small fw-semibold text-secondary mb-1">Item Name</label>
                         <input type="text" name="item_name" id="ename" class="form-control form-control-sm rounded-1" required>
                     </div>
                     <div class="mb-3">
-                        <label class="small fw-semibold text-secondary">Category</label>
+                        <label class="small fw-semibold text-secondary mb-1">Category</label>
                         <select name="category" id="ecat" class="form-select form-select-sm rounded-1">
                             <option>Computer</option>
                             <option>Accessory</option>
@@ -497,12 +574,12 @@ ob_start();
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="small fw-semibold text-secondary">Stock Tracking Type</label>
+                        <label class="small fw-semibold text-secondary mb-1">Stock Tracking Type</label>
                         <select name="stock_type" id="etype" class="form-select form-select-sm rounded-1">
                             <option value="serial">Serialized (Track by Serial No.)</option>
                             <option value="non_serial">Non-Serialized (Bulk Quantity)</option>
                         </select>
-                        <small id="typeWarning" class="text-muted" style="font-size: 11px;"></small>
+                        <small id="typeWarning" class="text-muted d-block mt-1" style="font-size: 11px;"></small>
                     </div>
                 </div>
                 <div class="modal-footer border-top p-2 px-3">
@@ -535,7 +612,6 @@ ob_start();
 
 <script>
 $(document).ready(function() {
-    // CRITICAL FIX: Move modal to document body to break out of layout wrapper/overflow clipping
     $('#editModal').appendTo('body');
 
     // Search filter
@@ -630,7 +706,6 @@ function editItem(id, name, cat, type, stockCount) {
         $typeWarning.text("No stock linked. You can safely change the type.").attr('class', 'text-muted small d-block mt-1');
     }
     
-    // Explicit Modal Call using raw DOM element to prevent jQuery state conflicts
     var modalElement = document.getElementById('editModal');
     var editModal = bootstrap.Modal.getOrCreateInstance(modalElement);
     editModal.show();

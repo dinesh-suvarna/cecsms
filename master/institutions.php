@@ -913,9 +913,9 @@ ob_start();
 
         <div class="inst-header-left">
 
-            <div class="inst-header-icon">
+            <!-- <div class="inst-header-icon">
                 <i class="bi bi-building"></i>
-            </div>
+            </div> -->
 
             <div>
                 <h3>Institutions Directory</h3>
@@ -1341,11 +1341,11 @@ ob_start();
 
                                     <div class="inst-identity">
 
-                                        <div class="inst-avatar">
+                                        <!-- <div class="inst-avatar">
 
                                             <i class="bi bi-building"></i>
 
-                                        </div>
+                                        </div> -->
 
                                         <div class="inst-name">
 

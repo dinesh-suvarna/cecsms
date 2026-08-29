@@ -5,7 +5,6 @@ require_once "../includes/session.php";
 
 $role = $_SESSION['role'];
 $user_institution_id = $_SESSION['institution_id'] ?? null;
-$institution_filter = $_GET['institution_id'] ?? '';
 
 /* ================= ADD DIVISION ================= */
 $error = "";
@@ -70,12 +69,7 @@ $success = $_SESSION['success'] ?? "";
 $error = $_SESSION['error'] ?? "";
 unset($_SESSION['success'], $_SESSION['error']);
 
-/* ================= FETCH LIST & STATS ================= */
-$search = $_GET['search'] ?? '';
-$page   = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$limit  = 100;
-$start  = ($page - 1) * $limit;
-
+/* ================= FETCH DATA & STATS ================= */
 $params = [];
 $types  = "";
 $where  = " WHERE 1 ";
@@ -86,41 +80,17 @@ if ($role !== 'SuperAdmin') {
     $types .= "i";
 }
 
-if (!empty($search)) {
-    $where .= " AND d.division_name LIKE ? ";
-    $params[] = "%$search%";
-    $types .= "s";
-}
-
-if ($role == 'SuperAdmin' && !empty($institution_filter)) {
-    $where .= " AND d.institution_id = ? ";
-    $params[] = $institution_filter;
-    $types .= "i";
-}
-
-/* COUNT */
-$countSql = "SELECT COUNT(*) as total FROM divisions d $where";
-$stmt = $conn->prepare($countSql);
-if (!empty($params)) $stmt->bind_param($types, ...$params);
-$stmt->execute();
-$totalRows = $stmt->get_result()->fetch_assoc()['total'];
-$totalPages = ceil($totalRows / $limit);
-
-/* DATA SQL */
-$sql = "SELECT d.*, i.institution_name,
-        (SELECT COUNT(*) FROM divisions WHERE institution_id = d.institution_id AND status = 'Active') as dept_count
+/* FETCH ALL DIVISIONS DIRECTLY WITHOUT PAGINATION OR ACCORDION ACCORDING TO INSTITUTION DESIGN */
+$sql = "SELECT d.*, i.institution_name
         FROM divisions d
         JOIN institutions i ON d.institution_id = i.id
         $where
-        ORDER BY i.institution_name, d.division_name
-        LIMIT ?, ?";
-
-$params[] = $start;
-$params[] = $limit;
-$types .= "ii";
+        ORDER BY d.division_name ASC";
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param($types, ...$params);
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -130,8 +100,9 @@ ob_start();
 
 <style>
 /* =========================================================
-   ENTERPRISE ERP STYLES
+   ENTERPRISE ERP STYLES (MATCHED TO INSTITUTIONS DIRECTORY)
 ========================================================= */
+
 :root {
     --erp-navy: #173f63;
     --erp-navy-dark: #102f4a;
@@ -173,23 +144,27 @@ ob_start();
 .inst-header h3 { margin: 0; color: var(--erp-navy-dark); font-size: 1.18rem; font-weight: 650; }
 .inst-header p { margin: 3px 0 0; color: var(--erp-muted); font-size: .76rem; }
 
-/* BUTTONS */
+/* PRIMARY BUTTON */
 .btn-erp-primary {
     background: var(--erp-navy); border: 1px solid var(--erp-navy);
     color: #fff; border-radius: 4px !important; font-size: .78rem; font-weight: 600; padding: 8px 14px;
+    box-shadow: none !important;
 }
-.btn-erp-primary:hover { background: var(--erp-navy-dark); border-color: var(--erp-navy-dark); color: #fff; }
+.btn-erp-primary:hover, .btn-erp-primary:focus {
+    background: var(--erp-navy-dark); border-color: var(--erp-navy-dark); color: #fff;
+}
 
-.btn-form-save {
-    height: 39px; background: var(--erp-navy); border: 1px solid var(--erp-navy);
-    color: #fff; border-radius: 4px !important; font-size: .76rem; font-weight: 600;
+/* SUMMARY BAR */
+.inst-summary {
+    display: flex; align-items: stretch; background: var(--erp-white);
+    border: 1px solid var(--erp-border); border-radius: 5px; margin-bottom: 18px;
+    box-shadow: var(--erp-shadow); overflow: hidden;
 }
-.btn-form-save:hover { background: var(--erp-navy-dark); color: #fff; }
-
-.btn-form-cancel {
-    height: 39px; border: 1px solid #c8d2db; background: #fff;
-    color: #596b7a; border-radius: 4px !important; font-size: .76rem; font-weight: 600;
-}
+.inst-summary-item { min-width: 190px; padding: 13px 18px; border-right: 1px solid var(--erp-border-light); }
+.inst-summary-item:last-child { border-right: 0; }
+.inst-summary-label { color: var(--erp-muted); font-size: .65rem; font-weight: 600; text-transform: uppercase; letter-spacing: .045em; margin-bottom: 3px; }
+.inst-summary-value { color: var(--erp-text); font-size: 1.05rem; font-weight: 700; }
+.inst-summary-value.active { color: var(--erp-green); }
 
 /* FORM PANEL */
 .inst-form-panel {
@@ -201,37 +176,78 @@ ob_start();
     padding: 13px 18px; border-bottom: 1px solid var(--erp-border); background: #f5f7f9;
 }
 .inst-form-title { display: flex; align-items: center; gap: 8px; color: var(--erp-navy-dark); font-size: .82rem; font-weight: 650; }
+.inst-form-title i { color: var(--erp-blue); }
 .inst-form-body { padding: 18px; }
+
 .inst-form-panel .form-label { color: #536575; font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .045em; margin-bottom: 6px; }
 .inst-form-panel .form-control, .inst-form-panel .form-select {
     height: 39px; border: 1px solid var(--erp-border); border-radius: 4px !important;
-    color: var(--erp-text); background: #fff; font-size: .8rem;
+    color: var(--erp-text); background: #fff; font-size: .8rem; box-shadow: none !important;
+}
+.inst-form-panel .form-control:focus, .inst-form-panel .form-select:focus {
+    border-color: var(--erp-blue); box-shadow: 0 0 0 2px rgba(13,110,253,.08) !important;
+}
+
+.btn-form-save {
+    height: 39px; background: var(--erp-navy); border: 1px solid var(--erp-navy);
+    color: #fff; border-radius: 4px !important; font-size: .76rem; font-weight: 600;
+}
+.btn-form-save:hover { background: var(--erp-navy-dark); border-color: var(--erp-navy-dark); color: #fff; }
+
+.btn-form-cancel {
+    height: 39px; border: 1px solid var(--erp-border-dark, #c8d2db); background: #fff;
+    color: #596b7a; border-radius: 4px !important; font-size: .76rem; font-weight: 600;
 }
 
 /* TABLE TOOLBAR */
 .inst-table-panel {
-    background: var(--erp-white); border: 1px solid var(--erp-border); border-radius: 5px; overflow: hidden; box-shadow: var(--erp-shadow);
+    background: var(--erp-white); border: 1px solid var(--erp-border); border-radius: 5px;
+    overflow: hidden; box-shadow: var(--erp-shadow);
 }
 .inst-toolbar {
-    display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 13px 16px; border-bottom: 1px solid var(--erp-border); background: #fff;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 15px; padding: 13px 16px; border-bottom: 1px solid var(--erp-border); background: #fff;
 }
 .inst-toolbar-title { color: var(--erp-text); font-size: .82rem; font-weight: 650; }
 .inst-toolbar-count { color: var(--erp-muted); font-size: .7rem; font-weight: 500; }
 
-.inst-filter-control { height: 34px; background: #f7f9fa; border: 1px solid var(--erp-border); font-size: .76rem; border-radius: 4px; }
+.inst-search { width: 280px; }
+.inst-search .input-group-text {
+    background: #f7f9fa; border: 1px solid var(--erp-border); border-right: 0;
+    color: #82909c; font-size: .78rem;
+}
+.inst-search .form-control {
+    height: 34px; background: #f7f9fa; border: 1px solid var(--erp-border); border-left: 0;
+    font-size: .76rem; box-shadow: none;
+}
+.inst-search .form-control:focus { background: #fff; border-color: var(--erp-blue); box-shadow: none; }
 
-/* ACCORDION ERP STYLE */
-.accordion-item { border: 0; border-bottom: 1px solid var(--erp-border) !important; }
-.accordion-button { background: #f7f9fa; color: var(--erp-navy-dark); font-size: 1rem !important; font-weight: 650; padding: 12px 18px; }
-.accordion-button:not(.collapsed) { background: #edf3f8; color: var(--erp-navy); box-shadow: none; }
-
-/* TABLES */
+/* TABLE */
 .inst-table { width: 100%; margin: 0; border-collapse: separate; border-spacing: 0; }
-.inst-table thead th { background: #f7f9fa; color: #667786; border-bottom: 1px solid var(--erp-border); padding: 11px 14px; font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .045em; }
-.inst-table tbody td { padding: 11px 14px; color: var(--erp-text); border-bottom: 1px solid #edf1f4; font-size: 0.875rem; vertical-align: middle; }
-.inst-table tbody tr:hover { background: #afd0e0; }
+.inst-table thead th {
+    background: #f7f9fa; color: #667786; border-bottom: 1px solid var(--erp-border);
+    padding: 11px 14px; font-size: .64rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .045em; white-space: nowrap;
+}
+.inst-table tbody td {
+    padding: 13px 14px; color: var(--erp-text); border-bottom: 1px solid #edf1f4;
+    font-size: .78rem; vertical-align: middle;
+}
+.inst-table tbody tr:last-child td { border-bottom: 0; }
+.inst-table tbody tr { transition: background .12s ease; }
+.inst-table tbody tr:hover { background: #f9fbfc; }
 
-/* BADGES & STATUS */
+.inst-index { color: #8a98a5; font-size: .72rem; font-weight: 600; }
+
+.inst-identity { display: flex; align-items: center; gap: 11px; min-width: 250px; }
+.inst-avatar {
+    width: 34px; height: 34px; flex: 0 0 34px; display: flex; align-items: center;
+    justify-content: center; background: #edf3f8; border: 1px solid #d9e5ed;
+    border-radius: 4px; color: var(--erp-navy); font-size: .85rem;
+}
+.inst-name { color: var(--erp-text); font-weight: 600; font-size: 0.92rem !important; line-height: 1.35; }
+
+/* STATUS */
 .inst-status { display: inline-flex; align-items: center; gap: 6px; font-size: .68rem; font-weight: 650; }
 .inst-status-dot { width: 7px; height: 7px; border-radius: 50%; }
 .inst-status.active { color: var(--erp-green); }
@@ -241,17 +257,30 @@ ob_start();
 
 /* ACTIONS */
 .inst-actions { display: flex; justify-content: flex-end; gap: 5px; }
-.inst-action { width: 31px; height: 29px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--erp-border); background: #fff; border-radius: 4px; font-size: .76rem; }
+.inst-action {
+    width: 31px; height: 29px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--erp-border); background: #fff; border-radius: 4px;
+    font-size: .76rem; transition: all .15s ease;
+}
 .inst-action-edit { color: var(--erp-blue); }
-.inst-action-edit:hover { background: #edf5ff; border-color: #b9d5f7; }
+.inst-action-edit:hover { background: #edf5ff; border-color: #b9d5f7; color: #0a58ca; }
 .inst-action-delete { color: var(--erp-red); }
-.inst-action-delete:hover { background: #fff1f1; border-color: #edc4c4; }
+.inst-action-delete:hover { background: #fff1f1; border-color: #edc4c4; color: #8f3838; }
 .inst-action-restore { color: var(--erp-green); }
-.inst-action-restore:hover { background: #edf8f2; border-color: #b9dfcb; }
+.inst-action-restore:hover { background: #edf8f2; border-color: #b9dfcb; color: #216646; }
 
-/* ALERTS & EMPTY */
-.inst-alert { border-radius: 4px !important; font-size: .76rem; }
+/* EMPTY STATE */
 .inst-empty { padding: 55px 20px !important; text-align: center; color: var(--erp-muted); }
+.inst-empty-icon {
+    width: 48px; height: 48px; margin: 0 auto 12px; display: flex; align-items: center;
+    justify-content: center; background: #f1f4f6; border: 1px solid var(--erp-border);
+    border-radius: 5px; color: #8493a0; font-size: 1.2rem;
+}
+.inst-empty h5 { color: var(--erp-text); font-size: .85rem; font-weight: 650; margin-bottom: 4px; }
+.inst-empty p { font-size: .73rem; margin: 0; }
+
+/* ALERTS */
+.inst-alert { border-radius: 4px !important; border-width: 1px; font-size: .76rem; box-shadow: none !important; }
 
 /* DARK MODE */
 [data-bs-theme="dark"] {
@@ -259,15 +288,33 @@ ob_start();
     --erp-border: #2d3e4e; --erp-border-light: #263847; --erp-navy: #8eafc9; --erp-navy-dark: #dce8f0;
 }
 [data-bs-theme="dark"] .inst-header h3 { color: #edf3f7; }
-[data-bs-theme="dark"] .inst-header-icon { background: #203445; border-color: #33495a; color: #b8d0e2; }
+[data-bs-theme="dark"] .inst-header-icon, [data-bs-theme="dark"] .inst-avatar { background: #203445; border-color: #33495a; color: #b8d0e2; }
+[data-bs-theme="dark"] .inst-summary, [data-bs-theme="dark"] .inst-table-panel { background: var(--erp-white); }
+[data-bs-theme="dark"] .inst-summary-item { border-color: var(--erp-border); }
 [data-bs-theme="dark"] .inst-form-panel, [data-bs-theme="dark"] .inst-form-header { background: #142230; }
-[data-bs-theme="dark"] .inst-table-panel, [data-bs-theme="dark"] .inst-toolbar { background: var(--erp-white); }
-[data-bs-theme="dark"] .accordion-button { background: #142230; color: #edf3f7; }
-[data-bs-theme="dark"] .accordion-button:not(.collapsed) { background: #1b2b3a; color: #8eafc9; }
+[data-bs-theme="dark"] .inst-form-panel .form-control, [data-bs-theme="dark"] .inst-form-panel .form-select, [data-bs-theme="dark"] .inst-search .form-control { background: #172534 !important; color: var(--erp-text); border-color: var(--erp-border); }
 [data-bs-theme="dark"] .inst-table thead th { background: #142230; color: #9aabb9; }
 [data-bs-theme="dark"] .inst-table tbody tr:hover { background: #1b2b3a; }
 [data-bs-theme="dark"] .inst-action, [data-bs-theme="dark"] .btn-form-cancel { background: #172534; border-color: var(--erp-border); color: #b8c6d1; }
-[data-bs-theme="dark"] .inst-form-panel .form-control, [data-bs-theme="dark"] .inst-form-panel .form-select, [data-bs-theme="dark"] .inst-filter-control { background: #172534 !important; color: var(--erp-text); border-color: var(--erp-border); }
+[data-bs-theme="dark"] .inst-search .input-group-text { background: #172534; border-color: var(--erp-border); }
+
+/* RESPONSIVE */
+@media (max-width: 991.98px) {
+    .division-page { padding: 20px; }
+    .inst-summary-item { flex: 1; min-width: 0; }
+    .inst-search { width: 230px; }
+}
+@media (max-width: 767.98px) {
+    .division-page { padding: 18px 14px 30px; }
+    .inst-header { align-items: flex-start; flex-direction: column; }
+    .inst-header .btn-erp-primary { width: 100%; }
+    .inst-summary { flex-direction: column; }
+    .inst-summary-item { border-right: 0; border-bottom: 1px solid var(--erp-border-light); }
+    .inst-summary-item:last-child { border-bottom: 0; }
+    .inst-toolbar { align-items: stretch; flex-direction: column; }
+    .inst-search { width: 100%; }
+    .inst-table { min-width: 700px; }
+}
 </style>
 
 <div class="division-page">
@@ -275,14 +322,12 @@ ob_start();
     <!-- PAGE HEADER -->
     <div class="inst-header">
         <div class="inst-header-left">
-            <div class="inst-header-icon">
-                <i class="bi bi-diagram-3"></i>
-            </div>
             <div>
-                <h3>Department Directory</h3>
-                <p>Manage organizational divisions, academic branches, and administrative units.</p>
+                <h3>Departments Directory</h3>
+                <p>Manage institutional departments, academic branches, and administrative units.</p>
             </div>
         </div>
+
         <button class="btn btn-erp-primary" type="button" data-bs-toggle="collapse" data-bs-target="#addDepartmentCollapse" aria-expanded="false" aria-controls="addDepartmentCollapse">
             <i class="bi bi-plus-lg me-2"></i> Add Department
         </button>
@@ -302,6 +347,38 @@ ob_start();
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     <?php endif; ?>
+
+    <!-- SUMMARY METRICS BAR -->
+    <?php
+    $totalDepartments = $result->num_rows;
+    $activeDepartments = 0;
+
+    if ($result->num_rows > 0) {
+        $result->data_seek(0);
+        while ($summaryRow = $result->fetch_assoc()) {
+            if ($summaryRow['status'] === 'Active') {
+                $activeDepartments++;
+            }
+        }
+        $result->data_seek(0);
+    }
+    $inactiveDepartments = $totalDepartments - $activeDepartments;
+    ?>
+
+    <div class="inst-summary">
+        <div class="inst-summary-item">
+            <div class="inst-summary-label">Total Departments</div>
+            <div class="inst-summary-value"><?= inr($totalDepartments) ?></div>
+        </div>
+        <div class="inst-summary-item">
+            <div class="inst-summary-label">Active</div>
+            <div class="inst-summary-value active"><?= inr($activeDepartments) ?></div>
+        </div>
+        <div class="inst-summary-item">
+            <div class="inst-summary-label">Inactive</div>
+            <div class="inst-summary-value"><?= inr($inactiveDepartments) ?></div>
+        </div>
+    </div>
 
     <!-- ADD FORM PANEL -->
     <div class="collapse mb-3 <?= (!empty($error)) ? 'show' : '' ?>" id="addDepartmentCollapse">
@@ -332,7 +409,7 @@ ob_start();
                             <input type="hidden" name="institution_id" value="<?= $user_institution_id; ?>">
                         <?php endif; ?>
 
-                        <div class="<?= ($role == 'SuperAdmin') ? 'col-md-5' : 'col-md-7' ?>">
+                        <div class="<?= ($role == 'SuperAdmin') ? 'col-md-5' : 'col-md-6' ?>">
                             <label class="form-label">Department Name <span class="text-danger">*</span></label>
                             <input type="text" name="division_name" class="form-control" placeholder="e.g. Computer Science & Engineering" required>
                         </div>
@@ -359,145 +436,119 @@ ob_start();
         </div>
     </div>
 
-    <!-- MAIN DATA CONTAINER -->
+    <!-- MAIN DATA TABLE -->
     <div class="inst-table-panel">
-        
-        <!-- TOOLBAR & FILTERS -->
+
         <div class="inst-toolbar">
             <div>
-                <span class="inst-toolbar-title">Department Directory Records</span>
-                <span class="inst-toolbar-count ms-2"><?= inr($totalRows) ?> total</span>
+                <span class="inst-toolbar-title">Department Records</span>
+                <span class="inst-toolbar-count ms-2"><?= inr($totalDepartments) ?> records</span>
             </div>
 
-            <form method="GET" class="m-0 d-flex gap-2 align-items-center">
-                <?php if ($role == 'SuperAdmin'): ?>
-                    <select name="institution_id" class="form-select inst-filter-control" onchange="this.form.submit()">
-                        <option value="">All Institutions</option>
-                        <?php
-                        $res = $conn->query("SELECT id, institution_name FROM institutions ORDER BY institution_name");
-                        while ($irow = $res->fetch_assoc()) {
-                            $selected = ($institution_filter == $irow['id']) ? 'selected' : '';
-                            echo "<option value='{$irow['id']}' $selected>{$irow['institution_name']}</option>";
-                        }
-                        ?>
-                    </select>
-                <?php endif; ?>
-
+            <div class="inst-search">
                 <div class="input-group">
-                    <input type="text" id="liveSearch" name="search" value="<?= htmlspecialchars($search) ?>" class="form-control inst-filter-control" placeholder="Search departments...">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="search" class="form-control" placeholder="Search departments...">
                 </div>
-
-                <button type="submit" class="btn btn-sm btn-erp-primary" title="Filter"><i class="bi bi-filter"></i></button>
-                <a href="divisions.php" class="btn btn-sm btn-form-cancel" title="Clear Filters"><i class="bi bi-arrow-clockwise"></i></a>
-            </form>
+            </div>
         </div>
 
-        <!-- ACCORDION CONTENT LIST -->
-        <div class="accordion accordion-flush" id="deptAccordion">
-            <?php 
-            $current_institution = "";
-            $first = true;
-
-            if ($result->num_rows > 0):
-                while ($row = $result->fetch_assoc()): 
-                    $div_formatted = ucwords(strtolower($row['division_name']));
-                    $formatted_division_name = str_replace(" And ", " and ", $div_formatted);
-
-                    if ($current_institution !== $row['institution_name']): 
-                        if (!$first) echo '</tbody></table></div></div></div>'; 
-                        $current_institution = $row['institution_name'];
-                        $acc_id = "inst_" . $row['institution_id'];
-                        $show_class = (!empty($search)) ? 'show' : '';
-                        $button_class = (!empty($search)) ? '' : 'collapsed';
-            ?>
-                <div class="accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button <?= $button_class ?>" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $acc_id ?>">
-                            <div class="d-flex justify-content-between align-items-center w-100 me-3">
-                                <span>
-                                    <i class="bi bi-building me-2 text-primary"></i>
-                                    <?= htmlspecialchars($current_institution) ?>
-                                </span>
-                                <span class="badge bg-light text-dark border px-2 py-1 fs-xs fw-normal">
-                                    <?= $row['dept_count'] ?> Active
-                                </span>
-                            </div>
-                        </button>
-                    </h2>
-                    <div id="<?= $acc_id ?>" class="accordion-collapse collapse <?= $show_class ?>" data-bs-parent="#deptAccordion">
-                        <div class="accordion-body p-0">
-                            <div class="table-responsive">
-                                <table class="inst-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Department Name</th>
-                                            <th style="width: 160px;">Type</th>
-                                            <th style="width: 140px;">Status</th>
-                                            <th class="text-end" style="width: 120px;">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                <?php 
-                        $first = false;
-                    endif; 
-                ?>
+        <div class="table-responsive">
+            <table class="inst-table" id="tbl">
+                <thead>
                     <tr>
-                        <td class="fw-semibold"><?= htmlspecialchars($formatted_division_name) ?></td>
-                        <td>
-                            <span class="text-capitalize text-muted small"><?= htmlspecialchars($row['division_type']) ?></span>
-                        </td>
-                        <td>
-                            <?php if ($row['status'] == 'Active'): ?>
-                                <span class="inst-status active"><span class="inst-status-dot"></span> Active</span>
-                            <?php else: ?>
-                                <span class="inst-status inactive"><span class="inst-status-dot"></span> Inactive</span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="text-end">
-                            <div class="inst-actions">
-                                <?php if ($row['status'] == 'Active'): ?>
-                                    <a href="<?= e_url('edit_division.php', $row['id']) ?>" class="inst-action inst-action-edit" title="Edit">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </a>
-                                    <button onclick="deactivateDivision(<?= $row['id'] ?>)" class="inst-action inst-action-delete" title="Deactivate">
-                                        <i class="bi bi-person-dash"></i>
-                                    </button>
-                                <?php else: ?>
-                                    <button onclick="restoreDivision(<?= $row['id'] ?>)" class="inst-action inst-action-restore" title="Restore">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                    </button>
-                                <?php endif; ?>
-                            </div>
-                        </td>
+                        <th style="width: 70px;">#</th>
+                        <th>Department</th>
+                        <!-- <?php if ($role == 'SuperAdmin'): ?>
+                            <th>Institution</th>
+                        <?php endif; ?> -->
+                        <th style="width: 160px;">Type</th>
+                        <th style="width: 140px;">Status</th>
+                        <th class="text-end" style="width: 120px;">Actions</th>
                     </tr>
-                <?php endwhile; ?>
-                    </tbody></table></div></div></div> 
-            <?php else: ?>
-                <div class="inst-empty">
-                    <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
-                    <h5>No Departments Found</h5>
-                    <p class="small m-0">Try adjusting your search criteria or target filters.</p>
-                </div>
-            <?php endif; ?>
-        </div>
-    </div>
+                </thead>
+                <tbody>
+                    <?php if ($result->num_rows > 0): ?>
+                        <?php 
+                        $i = 1;
+                        while ($row = $result->fetch_assoc()):
+                            $div_formatted = ucwords(strtolower($row['division_name']));
+                            $formatted_division_name = str_replace(" And ", " and ", $div_formatted);
+                        ?>
+                            <tr>
+                                <!-- INDEX -->
+                                <td>
+                                    <span class="inst-index"><?= $i++ ?></span>
+                                </td>
 
-    <!-- PAGINATION -->
-    <?php if ($totalPages > 1): ?>
-        <div class="d-flex justify-content-center mt-4">
-            <nav>
-                <ul class="pagination pagination-sm m-0">
-                    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                        <li class="page-item <?= ($i == $page) ? 'active' : '' ?>">
-                            <a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&institution_id=<?= urlencode($institution_filter) ?>">
-                                <?= $i ?>
-                            </a>
-                        </li>
-                    <?php endfor; ?>
-                </ul>
-            </nav>
+                                <!-- DEPARTMENT IDENTITY -->
+                                <td>
+                                    <div class="inst-identity">
+                                        <!-- <div class="inst-avatar">
+                                            <i class="bi bi-diagram-3"></i>
+                                        </div> -->
+                                        <div class="inst-name">
+                                            <?= htmlspecialchars($formatted_division_name) ?>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- INSTITUTION (VISIBLE TO SUPERADMIN) -->
+                                <!-- <?php if ($role == 'SuperAdmin'): ?>
+                                    <td>
+                                        <span class="text-secondary small fw-medium"><?= htmlspecialchars($row['institution_name']) ?></span>
+                                    </td>
+                                <?php endif; ?> -->
+
+                                <!-- TYPE -->
+                                <td>
+                                    <span class="text-capitalize text-muted small fw-medium"><?= htmlspecialchars($row['division_type']) ?></span>
+                                </td>
+
+                                <!-- STATUS -->
+                                <td>
+                                    <?php if ($row['status'] == 'Active'): ?>
+                                        <span class="inst-status active"><span class="inst-status-dot"></span> Active</span>
+                                    <?php else: ?>
+                                        <span class="inst-status inactive"><span class="inst-status-dot"></span> Inactive</span>
+                                    <?php endif; ?>
+                                </td>
+
+                                <!-- ACTIONS -->
+                                <td>
+                                    <div class="inst-actions">
+                                        <?php if ($row['status'] == 'Active'): ?>
+                                            <a href="<?= e_url('edit_division.php', $row['id']) ?>" class="inst-action inst-action-edit" title="Edit department">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+                                            <button type="button" onclick="deactivateDivision(<?= $row['id'] ?>)" class="inst-action inst-action-delete" title="Deactivate department">
+                                                <i class="bi bi-person-dash"></i>
+                                            </button>
+                                        <?php else: ?>
+                                            <button type="button" onclick="restoreDivision(<?= $row['id'] ?>)" class="inst-action inst-action-restore" title="Restore department">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="<?= ($role == 'SuperAdmin') ? '6' : '5' ?>" class="inst-empty">
+                                <div class="inst-empty-icon">
+                                    <i class="bi bi-folder-x"></i>
+                                </div>
+                                <h5>No Departments Found</h5>
+                                <p>Add a department to begin managing organizational records.</p>
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
-    <?php endif; ?>
+
+    </div>
 
 </div>
 
@@ -522,7 +573,8 @@ function deactivateDivision(id) {
         cancelButtonColor: '#6c757d',
         confirmButtonText: 'Deactivate',
         cancelButtonText: 'Cancel',
-        reverseButtons: true
+        reverseButtons: true,
+        customClass: { popup: 'shadow' }
     }).then((result) => {
         if (result.isConfirmed) {
             document.getElementById('delete_id').value = id;
@@ -541,7 +593,8 @@ function restoreDivision(id) {
         cancelButtonColor: '#6c757d',
         confirmButtonText: 'Restore',
         cancelButtonText: 'Cancel',
-        reverseButtons: true
+        reverseButtons: true,
+        customClass: { popup: 'shadow' }
     }).then((result) => {
         if (result.isConfirmed) {
             document.getElementById('restore_id').value = id;
@@ -550,39 +603,17 @@ function restoreDivision(id) {
     });
 }
 
-// Live Search Script
-document.getElementById('liveSearch').addEventListener('keyup', function() {
-    let filter = this.value.toLowerCase();
-    let accordionItems = document.querySelectorAll('#deptAccordion .accordion-item');
-
-    accordionItems.forEach(item => {
-        let rows = item.querySelectorAll('tbody tr');
-        let hasVisibleRow = false;
-
-        rows.forEach(row => {
-            let deptName = row.cells[0].textContent.toLowerCase();
-            let deptType = row.cells[1].textContent.toLowerCase();
-
-            if (deptName.includes(filter) || deptType.includes(filter)) {
-                row.style.display = "";
-                hasVisibleRow = true;
-            } else {
-                row.style.display = "none";
-            }
+/* LIVE SEARCH */
+const searchInput = document.getElementById('search');
+if (searchInput) {
+    searchInput.addEventListener('input', function () {
+        const filter = this.value.trim().toLowerCase();
+        document.querySelectorAll('#tbl tbody tr').forEach(row => {
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(filter) ? '' : 'none';
         });
-
-        if (hasVisibleRow) {
-            item.style.display = "";
-            if (filter.length > 0) {
-                const collapseElement = item.querySelector('.accordion-collapse');
-                const bsCollapse = new bootstrap.Collapse(collapseElement, {toggle: false});
-                bsCollapse.show();
-            }
-        } else {
-            item.style.display = "none";
-        }
     });
-});
+}
 </script>
 
 <?php

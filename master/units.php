@@ -6,7 +6,7 @@ $role = $_SESSION['role'];
 $user_institution_id = $_SESSION['institution_id'] ?? null;
 
 $page_title = "Labs & Facilities";
-$page_icon  = "bi bi-grid-3x3-gap-fill";
+//$page_icon  = "bi bi-grid-3x3-gap-fill";
 
 $error = "";
 $success = "";
@@ -102,6 +102,56 @@ ob_start();
     }
 
     body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color: var(--erp-text-main); }
+
+    /* Custom Container Spacing */
+    .erp-page-container {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 26px 30px 40px;
+    }
+
+    /* Page Header Block */
+    .inst-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding-bottom: 20px;
+        margin-bottom: 22px;
+        border-bottom: 1px solid #dce3e9;
+    }
+
+    .inst-header-left { 
+        display: flex; 
+        align-items: center; 
+        gap: 14px; 
+    }
+
+    .inst-header-icon {
+        width: 42px; 
+        height: 42px;
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
+        background: #edf3f8; 
+        border: 1px solid #dce6ee; 
+        border-radius: 5px;
+        color: #173f63; 
+        font-size: 1.1rem;
+    }
+
+    .inst-header h3 { 
+        margin: 0; 
+        color: #102f4a; 
+        font-size: 1.18rem; 
+        font-weight: 650; 
+    }
+
+    .inst-header p { 
+        margin: 3px 0 0; 
+        color: #71808f; 
+        font-size: .76rem; 
+    }
 
     /* Custom Color Overrides */
     .btn-custom-navy {
@@ -217,12 +267,17 @@ ob_start();
     .action-btn-saas.danger:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 </style>
 
-<div class="container-fluid p-0">
+<div class="erp-page-container">
     <!-- Header Block -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="fw-bold tracking-tight mb-1" style="color: var(--erp-text-main); letter-spacing: -0.01em;"><?= $page_title ?></h4>
-            <p class="text-muted small mb-0">Directory of registered laboratories, classrooms and administrative spaces.</p>
+    <div class="inst-header">
+        <div class="inst-header-left">
+            <!-- <div class="inst-header-icon">
+                <i class="<?= $page_icon ?>"></i>
+            </div> -->
+            <div>
+                <h3><?= $page_title ?></h3>
+                <p>Directory of registered laboratories, classrooms and administrative spaces.</p>
+            </div>
         </div>
         
         <div class="d-flex align-items-center gap-2">

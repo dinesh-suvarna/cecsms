@@ -219,6 +219,44 @@ ob_start();
         color: var(--erp-text-main);
     }
 
+    /* Container padding to push content slightly right */
+.page-wrapper {
+    padding: 24px 28px 36px;
+}
+
+/* Header layout & horizontal divider line */
+.inst-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--erp-border, #d9e0e7);
+}
+
+/* Header left side flex layout */
+.inst-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+/* Header icon box */
+.inst-header-icon {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #edf3f8;
+    border: 1px solid #dce6ee;
+    border-radius: 6px;
+    color: var(--erp-navy);
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
     /* Search Box Styling */
     .global-search-wrapper {
         position: relative;
@@ -340,13 +378,20 @@ ob_start();
     }
 </style>
 
-<div class="container-fluid p-0">
+<div class="container-fluid page-wrapper">
     <!-- Header Block -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="fw-bold tracking-tight mb-1" style="color: var(--erp-text-main); letter-spacing: -0.01em;">Categorized Vendor Directory</h4>
-            <p class="text-muted extra-small mb-0">Comprehensive vendor profiles and transaction history organized by stock domain.</p>
+    <div class="inst-header">
+        <div class="inst-header-left">
+            <!-- Icon Box -->
+            <div class="inst-header-icon">
+                <i class="bi bi-folder-symlink-fill"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold tracking-tight mb-1" style="color: var(--erp-text-main); letter-spacing: -0.01em;">Categorized Vendor Directory</h4>
+                <p class="text-muted extra-small mb-0">Comprehensive vendor profiles and transaction history organized by stock domain.</p>
+            </div>
         </div>
+
         <div class="d-flex align-items-center gap-2">
             <!-- Global Search Input -->
             <div class="global-search-wrapper">

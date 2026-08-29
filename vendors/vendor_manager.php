@@ -97,23 +97,49 @@ ob_start();
         color: var(--erp-text-main);
     }
 
+    /* Container padding to push content slightly right & balance whitespace */
+    .page-wrapper {
+        padding: 24px 28px 36px;
+    }
+
+    /* Header layout & horizontal divider line */
+    .inst-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding-bottom: 20px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid var(--erp-border);
+    }
+
+    /* Header left side flex layout */
+    .inst-header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    /* Header icon box */
+    .inst-header-icon {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #edf3f8;
+        border: 1px solid #dce6ee;
+        border-radius: 6px;
+        color: var(--erp-navy);
+        font-size: 1.15rem;
+        flex-shrink: 0;
+    }
+
     .erp-card {
         background: var(--erp-card-bg);
         border: 1px solid var(--erp-border);
         border-radius: 8px;
         box-shadow: var(--erp-shadow-sm);
-    }
-
-    .icon-box-header {
-        width: 44px;
-        height: 44px;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #edf3f8;
-        color: var(--erp-navy);
-        font-size: 1.25rem;
     }
 
     .form-label-erp {
@@ -182,29 +208,38 @@ ob_start();
     <?php endif; ?>
 </style>
 
-<div class="container-fluid p-0">
+<div class="container-fluid page-wrapper">
     <?php if($error_msg): ?>
         <div class="alert alert-danger border-0 shadow-sm rounded-2 py-2 px-3 mb-3 d-flex align-items-center extra-small">
             <i class="bi bi-exclamation-triangle-fill me-2 fs-6"></i> <?= $error_msg ?>
         </div>
     <?php endif; ?>
 
+    <!-- PAGE HEADER BLOCK -->
+    <div class="inst-header">
+        <div class="inst-header-left">
+            <div class="inst-header-icon">
+                <i class="bi bi-person-vcard-fill"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold tracking-tight mb-1" style="color: var(--erp-text-main); letter-spacing: -0.01em;">
+                    <?= $edit_data ? "Modify Vendor" : $category_type . " Vendor Registry" ?>
+                </h4>
+                <p class="text-muted extra-small mb-0">Provide complete information for accurate inventory tracking.</p>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <a href="view_vendors.php?type=<?= urlencode($category_type) ?>" class="btn btn-light btn-sm fw-semibold border rounded-2 px-3">
+                <i class="bi bi-arrow-left me-1"></i> Directory View
+            </a>
+        </div>
+    </div>
+
+    <!-- FORM CARD CONTAINER -->
     <div class="row">
         <div class="col-12">
             <div class="erp-card" id="registryCard">
-                <!-- Header Block -->
-                <div class="p-4 border-bottom bg-white d-flex align-items-center gap-3">
-                    <div class="icon-box-header flex-shrink-0">
-                        <i class="bi bi-people-fill"></i>
-                    </div>
-                    <div>
-                        <h5 class="fw-bold tracking-tight mb-1" style="color: var(--erp-text-main); letter-spacing: -0.01em;">
-                        <?= $edit_data ? "Modify Vendor" : $category_type . " Vendor Registry" ?></h5>
-                        <p class="text-muted mb-0 extra-small">Provide complete information for accurate inventory tracking.</p>
-                    </div>
-                </div>
-
-                <!-- Form Section -->
                 <div class="p-4 p-lg-5">
                     <form method="POST" id="vendorForm" class="needs-validation" novalidate>
                         <input type="hidden" name="vendor_id" value="<?= $edit_data['id'] ?? '' ?>">

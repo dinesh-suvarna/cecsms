@@ -149,6 +149,44 @@ ob_start();
 
     body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color: var(--erp-text-main); }
 
+    /* Outer Page Wrapper Padding */
+    .page-wrapper {
+        padding: 24px 28px 36px;
+    }
+
+    /* Page Header Layout & Horizontal Line */
+    .inst-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding-bottom: 20px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid var(--erp-border);
+    }
+
+    /* Header Left Block */
+    .inst-header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    /* Header Square Icon Box */
+    .inst-header-icon {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #edf3f8;
+        border: 1px solid #dce6ee;
+        border-radius: 6px;
+        color: var(--erp-navy);
+        font-size: 1.15rem;
+        flex-shrink: 0;
+    }
+
     /* Search Box Styling */
     .global-search-wrapper {
         position: relative;
@@ -204,12 +242,17 @@ ob_start();
     .custom-ledger-table tbody td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--erp-border); font-size: 0.85rem; }
 </style>
 
-<div class="container-fluid p-0">
+<div class="container-fluid page-wrapper">
     <!-- Header Block -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="fw-bold tracking-tight mb-1" style="color: var(--erp-text-main); letter-spacing: -0.01em;">Global Purchase Audit Ledger</h4>
-            <p class="text-muted small mb-0">Itemized bill aggregation grouped by inventory item.</p>
+    <div class="inst-header">
+        <div class="inst-header-left">
+            <div class="inst-header-icon">
+                <i class="bi bi-journal-text"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold tracking-tight mb-1" style="color: var(--erp-text-main); letter-spacing: -0.01em;">Global Purchase Audit Ledger</h4>
+                <p class="text-muted extra-small mb-0">Itemized bill aggregation grouped by inventory item.</p>
+            </div>
         </div>
         
         <!-- Search Bar and Action Button Right-Aligned -->
@@ -218,7 +261,7 @@ ob_start();
                 <i class="bi bi-search global-search-icon"></i>
                 <input type="text" id="ledgerSearchInput" class="global-search-input" placeholder="Search vendors, bills, items...">
             </div>
-            <a href="vendor_details.php" class="btn btn-white border fw-bold text-dark shadow-sm">
+            <a href="vendor_details.php" class="btn btn-light btn-sm fw-semibold border rounded-2 px-3">
                 <i class="bi bi-arrow-left me-1"></i> Directory View
             </a>
         </div>
@@ -400,7 +443,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             } else {
-                // Revert to default tab upon clearing search
+                // --- WHEN SEARCH IS CLEARED ---
+                
+                // 1. Collapse all open accordions across all tabs
+                document.querySelectorAll('.accordion-collapse.show').forEach(collapseEl => {
+                    bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false }).hide();
+                });
+
+                // 2. Revert to default tab upon clearing search
                 if (defaultTabBtn) {
                     bootstrap.Tab.getOrCreateInstance(defaultTabBtn).show();
                 }

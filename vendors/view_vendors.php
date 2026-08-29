@@ -58,6 +58,42 @@ ob_start();
         color: var(--erp-text-main);
     }
 
+    .page-wrapper {
+        padding: 24px 28px 36px;
+    }
+
+    .inst-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding-bottom: 20px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid var(--erp-border, #d9e0e7); 
+    }
+
+    /* Header left side flex layout */
+    .inst-header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    /* Header icon box */
+    .inst-header-icon {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #edf3f8;
+        border: 1px solid #dce6ee;
+        border-radius: 6px;
+        color: var(--erp-navy);
+        font-size: 1.15rem;
+        flex-shrink: 0;
+    }
+
     .badge-category {
         background: #edf3f8;
         color: var(--erp-navy);
@@ -195,14 +231,22 @@ ob_start();
     }
 </style>
 
-<div class="container-fluid p-0">
+<div class="container-fluid page-wrapper">
+
     <!-- Header Block -->
-    <div class="row mb-4 align-items-center">
-        <div class="col">
-            <h4 class="fw-bold mb-1" style="color: var(--erp-text-main);">Service Partners</h4>
-            <p class="text-muted extra-small mb-0">Unified vendor directory with global cross-category lookup.</p>
+    <div class="inst-header">
+        <div class="inst-header-left">
+            <!-- Icon Box -->
+            <div class="inst-header-icon">
+                <i class="bi bi-people-fill"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold mb-1" style="color: var(--erp-text-main);">Service Partners</h4>
+                <p class="text-muted extra-small mb-0">Unified vendor directory with global cross-category lookup.</p>
+            </div>
         </div>
-        <div class="col-auto d-flex gap-2">
+
+        <div class="d-flex align-items-center gap-2">
             <!-- Global Cross-Category Search Bar -->
             <div class="global-search-wrapper">
                 <i class="bi bi-search global-search-icon"></i>

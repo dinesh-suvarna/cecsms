@@ -51,7 +51,7 @@ ob_start();
     /* ERP Design System Tokens */
     :root {
         --erp-navy: #123b63;
-        --erp-bg: #f8fafc;
+        --erp-bg: #f3f5f7;
         --erp-card-bg: #ffffff;
         --erp-border: #d9e0e7;
         --erp-border-subtle: #f1f5f9;
@@ -60,24 +60,50 @@ ob_start();
         --erp-shadow-sm: 0 1px 3px rgba(20,45,70,.05);
     }
 
-    /* Page Header */
-    .erp-header-title {
-        font-weight: 800;
-        color: var(--erp-text-main);
-        letter-spacing: -0.01em;
-        font-size: 1.35rem;
+    body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color: var(--erp-text-main); }
+
+    /* Outer Page Wrapper Padding */
+    .page-wrapper {
+        padding: 24px 28px 36px;
     }
 
-    .erp-header-sub {
-        font-size: 0.8125rem;
-        color: var(--erp-text-muted);
+    /* Page Header Layout & Horizontal Line */
+    .inst-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding-bottom: 20px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid var(--erp-border);
+    }
+
+    /* Header Left Block */
+    .inst-header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    /* Header Square Icon Box */
+    .inst-header-icon {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #edf3f8;
+        border: 1px solid #dce6ee;
+        border-radius: 6px;
+        color: var(--erp-navy);
+        font-size: 1.15rem;
+        flex-shrink: 0;
     }
 
     /* Search Input Styling */
     .global-search-wrapper {
         position: relative;
-        max-width: 320px;
-        width: 100%;
+        width: 280px;
     }
 
     .global-search-input {
@@ -266,15 +292,21 @@ ob_start();
     }
 </style>
 
-<div class="container-fluid p-0">
-    <!-- Header Block (Matched exact design) -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="erp-header-title mb-1">Vendor Performance Analytics</h4>
-            <p class="erp-header-sub mb-0">Comparative procurement and operational performance matrix by sector.</p>
+<div class="container-fluid page-wrapper">
+    <!-- Header Block -->
+    <div class="inst-header">
+        <div class="inst-header-left">
+            <div class="inst-header-icon">
+                <i class="bi bi-bar-chart-line"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold tracking-tight mb-1" style="color: var(--erp-text-main); letter-spacing: -0.01em;">Vendor Performance Analytics</h4>
+                <p class="text-muted extra-small mb-0">Comparative procurement and operational performance matrix by sector.</p>
+            </div>
         </div>
+        
+        <!-- Search Bar Right-Aligned -->
         <div>
-            <!-- Global Vendor Search Bar -->
             <div class="global-search-wrapper">
                 <i class="bi bi-search global-search-icon"></i>
                 <input type="text" id="analyticsVendorSearch" class="global-search-input" placeholder="Search vendor name...">
@@ -282,7 +314,7 @@ ob_start();
         </div>
     </div>
 
-    <!-- Category Tabs (Positioned Bottom Left below header title) -->
+    <!-- Category Tabs Filter -->
     <ul class="nav nav-pills erp-tabs mb-4 gap-2" id="vendorCategoryTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="computer-tab" data-bs-toggle="pill" data-bs-target="#tab-computer" type="button" role="tab">
@@ -434,6 +466,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (query === '' || vendorName.includes(query)) {
                         item.style.display = '';
                         matchCountInPane++;
+
+                        // Auto-expand item if matching during active search
+                        const collapseEl = item.querySelector('.accordion-collapse');
+                        if (query !== '' && collapseEl) {
+                            bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false }).show();
+                        }
                     } else {
                         item.style.display = 'none';
                     }
@@ -457,7 +495,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             } else {
-                // Reset search: Revert active tab back to default
+                // --- WHEN SEARCH IS CLEARED ---
+                
+                // 1. Collapse all open accordions across all tabs
+                document.querySelectorAll('.accordion-collapse.show').forEach(collapseEl => {
+                    bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false }).hide();
+                });
+
+                // 2. Reset search: Revert active tab back to default
                 if (defaultTabBtn) {
                     const tabTrigger = bootstrap.Tab.getOrCreateInstance(defaultTabBtn);
                     tabTrigger.show();

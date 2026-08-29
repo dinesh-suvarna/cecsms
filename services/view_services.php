@@ -61,6 +61,56 @@ ob_start();
 ?>
 
 <style>
+/* ERP Design System Tokens */
+:root {
+    --erp-navy: #123b63;
+    --erp-bg: #f3f5f7;
+    --erp-card-bg: #ffffff;
+    --erp-border: #d9e0e7;
+    --erp-text-main: #20384d;
+    --erp-text-muted: #64748b;
+}
+
+body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color: var(--erp-text-main); }
+
+/* Outer Page Wrapper Padding */
+.page-wrapper {
+    padding: 24px 28px 36px;
+}
+
+/* Page Header Layout & Horizontal Line */
+.inst-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--erp-border);
+}
+
+/* Header Left Block */
+.inst-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+/* Header Square Icon Box */
+.inst-header-icon {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #edf3f8;
+    border: 1px solid #dce6ee;
+    border-radius: 6px;
+    color: var(--erp-navy);
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
 /* Page Specific Utility Styles */
 .metric-card {
     background: #ffffff;
@@ -105,19 +155,24 @@ ob_start();
 }
 </style>
 
-<div class="container-fluid p-0">
+<div class="container-fluid page-wrapper">
 
     <!-- PAGE TOP BAR -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="fw-bold mb-1" style="color: var(--primary-accent);"><?= htmlspecialchars($page_title) ?></h4>
-            <p class="text-muted mb-0 small">Track and manage vendor billing records and maintenance logs.</p>
+    <div class="inst-header">
+        <div class="inst-header-left">
+            <div class="inst-header-icon">
+                <i class="bi <?= $page_icon ?>"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold tracking-tight mb-1" style="color: var(--erp-text-main); letter-spacing: -0.01em;"><?= htmlspecialchars($page_title) ?></h4>
+                <p class="text-muted extra-small mb-0">Track and manage vendor billing records and maintenance logs.</p>
+            </div>
         </div>
         <div class="d-flex gap-2">
             <a href="export_excel.php" class="btn btn-outline-success btn-sm fw-semibold px-3">
                 <i class="bi bi-file-earmark-excel-fill me-1"></i> Export Excel
             </a>
-            <a href="add_service.php" class="btn btn-primary btn-sm fw-semibold px-3" style="background-color: var(--primary-accent); border-color: var(--primary-accent);">
+            <a href="add_service.php" class="btn btn-primary btn-sm fw-semibold px-3" style="background-color: var(--primary-accent, var(--erp-navy)); border-color: var(--primary-accent, var(--erp-navy));">
                 <i class="bi bi-plus-lg me-1"></i> Add Service
             </a>
         </div>
@@ -127,7 +182,7 @@ ob_start();
     <div class="row g-3 mb-4">
         <div class="col-md-4">
             <div class="metric-card shadow-sm h-100 d-flex align-items-center gap-3">
-                <div class="rounded-3 p-3 text-white d-flex align-items-center justify-content-center" style="background-color: var(--primary-accent); width: 48px; height: 48px;">
+                <div class="rounded-3 p-3 text-white d-flex align-items-center justify-content-center" style="background-color: var(--primary-accent, var(--erp-navy)); width: 48px; height: 48px;">
                     <i class="bi bi-currency-rupee fs-4"></i>
                 </div>
                 <div>
@@ -154,7 +209,7 @@ ob_start();
                             </div>
                         </div>
                         <div class="col-sm-4 d-flex gap-2">
-                            <button type="submit" class="btn btn-sm text-white flex-grow-1 fw-bold" style="background-color: var(--primary-accent);">Filter</button>
+                            <button type="submit" class="btn btn-sm text-white flex-grow-1 fw-bold" style="background-color: var(--primary-accent, var(--erp-navy));">Filter</button>
                             <a href="view_services.php" class="btn btn-sm btn-light border flex-grow-1 fw-bold">Reset</a>
                         </div>
                     </form>

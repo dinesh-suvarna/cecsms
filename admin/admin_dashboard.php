@@ -3,6 +3,24 @@ require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/session.php";
 
 $role = $_SESSION['role'] ?? '';
+
+// Handle Session-based hiding of dismissible broadcasts
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dismiss_announcement_id'])) {
+    $dismiss_id = intval($_POST['dismiss_announcement_id']);
+    if (!isset($_SESSION['dismissed_announcements'])) {
+        $_SESSION['dismissed_announcements'] = [];
+    }
+    $_SESSION['dismissed_announcements'][] = $dismiss_id;
+    
+    // Maintain auto-open parameter if present, otherwise clean URL
+    header("Location: " . strtok($_SERVER['REQUEST_URI'], '?'));
+    exit;
+}
+
+$dismissed_ids = $_SESSION['dismissed_announcements'] ?? [];
+
+// Automatically expand broadcast viewer if freshly published
+$auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published'] === '1';
 ?>
 
 <style>
@@ -32,6 +50,98 @@ $role = $_SESSION['role'] ?? '';
     max-width: 1320px;
 }
 
+/* Eye-Catching ERP Broadcast Styling */
+.erp-announcement-card {
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    box-shadow: var(--shadow-subtle);
+    background-color: var(--card-bg);
+}
+.erp-announcement-header {
+    background-color: var(--brand-navy);
+    color: var(--brand-white);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+.erp-broadcast-btn {
+    background-color: var(--brand-primary);
+    color: var(--brand-white);
+    border: 1px solid var(--brand-navy);
+    font-weight: 500;
+    transition: var(--transition-smooth);
+}
+.erp-broadcast-btn:hover {
+    background-color: var(--brand-navy);
+    color: var(--brand-white);
+    box-shadow: var(--shadow-subtle);
+}
+.erp-btn-outline {
+    background-color: var(--card-bg);
+    color: var(--brand-primary);
+    border: 1px solid var(--card-border);
+    font-weight: 500;
+    transition: var(--transition-smooth);
+}
+.erp-btn-outline:hover {
+    background-color: #eef3f7;
+    color: var(--brand-navy);
+    border-color: var(--card-border-hover);
+}
+
+/* Modern Eye-Catching Alert Box */
+.erp-alert-item-eye-catchy {
+    background: linear-gradient(135deg, #ffffff 0%, #f4f8fc 100%);
+    border: 1px solid #b8d3e8;
+    border-left: 5px solid #0066cc !important;
+    border-radius: 8px;
+    padding: 14px 18px;
+    box-shadow: 0 4px 14px rgba(0, 102, 204, 0.08);
+    position: relative;
+    transition: var(--transition-smooth);
+}
+.erp-alert-item-eye-catchy:hover {
+    border-color: #70a6d4;
+    box-shadow: 0 6px 18px rgba(0, 102, 204, 0.14);
+}
+
+/* Pulsing Beacon Dot */
+.broadcast-pulse-dot {
+    width: 9px;
+    height: 9px;
+    background-color: #0066cc;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 0 rgba(0, 102, 204, 0.4);
+    animation: broadcastPulse 1.8s infinite;
+}
+
+@keyframes broadcastPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 102, 204, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(0, 102, 204, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 102, 204, 0);
+    }
+}
+
+.erp-badge-role {
+    background-color: var(--brand-navy);
+    color: var(--brand-white);
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+.erp-timestamp {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
 /* Institutional ERP module card */
 .elite-card {
     background: var(--card-bg);
@@ -49,7 +159,6 @@ $role = $_SESSION['role'] ?? '';
     overflow: hidden;
 }
 
-/* Formal module identification strip */
 .elite-card::before {
     content: '';
     position: absolute;
@@ -72,7 +181,6 @@ $role = $_SESSION['role'] ?? '';
     background: var(--card-accent, var(--brand-primary));
 }
 
-/* Module header */
 .card-header-row {
     display: flex;
     justify-content: space-between;
@@ -101,7 +209,6 @@ $role = $_SESSION['role'] ?? '';
     color: var(--card-accent, var(--brand-primary));
 }
 
-/* Module category */
 .status-badge {
     font-size: 0.68rem;
     font-weight: 600;
@@ -115,7 +222,6 @@ $role = $_SESSION['role'] ?? '';
     white-space: nowrap;
 }
 
-/* Typography */
 .elite-card h5 {
     font-weight: 650;
     color: var(--text-primary);
@@ -134,7 +240,6 @@ $role = $_SESSION['role'] ?? '';
     padding-left: 3px;
 }
 
-/* Conventional ERP action area */
 .card-action-btn {
     margin-top: auto;
     display: flex;
@@ -166,7 +271,6 @@ $role = $_SESSION['role'] ?? '';
     transform: translateX(2px);
 }
 
-/* Module accent categories */
 .accent-blue {
     --card-accent: #1b5a8a;
     --soft-bg: #edf4f9;
@@ -191,7 +295,6 @@ $role = $_SESSION['role'] ?? '';
     --soft-bg: #eef5f1;
 }
 
-/* Dark mode integration */
 [data-bs-theme="dark"] {
     --bg-surface: #101a24;
     --card-bg: #172534;
@@ -221,7 +324,6 @@ $role = $_SESSION['role'] ?? '';
     color: #eef3f7;
 }
 
-/* Responsive institutional layout */
 @media (max-width: 991.98px) {
     .dashboard-wrapper {
         padding: 22px 0 30px;
@@ -255,6 +357,142 @@ $role = $_SESSION['role'] ?? '';
 
 <div class="dashboard-wrapper">
     <div class="container">
+
+        <!-- Toolbar -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
+                <i class="bi bi-speedometer2 text-primary"></i> System Overview
+            </h5>
+            
+            <div class="d-flex align-items-center gap-2">
+                <!-- Show Broadcast Messages Button -->
+                <button class="btn btn-sm erp-btn-outline d-flex align-items-center gap-2 px-3 py-2" 
+                        type="button" 
+                        data-bs-toggle="collapse" 
+                        data-bs-target="#announcementsDisplayCollapse" 
+                        aria-expanded="<?= $auto_expand ? 'true' : 'false' ?>" 
+                        aria-controls="announcementsDisplayCollapse">
+                    <i class="bi bi-megaphone-fill text-primary"></i>
+                    <span>Show Broadcast Messages</span>
+                </button>
+
+                <!-- Broadcast Update Button (SuperAdmin Only) -->
+                <?php if ($role === 'SuperAdmin'): ?>
+                <button class="btn btn-sm erp-broadcast-btn d-flex align-items-center gap-2 px-3 py-2" 
+                        type="button" 
+                        data-bs-toggle="collapse" 
+                        data-bs-target="#announcementFormCollapse" 
+                        aria-expanded="false" 
+                        aria-controls="announcementFormCollapse">
+                    <i class="bi bi-broadcast"></i>
+                    <span>Broadcast Update</span>
+                </button>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Collapsible Announcement Creation Form (SuperAdmin Only) -->
+        <?php if ($role === 'SuperAdmin'): ?>
+        <div class="collapse mb-4" id="announcementFormCollapse">
+            <div class="card erp-announcement-card">
+                <div class="card-header erp-announcement-header d-flex align-items-center justify-content-between py-2 px-3">
+                    <span class="small fw-semibold"><i class="bi bi-megaphone me-2"></i> Create System Announcement</span>
+                    <!-- <span class="badge bg-secondary text-light fw-normal" style="font-size: 0.68rem;">Developer Console</span> -->
+                </div>
+                <div class="card-body p-3">
+                    <form action="/cecsms/includes/post_announcement.php" method="POST">
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold small text-secondary">Target Audience</label>
+                                <select name="target_role" class="form-select form-select-sm" required>
+                                    <option value="Admin">Admins Only</option>
+                                    <option value="All">All Users (Admin & Staff)</option>
+                                    <option value="SuperAdmin">SuperAdmin / Dev Notes Only</option>
+                                </select>
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label fw-semibold small text-secondary">Title / Reference</label>
+                                <input type="text" name="title" class="form-control form-control-sm" placeholder="e.g., Database Migration / System Notice" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold small text-secondary">Message Details</label>
+                                <textarea name="message" class="form-control form-control-sm" rows="2" placeholder="Provide clear concise details regarding this deployment or update..." required></textarea>
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="button" class="btn btn-sm btn-light border me-1" data-bs-toggle="collapse" data-bs-target="#announcementFormCollapse">Cancel</button>
+                                <button type="submit" class="btn btn-sm erp-broadcast-btn">
+                                    <i class="bi bi-send me-1"></i> Publish Announcement
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Collapsible Active Broadcast Messages Container -->
+        <!-- Automatically opens ONLY when $auto_expand is true (i.e. fresh publish) -->
+        <div class="collapse <?= $auto_expand ? 'show' : '' ?> mb-3" id="announcementsDisplayCollapse">
+            <?php 
+            require_once __DIR__ . "/../includes/announcement_fetcher.php";
+            $announcements = get_role_announcements();
+            $has_visible = false;
+
+            if ($announcements && $announcements->num_rows > 0):
+                while ($row = $announcements->fetch_assoc()):
+                    $is_dismissed = in_array($row['id'], $dismissed_ids);
+                    if (!$is_dismissed) {
+                        $has_visible = true;
+                    }
+            ?>
+                <!-- Eye-Catchy Broadcast Card -->
+                <div class="erp-alert-item-eye-catchy d-flex align-items-center justify-content-between mb-2 <?= $is_dismissed ? 'opacity-50' : '' ?>">
+                    <div class="d-flex align-items-center gap-3 overflow-hidden me-3">
+                        <span class="broadcast-pulse-dot flex-shrink-0" title="Active Broadcast"></span>
+                        <span class="erp-badge-role text-uppercase flex-shrink-0"><?= htmlspecialchars($row['sender_role']) ?></span>
+                        <div class="text-truncate small text-dark">
+                            <strong class="text-primary me-1"><?= htmlspecialchars($row['title']) ?>:</strong> 
+                            <span class="text-body fw-medium"><?= htmlspecialchars($row['message']) ?></span>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <span class="erp-timestamp me-2"><i class="bi bi-clock me-1"></i><?= date('M d, H:i', strtotime($row['created_at'])) ?></span>
+                        
+                        <!-- Permanent Delete (SuperAdmin Only) -->
+                        <?php if ($role === 'SuperAdmin'): ?>
+                        <form action="/cecsms/includes/delete_announcement.php" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete this announcement?');">
+                            <input type="hidden" name="id" value="<?= $row['id'] ?>">
+                            <button type="submit" class="btn btn-link text-danger p-0 border-0 ms-1 opacity-75" title="Permanently Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                        <?php endif; ?>
+
+                        <!-- Session Hide / Dismiss -->
+                        <?php if (!$is_dismissed): ?>
+                        <form method="POST" class="d-inline">
+                            <input type="hidden" name="dismiss_announcement_id" value="<?= $row['id'] ?>">
+                            <button type="submit" class="btn-close small opacity-75 ms-1" aria-label="Close" title="Hide for this session"></button>
+                        </form>
+                        <?php else: ?>
+                        <span class="badge bg-light text-muted border ms-1" style="font-size:0.65rem;">Dismissed</span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php 
+                endwhile;
+            endif;
+
+            if (!$has_visible && (!$announcements || $announcements->num_rows === 0)):
+            ?>
+                <div class="text-muted small italic p-3 text-center border rounded bg-white shadow-sm">
+                    <i class="bi bi-info-circle text-primary me-1"></i> No broadcast announcements found.
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Dashboard Module Grid -->
         <div class="row g-4">
 
             <?php if(in_array($role, ['Admin', 'SuperAdmin'])): ?>
@@ -308,7 +546,6 @@ $role = $_SESSION['role'] ?? '';
             <div class="col-lg-4 col-md-6">
                 <a href="/cecsms/services/index.php" class="elite-card accent-navy">
                     <div class="card-header-row">
-                        <!-- <div class="icon-wrapper"><i class="bi bi-cpu-fill"></i></div> -->
                          <div class="icon-wrapper service-icon">
                             <svg xmlns="http://www.w3.org/2000/svg"
                                 viewBox="0 0 64 64"
@@ -318,54 +555,20 @@ $role = $_SESSION['role'] ?? '';
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
                                 aria-hidden="true">
-
-                                <!-- Desktop monitor -->
                                 <rect x="5" y="9" width="28" height="20" rx="2"/>
-
-                                <!-- Monitor screen -->
                                 <rect x="8" y="12" width="22" height="14" rx="1"/>
-
-                                <!-- Monitor stand -->
                                 <path d="M16 29v5"/>
                                 <path d="M12 34h14"/>
-
-                                <!-- Desktop CPU -->
                                 <rect x="7" y="39" width="13" height="16" rx="1.5"/>
                                 <circle cx="13.5" cy="44" r="1.2"/>
                                 <path d="M10 49h7"/>
                                 <path d="M10 52h5"/>
-
-                                <!-- Printer -->
-                                <path d="M35 35h18
-                                        C55 35 57 37 57 39
-                                        V49
-                                        H35
-                                        V39
-                                        C35 37 36 35 38 35Z"/>
-
-                                <!-- Printer top paper -->
+                                <path d="M35 35h18 C55 35 57 37 57 39 V49 H35 V39 C35 37 36 35 38 35Z"/>
                                 <path d="M40 30h10v5H40z"/>
-
-                                <!-- Printer output paper -->
                                 <path d="M40 49v7h10v-7"/>
-
-                                <!-- Printer control light -->
                                 <circle cx="52" cy="39" r="1"/>
-
-                                <!-- Service wrench -->
-                                <path d="M44 17
-                                        C42 15 42 12 44 10
-                                        C45 9 47 9 48 10
-                                        L45 13
-                                        L48 16
-                                        L51 13
-                                        C52 14 52 17 50 19
-                                        C48 21 45 21 43 19
-                                        L37 25"/>
-
-                                <!-- Wrench handle -->
+                                <path d="M44 17 C42 15 42 12 44 10 C45 9 47 9 48 10 L45 13 L48 16 L51 13 C52 14 52 17 50 19 C48 21 45 21 43 19 L37 25"/>
                                 <path d="M37 25l-3 3"/>
-
                             </svg>
                         </div>
                         <span class="status-badge">Maintenance</span>
@@ -398,7 +601,6 @@ $role = $_SESSION['role'] ?? '';
             <div class="col-lg-4 col-md-6">
                 <a href="/cecsms/furniture_stock/furniture_dashboard.php" class="elite-card accent-navy">
                     <div class="card-header-row">
-                        <!-- <div class="icon-wrapper"><i class="bi bi-table"></i></div> -->
                          <div class="icon-wrapper furniture-icon">
                             <svg xmlns="http://www.w3.org/2000/svg"
                                 viewBox="0 0 64 64"
@@ -408,19 +610,15 @@ $role = $_SESSION['role'] ?? '';
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
                                 aria-hidden="true">
-                                
                                 <path d="M10 22h40"/>
                                 <path d="M14 22v27"/>
                                 <path d="M46 22v27"/>
-
                                 <path d="M37 29v13"/>
                                 <path d="M37 29h10"/>
                                 <path d="M47 29v13"/>
-
                                 <path d="M34 42h16"/>
                                 <path d="M37 42v10"/>
                                 <path d="M47 42v10"/>
-
                                 <path d="M14 43h32"/>
                             </svg>
                         </div>
@@ -438,7 +636,6 @@ $role = $_SESSION['role'] ?? '';
             <div class="col-lg-4 col-md-6">
                 <a href="/cecsms/electrical_stock/electricals_dashboard.php" class="elite-card accent-blue">
                     <div class="card-header-row">
-                        <!-- <div class="icon-wrapper"><i class="bi bi-plug-fill"></i></div> -->
                          <div class="icon-wrapper electrical-icon">
                             <svg xmlns="http://www.w3.org/2000/svg"
                                 viewBox="0 0 64 64"
@@ -448,71 +645,25 @@ $role = $_SESSION['role'] ?? '';
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
                                 aria-hidden="true">
-
-                                <!-- Ceiling canopy -->
                                 <path d="M27 5h10"/>
                                 <path d="M27 5c0 3 2 5 5 5s5-2 5-5"/>
-                                
-                                <!-- Down rod -->
                                 <path d="M31 10v10"/>
                                 <path d="M33 10v10"/>
-
-                                <!-- Fan motor housing -->
-                                <path d="M25 20
-                                        C25 18 27 17 32 17
-                                        C37 17 39 18 39 20
-                                        V25
-                                        C39 28 36 30 32 30
-                                        C28 30 25 28 25 25Z"/>
-
-                                <!-- Fan lower motor -->
-                                <path d="M27 25
-                                        C27 28 29 30 32 30
-                                        C35 30 37 28 37 25"/>
-
-                                <!-- Center cap -->
+                                <path d="M25 20 C25 18 27 17 32 17 C37 17 39 18 39 20 V25 C39 28 36 30 32 30 C28 30 25 28 25 25Z"/>
+                                <path d="M27 25 C27 28 29 30 32 30 C35 30 37 28 37 25"/>
                                 <ellipse cx="32" cy="29" rx="4" ry="2"/>
-
-                                <!-- Fan blade - top left -->
-                                <path d="M27 21
-                                        C22 18 16 14 11 15
-                                        C9 16 9 18 11 19
-                                        C16 22 22 23 27 23"/>
-
-                                <!-- Fan blade - top right -->
-                                <path d="M37 21
-                                        C42 18 48 14 53 15
-                                        C55 16 55 18 53 19
-                                        C48 22 42 23 37 23"/>
-
-                                <!-- Fan blade - bottom left -->
-                                <path d="M28 26
-                                        C23 29 17 34 16 39
-                                        C16 41 18 42 20 40
-                                        C24 37 27 32 30 27"/>
-
-                                <!-- Fan blade - bottom right -->
-                                <path d="M36 26
-                                        C41 29 47 34 48 39
-                                        C48 41 46 42 44 40
-                                        C40 37 37 32 34 27"/>
-
-                                <!-- Tube light -->
+                                <path d="M27 21 C22 18 16 14 11 15 C9 16 9 18 11 19 C16 22 22 23 27 23"/>
+                                <path d="M37 21 C42 18 48 14 53 15 C55 16 55 18 53 19 C48 22 42 23 37 23"/>
+                                <path d="M28 26 C23 29 17 34 16 39 C16 41 18 42 20 40 C24 37 27 32 30 27"/>
+                                <path d="M36 26 C41 29 47 34 48 39 C48 41 46 42 44 40 C40 37 37 32 34 27"/>
                                 <path d="M13 48h38"/>
-
-                                <!-- Tube light body -->
                                 <rect x="15" y="45" width="34" height="6" rx="2"/>
-
-                                <!-- Left end cap -->
                                 <path d="M15 45h-2v6h2"/>
                                 <path d="M13 46h-2"/>
                                 <path d="M13 50h-2"/>
-
-                                <!-- Right end cap -->
                                 <path d="M49 45h2v6h-2"/>
                                 <path d="M51 46h2"/>
                                 <path d="M51 50h2"/>
-
                             </svg>
                         </div>
                         <span class="status-badge">Equipment</span>

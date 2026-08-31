@@ -59,6 +59,7 @@ if(isset($_POST['submit'])){
     $oldAmount   = $amount;
     $oldWarranty = $warranty;
     $oldSerials  = $_POST['serial_number'] ?? [];
+    $duplicateSerials = [];
 
     $filledSerials = []; 
     $stockType = 'non_serial'; 
@@ -142,8 +143,15 @@ if(isset($_POST['submit'])){
             $errorMsg = "Serial numbers are not allowed for non-serialized items.";
         }
 
+        // Check for duplicate serial numbers entered inside the form itself ---
         if(empty($errorMsg) && count($filledSerials) !== count(array_unique($filledSerials))){
-            $errorMsg = "Duplicate serial numbers entered.";
+            $errorMsg = "Duplicate serial numbers entered in the form.";
+            $counts = array_count_values($filledSerials);
+            foreach($counts as $val => $count) {
+                if($count > 1) {
+                    $duplicateSerials[] = $val;
+                }
+            }
         }
 
         if(empty($errorMsg) && !empty($filledSerials)){
@@ -159,6 +167,10 @@ if(isset($_POST['submit'])){
 
             if($resultCheck->num_rows > 0){
                 $errorMsg = "One or more serial numbers already exist for this item.";
+                // Collect exact duplicate values to pass to JavaScript
+                while($row = $resultCheck->fetch_assoc()){
+                    $duplicateSerials[] = $row['serial_number'];
+                }
             }
             $stmtCheck->close();
         }
@@ -307,7 +319,7 @@ ob_start();
     color: #ffffff;
 }
 </style>
-<div class="container-fluid mt-4">
+<div class="container-fluid mt-4 px-4">
 
             <!-- Page Header -->
             <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
@@ -404,7 +416,7 @@ ob_start();
                 <!-- Section 2: Quantity & Serial Mapping -->
                 <div class="card stock-form-card shadow-sm mb-4">
                     <div class="stock-card-header">
-                        <span class="stock-card-title"><i class="bi bi-cpu me-2"></i>2. Quantity & Serial Numbers</span>
+                        <span class="stock-card-title"><i class="bi bi-boxes me-2"></i>2. Quantity & Serial Numbers</span>
                     </div>
                     <div class="card-body p-4">
                         <div class="row g-3">
@@ -418,19 +430,31 @@ ob_start();
                                 </span>
                             </div>
 
-                            <div class="col-12 mt-3">
-                                <div id="serialContainer" class="row g-3">
-                                    <?php
-                                    if(!empty($oldSerials)){
-                                        foreach($oldSerials as $i => $serial){
-                                    ?>
-                                        <div class="col-md-4">
-                                            <label class="form-label form-label-erp">Serial Number <?= $i+1 ?> <span class="text-danger">*</span></label>
-                                            <input type="text" name="serial_number[]" class="form-control form-control-erp text-uppercase" value="<?= htmlspecialchars($serial) ?>" required autocomplete="off">
-                                        </div>
-                                    <?php }} ?>
-                                </div>
-                            </div>
+                           <div class="col-12 mt-3">
+    <div id="serialContainer" class="row g-3">
+        <?php
+        if(!empty($oldSerials)){
+            foreach($oldSerials as $i => $serial){
+                $isDuplicate = in_array(strtoupper(trim($serial)), $duplicateSerials ?? []);
+                $inputClass  = $isDuplicate ? 'is-invalid' : '';
+        ?>
+            <div class="col-md-4">
+                <label class="form-label form-label-erp">Serial Number <?= $i+1 ?> <span class="text-danger">*</span></label>
+                <input type="text" 
+                       name="serial_number[]" 
+                       class="form-control form-control-erp text-uppercase <?= $inputClass ?>" 
+                       value="<?= htmlspecialchars($serial) ?>" 
+                       required 
+                       autocomplete="off">
+                <?php if($isDuplicate): ?>
+                    <div class="invalid-feedback fw-semibold" style="font-size: 0.75rem;">
+                        Already exists in database!
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php }} ?>
+    </div>
+</div>
                         </div>
                     </div>
                 </div>
@@ -666,6 +690,17 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
     updateStockTypeBadge();
+});
+
+// Remove red border dynamically as the user re-types (Vanilla JS)
+document.getElementById('serialContainer').addEventListener('input', function(e) {
+    if (e.target && e.target.name === 'serial_number[]') {
+        e.target.classList.remove('is-invalid');
+        const feedback = e.target.parentNode.querySelector('.invalid-feedback');
+        if (feedback) {
+            feedback.remove();
+        }
+    }
 });
 </script>
 

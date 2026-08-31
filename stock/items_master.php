@@ -274,10 +274,10 @@ ob_start();
 .table-erp tbody td { padding: 10px 16px; border-bottom: 1px solid var(--erp-border); vertical-align: middle; }
 .table-erp tbody tr:last-child td { border-bottom: none; }
 
-.badge-erp { font-size: .67rem; font-weight: 600; padding: 4px 8px; border-radius: 4px; display: inline-block; }
-.badge-erp-neutral { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
-.badge-erp-success { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-.badge-erp-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.badge-erp { font-size: .67rem; font-weight: 600; padding: 4px 8px; border-radius: 4px; display: inline-block; } */
+.erp-neutral { color: #475569; }
+.erp-success { color: #047857; }
+.erp-danger { color: #b91c1c; }
 
 .type-pill {
     font-size: 0.65rem;
@@ -286,8 +286,6 @@ ob_start();
     border-radius: 4px;
     text-transform: uppercase;
 }
-.pill-serial { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-.pill-nonserial { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 
 /* Buttons */
 .btn-erp-primary {
@@ -451,8 +449,8 @@ ob_start();
                 <button id="resetSearch" class="btn btn-erp-cancel px-2.5" title="Clear Search">
                     <i class="bi bi-x-lg"></i>
                 </button>
-                <button id="collapseAllBtn" class="btn btn-erp-cancel px-3" title="Collapse All">
-                    <i class="bi bi-arrows-collapse me-1"></i> Collapse All
+                <button id="btnToggleCollapse" class="btn btn-erp-cancel px-3" type="button">
+                    <i class="bi bi-arrows-expand me-1"></i> <span id="toggleCollapseText">Expand All</span>
                 </button>
             </div>
         </div>
@@ -508,14 +506,14 @@ ob_start();
                                                     <?php endif; ?>
                                                 </td>
                                                 <td>
-                                                    <span class="type-pill <?= $isSerial ? 'pill-serial' : 'pill-nonserial' ?>">
+                                                    <span class="text-center fw-semibold text-dark <?= $isSerial  ?>">
                                                         <i class="bi <?= $isSerial ? 'bi-qr-code' : 'bi-boxes' ?> me-1"></i><?= $isSerial ? 'Serialized' : 'Non-Serialized' ?>
                                                     </span>
                                                 </td>
                                                 <td class="text-center fw-semibold text-dark"><?= inr($row['total_purchased']) ?></td>
                                                 <td class="text-center text-danger fw-semibold"><?= inr($row['total_dispatched']) ?></td>
-                                                <td class="text-center">
-                                                    <span class="badge-erp <?= ($available > 0 ? 'badge-erp-success' : 'badge-erp-danger') ?>">
+                                                <td class="text-center fw-semibold text-dark">
+                                                    <span class=" <?= ($available > 0 ? 'erp-success' : 'erp-danger') ?>">
                                                         <?= inr($available) ?>
                                                     </span>
                                                 </td>
@@ -619,14 +617,13 @@ $(document).ready(function() {
         let query = $(this).val().trim().toLowerCase();
         
         if (query === "") { 
-            $('.accordion-collapse').each(function() {
-                let parentId = $(this).data('parent-id');
-                if (parentId) {
-                    $(this).attr('data-bs-parent', parentId);
-                }
-            });
             $('.accordion-collapse').removeClass('show');
+            $('.accordion-button').addClass('collapsed').attr('aria-expanded', 'false');
             $('.cat-stack-card, .table-erp tbody tr').css('display', '');
+            
+            allCollapsed = true;
+            $('#toggleCollapseText').text('Expand All');
+            $('#btnToggleCollapse i').removeClass('bi-arrows-collapse').addClass('bi-arrows-expand');
             return; 
         }
 
@@ -665,8 +662,23 @@ $(document).ready(function() {
         $('#assetSearch').val('').trigger('input'); 
     });
 
-    $('#collapseAllBtn').click(function() { 
-        $('.accordion-collapse').removeClass('show'); 
+    // Expand / Collapse All Toggle
+    let allCollapsed = true;
+
+    $('#btnToggleCollapse').on('click', function() {
+        if (!allCollapsed) {
+            $('#categoryAccordion .accordion-collapse').removeClass('show');
+            $('#categoryAccordion .accordion-button').addClass('collapsed').attr('aria-expanded', 'false');
+            $('#toggleCollapseText').text('Expand All');
+            $(this).find('i').removeClass('bi-arrows-collapse').addClass('bi-arrows-expand');
+            allCollapsed = true;
+        } else {
+            $('#categoryAccordion .accordion-collapse').addClass('show');
+            $('#categoryAccordion .accordion-button').removeClass('collapsed').attr('aria-expanded', 'true');
+            $('#toggleCollapseText').text('Collapse All');
+            $(this).find('i').removeClass('bi-arrows-expand').addClass('bi-arrows-collapse');
+            allCollapsed = false;
+        }
     });
 
     // Delete handler

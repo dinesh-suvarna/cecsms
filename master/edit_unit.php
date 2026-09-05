@@ -230,7 +230,7 @@ ob_start();
             </div>
             <div>
                 <h3>Edit Facility Details</h3>
-                <p>ID: #<?= $unit_id ?> | Managing configuration for <strong><?= htmlspecialchars($unit_name) ?></strong></p>
+                <p>Managing configuration for <strong><?= htmlspecialchars($unit_name) ?></strong></p>
             </div>
         </div>
         <a href="units.php" class="btn btn-form-cancel px-3">

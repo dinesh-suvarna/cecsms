@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/functions.php";
+require_once __DIR__ . "/../config/crypto.php";
 require_once "../includes/session.php";
 require_once "../admin/auth.php";
 requireRole([ROLE_SUPERADMIN]);
@@ -33,13 +34,13 @@ if (isset($_POST['submit'])) {
 
 /* ================= DELETE ================= */
 if (isset($_POST['delete_id'])) {
-    $id = intval($_POST['delete_id']);
+    $id = decrypt_id($_POST['delete_id']);
 
-    $stmt = $conn->prepare(
-        "UPDATE institutions SET status='Inactive' WHERE id=?"
-    );
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
+    if ($id !== false && ctype_digit((string)$id)) {
+        $stmt = $conn->prepare("UPDATE institutions SET status='Inactive' WHERE id=?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+    }
 
     header("Location: institutions.php");
     exit;
@@ -47,13 +48,13 @@ if (isset($_POST['delete_id'])) {
 
 /* ================= RESTORE ================= */
 if (isset($_POST['restore_id'])) {
-    $id = intval($_POST['restore_id']);
+    $id = decrypt_id($_POST['restore_id']);
 
-    $stmt = $conn->prepare(
-        "UPDATE institutions SET status='Active' WHERE id=?"
-    );
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
+    if ($id !== false && ctype_digit((string)$id)) {
+        $stmt = $conn->prepare("UPDATE institutions SET status='Active' WHERE id=?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+    }
 
     header("Location: institutions.php");
     exit;
@@ -61,43 +62,50 @@ if (isset($_POST['restore_id'])) {
 
 /* ================= UPDATE ================= */
 if (isset($_POST['update'])) {
-    $id = intval($_POST['id']);
-    $new_name = trim($_POST['institution_name']);
+    $id = decrypt_id($_POST['id']);
 
-    $check = $conn->prepare(
-        "SELECT id FROM institutions
-         WHERE institution_name=? AND id!=?"
-    );
-    $check->bind_param("si", $new_name, $id);
-    $check->execute();
-    $check->store_result();
-
-    if ($check->num_rows > 0) {
-        $error = "Institute name already exists!";
+    if ($id === false || !ctype_digit((string)$id)) {
+        $error = "Invalid transaction token.";
     } else {
-        $stmt = $conn->prepare(
-            "UPDATE institutions
-             SET institution_name=?
-             WHERE id=?"
-        );
-        $stmt->bind_param("si", $new_name, $id);
-        $stmt->execute();
+        $id = intval($id);
+        $new_name = trim($_POST['institution_name']);
 
-        header("Location: institutions.php");
-        exit;
+        $check = $conn->prepare("SELECT id FROM institutions WHERE institution_name=? AND id!=?");
+        $check->bind_param("si", $new_name, $id);
+        $check->execute();
+        $check->store_result();
+
+        if ($check->num_rows > 0) {
+            $error = "Institute name already exists!";
+        } else {
+            $stmt = $conn->prepare("UPDATE institutions SET institution_name=? WHERE id=?");
+            $stmt->bind_param("si", $new_name, $id);
+            $stmt->execute();
+
+            header("Location: institutions.php");
+            exit;
+        }
     }
 }
 
 /* ================= EDIT FETCH ================= */
+$edit_id = null;
 $editData = null;
-
 if (isset($_GET['edit'])) {
-    $id = intval($_GET['edit']);
+    $decrypted = decrypt_id($_GET['edit']);
+    
+    if ($decrypted === false || !ctype_digit((string)$decrypted)) {
+        notify("danger", "Invalid request parameter.");
+        header("Location: institutions.php");
+        exit;
+    }
+    
+    $edit_id = intval($decrypted);
 
     $stmt = $conn->prepare(
         "SELECT * FROM institutions WHERE id=?"
     );
-    $stmt->bind_param("i", $id);
+    $stmt->bind_param("i", $edit_id);
     $stmt->execute();
 
     $editData = $stmt->get_result()->fetch_assoc();
@@ -1086,7 +1094,7 @@ ob_start();
                     <input
                         type="hidden"
                         name="id"
-                        value="<?= $editData['id'] ?>">
+                        value="<?= htmlspecialchars($_GET['edit'] ?? '') ?>">
 
                     <div class="row g-3 align-items-end">
 
@@ -1395,26 +1403,22 @@ ob_start();
 
                                     <div class="inst-actions">
 
+                                       <?php $token = encrypt_id($row['id']); ?>
+
                                         <?php if ($row['status'] === 'Active'): ?>
 
-                                            <a
-                                                href="?edit=<?= $row['id'] ?>"
-                                                class="inst-action inst-action-edit"
-                                                title="Edit institution">
-
+                                            <a href="<?= e_url('institutions.php', $row['id'], 'edit') ?>"
+                                            class="inst-action inst-action-edit"
+                                            title="Edit institution">
                                                 <i class="bi bi-pencil-square"></i>
-
                                             </a>
-
 
                                             <button
                                                 type="button"
                                                 class="inst-action inst-action-delete"
-                                                onclick="deleteInstitute(<?= $row['id'] ?>)"
+                                                onclick="deleteInstitute('<?= $token ?>')"
                                                 title="Deactivate institution">
-
                                                 <i class="bi bi-person-dash"></i>
-
                                             </button>
 
                                         <?php else: ?>
@@ -1422,11 +1426,9 @@ ob_start();
                                             <button
                                                 type="button"
                                                 class="inst-action inst-action-restore"
-                                                onclick="restoreInstitute(<?= $row['id'] ?>)"
+                                                onclick="restoreInstitute('<?= $token ?>')"
                                                 title="Restore institution">
-
                                                 <i class="bi bi-arrow-counterclockwise"></i>
-
                                             </button>
 
                                         <?php endif; ?>

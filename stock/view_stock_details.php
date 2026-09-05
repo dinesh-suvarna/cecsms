@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../config/crypto.php";
 require_once __DIR__ . "/../includes/functions.php";
 $page_title = "View Stock Details";
 $page_icon  = "bi-clipboard-data";
@@ -562,10 +563,15 @@ ob_start();
                                                                 </thead>
                                                                 <tbody>
                                                                     <?php 
-                                                                    $subSl = 1;
-                                                                    foreach ($items as $row): 
-                                                                        $stockId = (int)$row['id'];
-                                                                        $calcRemaining = (int)$row['total_quantity'] - (int)$row['dispatched_qty'];
+                                                                        $subSl = 1;
+                                                                        foreach ($items as $row): 
+                                                                            $stockId = (int)$row['id'];
+                                                                            
+                                                                            // 2. ENCRYPT IDs FOR LINKS
+                                                                            $enc_stock_id = encrypt_id($stockId);
+                                                                            $enc_dispatch_id = !empty($row['last_dispatch_id']) ? encrypt_id($row['last_dispatch_id']) : '';
+
+                                                                            $calcRemaining = (int)$row['total_quantity'] - (int)$row['dispatched_qty'];
                                                                         
                                                                         if ($row['stock_type'] === 'serial') {
                                                                             if ($row['status'] === 'dispatched') {
@@ -614,11 +620,12 @@ ob_start();
                                                                             <td class="text-end fw-semibold">₹<?= number_format((float)$row['amount'], 2) ?></td>
                                                                             <td class="text-center">
                                                                                 <?php if ($dynamicStatus === 'dispatched'): ?>
-                                                                                    <a href="dispatch_report.php?stock_id=<?= $stockId ?>&dispatch_id=<?= $row['last_dispatch_id'] ?>" class="badge badge-erp bg-danger text-decoration-none">
+                                                                                    <!-- Encrypted Dispatch & Stock Parameters -->
+                                                                                    <a href="dispatch_report.php?stock_id=<?= urlencode($enc_stock_id) ?>&dispatch_id=<?= urlencode($enc_dispatch_id) ?>" class="badge badge-erp bg-danger text-decoration-none">
                                                                                         <i class="bi bi-truck me-1"></i> Dispatched
                                                                                     </a>
                                                                                 <?php elseif ($dynamicStatus === 'partial'): ?>
-                                                                                    <a href="dispatch_report.php?stock_id=<?= $stockId ?>" class="badge badge-erp bg-warning text-dark text-decoration-none">
+                                                                                    <a href="dispatch_report.php?stock_id=<?= urlencode($enc_stock_id) ?>" class="badge badge-erp bg-warning text-dark text-decoration-none">
                                                                                         Partially Dispatched (<?= $row['dispatched_qty'] ?>)
                                                                                     </a>
                                                                                 <?php elseif ($dynamicStatus === 'disposed'): ?>
@@ -631,7 +638,8 @@ ob_start();
                                                                             </td>
                                                                             <td class="text-end pe-3">
                                                                                 <div class="d-inline-flex gap-1">
-                                                                                    <a href="edit_stock.php?id=<?= $stockId ?>" class="action-btn-erp" title="Edit Record">
+                                                                                    <!-- Encrypted Edit Link -->
+                                                                                    <a href="edit_stock.php?id=<?= urlencode($enc_stock_id) ?>" class="action-btn-erp" title="Edit Record">
                                                                                         <i class="bi bi-pencil-square"></i>
                                                                                     </a>
                                                                                     <?php if ($dynamicStatus === 'dispatched'): ?>

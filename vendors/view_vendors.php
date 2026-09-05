@@ -6,6 +6,7 @@ if (!isset($_SESSION["user_id"])) {
 }
 
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../config/crypto.php";
 
 $success_msg = "";
 if (isset($_SESSION['success'])) {
@@ -72,14 +73,12 @@ ob_start();
         border-bottom: 1px solid var(--erp-border, #d9e0e7); 
     }
 
-    /* Header left side flex layout */
     .inst-header-left {
         display: flex;
         align-items: center;
         gap: 14px;
     }
 
-    /* Header icon box */
     .inst-header-icon {
         width: 42px;
         height: 42px;
@@ -236,7 +235,6 @@ ob_start();
     <!-- Header Block -->
     <div class="inst-header">
         <div class="inst-header-left">
-            <!-- Icon Box -->
             <div class="inst-header-icon">
                 <i class="bi bi-people-fill"></i>
             </div>
@@ -247,7 +245,6 @@ ob_start();
         </div>
 
         <div class="d-flex align-items-center gap-2">
-            <!-- Global Cross-Category Search Bar -->
             <div class="global-search-wrapper">
                 <i class="bi bi-search global-search-icon"></i>
                 <input type="text" id="globalVendorSearch" class="global-search-input" placeholder="Search vendors...">
@@ -259,7 +256,6 @@ ob_start();
     </div>
 
     <div class="card border rounded-2 shadow-sm overflow-hidden" style="background: var(--erp-card-bg); border-color: var(--erp-border) !important;">
-        <!-- Category Navigation Tabs -->
         <div class="card-header bg-white border-bottom p-3 pb-3" style="border-color: var(--erp-border) !important;">
             <ul class="nav nav-pills erp-tabs gap-2" id="vendorTabs">
                 <?php foreach (['Computer', 'Furniture', 'Electricals'] as $tab): ?>
@@ -276,7 +272,6 @@ ob_start();
             </ul>
         </div>
 
-        <!-- Tab Panes & Tables -->
         <div class="card-body p-0">
             <div class="tab-content">
                 <?php foreach ($grouped_vendors as $cat => $vendors): ?>
@@ -300,12 +295,19 @@ ob_start();
                                         <?php 
                                         $count = 1;
                                         foreach ($vendors as $row): 
+                                            // Encrypt vendor ID for edit and delete actions[cite: 5]
+                                            $enc_id = encrypt_id($row['id']);
+
+                                            // Prepare sanitized modal data payload with encrypted ID
+                                            $modalData = $row;
+                                            $modalData['id'] = $enc_id;
+
                                             $words = explode(" ", $row['vendor_name']);
                                             $initials = "";
                                             foreach ($words as $w) { $initials .= strtoupper(substr($w, 0, 1)); }
                                             $initials = substr($initials, 0, 3);
                                         ?>
-                                        <tr class="vendor-row" data-vendor-id="<?= $row['id'] ?>">
+                                        <tr class="vendor-row" data-vendor-id="<?= htmlspecialchars($enc_id) ?>">
                                             <td class="ps-4">
                                                 <span class="badge bg-light text-muted border px-2 py-1 extra-small">#<?= str_pad($count++, 2, '0', STR_PAD_LEFT); ?></span>
                                             </td>
@@ -313,7 +315,7 @@ ob_start();
                                                 <div class="d-flex align-items-center gap-3">
                                                     <div class="vendor-avatar"><?= $initials ?></div>
                                                     <div>
-                                                        <button class="vendor-name-btn" onclick='viewVendorDetails(<?= json_encode($row) ?>)'>
+                                                        <button class="vendor-name-btn" onclick='viewVendorDetails(<?= json_encode($modalData, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>
                                                             <?= htmlspecialchars($row['vendor_name']); ?>
                                                         </button>
                                                         <div class="text-muted extra-small" style="font-size: 0.75rem;"><?= htmlspecialchars($row['email'] ?: 'No email provided'); ?></div>
@@ -325,12 +327,12 @@ ob_start();
                                                 <div class="text-muted extra-small"><?= htmlspecialchars($row['phone_number'] ?: '--'); ?></div>
                                             </td>
                                             <td class="text-end pe-4">
-                                                <a href="vendor_manager.php?edit=<?= $row['id'] ?>&type=<?= urlencode($cat) ?>" 
+                                                <a href="vendor_manager.php?edit=<?= urlencode($enc_id) ?>&type=<?= urlencode($cat) ?>" 
                                                    class="btn-action text-primary me-1" title="Edit Vendor">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </a>
                                                 <button class="btn-action text-danger delete-vendor-btn" 
-                                                        data-id="<?= $row['id']; ?>" 
+                                                        data-token="<?= htmlspecialchars($enc_id); ?>" 
                                                         data-type="<?= urlencode($cat); ?>"
                                                         data-name="<?= htmlspecialchars($row['vendor_name']); ?>" title="Delete">
                                                     <i class="bi bi-trash3"></i>
@@ -409,7 +411,6 @@ $(document).ready(function() {
         vendorModal = new bootstrap.Modal(document.getElementById('detailsModal'));
     }
 
-    // Initialize individual DataTables per Category Tab
     $('.vendor-table').each(function() {
         let tableId = $(this).attr('id');
         dataTables[tableId] = $(this).DataTable({
@@ -422,21 +423,17 @@ $(document).ready(function() {
         });
     });
 
-    // Track active category and tab pane
     let defaultTabPaneId = $('#vendorTabs button.active').data('bs-target') || ('#tab-' + '<?= strtolower($active_tab) ?>');
 
-    // Update defaultTabPaneId when user manually clicks a tab
     $('#vendorTabs button').on('click', function() {
         defaultTabPaneId = $(this).data('bs-target');
         let cat = $(this).data('category');
         $('#btnRegisterVendor').attr('href', 'vendor_manager.php?type=' + encodeURIComponent(cat));
     });
 
-    // GLOBAL SEARCH LOGIC ACROSS ALL TABS
     $('#globalVendorSearch').on('keyup input', function() {
         let query = $(this).val().trim();
         
-        // 1. Filter all DataTables instances
         $.each(dataTables, function(id, table) {
             table.search(query).draw();
         });
@@ -447,26 +444,23 @@ $(document).ready(function() {
             
             let activeMatchCount = dataTables[currentActiveTableId] ? dataTables[currentActiveTableId].rows({ search: 'applied' }).count() : 0;
 
-            // If active tab has NO matches, switch to the first tab that does
             if (activeMatchCount === 0) {
                 $.each(dataTables, function(tableId, table) {
                     let matchingRows = table.rows({ search: 'applied' }).count();
                     
                     if (matchingRows > 0) {
                         let parentPaneId = $('#' + tableId).closest('.tab-pane').attr('id');
-                        // FIXED: Added '#' prefix to parentPaneId
                         let targetTabButton = $('#vendorTabs button[data-bs-target="#' + parentPaneId + '"]');
                         
                         if (targetTabButton.length) {
                             let tabTrigger = bootstrap.Tab.getOrCreateInstance(targetTabButton[0]);
                             tabTrigger.show();
                         }
-                        return false; // Stop checking further tabs
+                        return false;
                     }
                 });
             }
         } else {
-            // 2. SEARCH CLEARED: Revert back to the default tab
             let defaultTabButton = $('#vendorTabs button[data-bs-target="' + defaultTabPaneId + '"]');
             if (defaultTabButton.length && !defaultTabButton.hasClass('active')) {
                 let tabTrigger = bootstrap.Tab.getOrCreateInstance(defaultTabButton[0]);
@@ -475,9 +469,9 @@ $(document).ready(function() {
         }
     });
 
-    // Delete confirmation handler
+    // Delete confirmation handler using encrypted token
     $(document).on('click', '.delete-vendor-btn', function() {
-        const id = $(this).data('id');
+        const token = $(this).data('token');
         const name = $(this).data('name');
         const cat = $(this).data('type');
 
@@ -496,7 +490,7 @@ $(document).ready(function() {
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = `delete_vendor.php?id=${id}&type=${cat}`;
+                window.location.href = `delete_vendor.php?id=${encodeURIComponent(token)}&type=${cat}`;
             }
         });
     });

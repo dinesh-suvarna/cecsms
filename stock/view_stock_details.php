@@ -5,23 +5,106 @@ require_once __DIR__ . "/../includes/functions.php";
 $page_title = "View Stock Details";
 $page_icon  = "bi-clipboard-data";
 
-/* ---------- HELPER: DYNAMIC CATEGORY ICONS ---------- */
-function getCategoryIcon(string $category): string {
-    $cat = strtolower(trim($category));
-    if (str_contains($cat, 'computer') || str_contains($cat, 'pc') || str_contains($cat, 'laptop')) {
-        return 'bi-pc-display';
-    } elseif (str_contains($cat, 'accessory') || str_contains($cat, 'peripherals')) {
-        return 'bi-keyboard';
-    } elseif (str_contains($cat, 'network') || str_contains($cat, 'router') || str_contains($cat, 'switch')) {
-        return 'bi-diagram-3';
-    } elseif (str_contains($cat, 'component') || str_contains($cat, 'hardware')) {
-        return 'bi-cpu';
-    } elseif (str_contains($cat, 'furniture')) {
-        return 'bi-lamp';
-    } elseif (str_contains($cat, 'mobile') || str_contains($cat, 'phone')) {
-        return 'bi-phone';
+/* ---------- HELPER: DYNAMIC CATEGORY & ITEM ICONS ---------- */
+if (!function_exists('getCategoryIcon')) {
+    function getCategoryIcon(string $category): string {
+        $cat = strtolower(trim($category));
+        if (str_contains($cat, 'computer') || str_contains($cat, 'pc') || str_contains($cat, 'laptop')) {
+            return 'bi-pc-display';
+        } elseif (str_contains($cat, 'accessory') || str_contains($cat, 'peripherals')) {
+            return 'bi-keyboard';
+        } elseif (str_contains($cat, 'network') || str_contains($cat, 'router') || str_contains($cat, 'switch')) {
+            return 'bi-box-seam';
+        } elseif (str_contains($cat, 'component') || str_contains($cat, 'hardware')) {
+            return 'bi-cpu';
+        } elseif (str_contains($cat, 'furniture')) {
+            return 'bi-lamp';
+        } elseif (str_contains($cat, 'mobile') || str_contains($cat, 'phone')) {
+            return 'bi-phone';
+        }
+        return 'bi-folder';
     }
-    return 'bi-folder';
+}
+
+if (!function_exists('getItemDetailIcon')) {
+    function getItemDetailIcon(?string $itemName, ?string $category = ''): string {
+        $name = strtolower(trim($itemName ?? ''));
+        $cat  = strtolower(trim($category ?? ''));
+
+        // Remove spaces, hyphens, underscores to match variations like "ip com", "access point", etc.
+        $cleanName = str_replace([' ', '-', '_'], '', $name);
+
+        switch (true) {
+            // 1. HIGH-PRIORITY SPECIFIC ITEM MATCHES
+            case (
+                str_contains($cleanName, 'accesspoint') || 
+                str_contains($cleanName, 'ipcom') || 
+                str_contains($name, 'wifi')
+            ):
+                return 'bi-wifi';
+
+            case (str_contains($name, 'rack') || str_contains($name, 'server')):
+                return 'bi-hdd-rack'; 
+
+            case (str_contains($name, 'switch') || str_contains($name, 'patch panel') || str_contains($name, 'hub')):
+                return 'bi-hdd-stack'; 
+
+            case (str_contains($name, 'router')):
+                return 'bi-router';
+
+            case (str_contains($name, 'computer') || str_contains($name, 'desktop')):
+                return 'bi-pc-display';
+
+            case (str_contains($name, 'laptop')):
+                return 'bi-laptop';
+
+            case (str_contains($name, 'monitor') || str_contains($name, 'display')):
+                return 'bi-display';
+
+            case (str_contains($name, 'printer')):
+                return 'bi-printer';
+
+            case (str_contains($name, 'keyboard')):
+                return 'bi-keyboard';
+
+            case (str_contains($name, 'mouse')):
+                return 'bi-mouse3';
+
+            case (str_contains($name, 'projector')):
+                return 'bi-projector'; 
+
+            case (str_contains($name, 'biometric') || str_contains($name, 'fingerprint')):
+                return 'bi-person-bounding-box';
+
+            case (str_contains($name, 'ups') || str_contains($name, 'battery')):
+                return 'bi-lightning-charge';
+
+            case (str_contains($name, 'table') || str_contains($name, 'desk')):
+                return 'bi-table';
+
+            case (str_contains($name, 'chair')):
+                return 'bi-person-workspace';
+
+            case (str_contains($name, 'camera') || str_contains($name, 'cctv')):
+                return 'bi-camera-video';
+
+            // 2. CATEGORY FALLBACKS 
+            case (str_contains($cat, 'computer')):
+                return 'bi-pc-display';
+
+            case (str_contains($cat, 'network')):
+                return 'bi-box-seam';
+
+            case (str_contains($cat, 'biometric')):
+                return 'bi-person-bounding-box';
+
+            case (str_contains($cat, 'mobile') || str_contains($name, 'phone')):
+                return 'bi-phone';
+
+            default:
+                return 'bi-box-seam';
+        }
+    }
 }
 
 /* ================== FETCH DATA WITH DISPATCH MATH ================== */
@@ -508,7 +591,7 @@ ob_start();
                                             <button class="accordion-button item-accordion-btn collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $itemId ?>">
                                                 <div class="d-flex justify-content-between align-items-center w-100 me-2">
                                                     <div class="d-flex align-items-center gap-2">
-                                                        <i class="bi bi-box-seam text-secondary fs-6"></i>
+                                                        <i class="bi <?= getItemDetailIcon($itemName, $catName) ?> text-secondary fs-6"></i>
                                                         <span class="fw-bold text-dark" style="font-size: 0.92rem;"><?= htmlspecialchars($itemName) ?></span>
                                                     </div>
                                                     <div class="d-flex align-items-center gap-2">

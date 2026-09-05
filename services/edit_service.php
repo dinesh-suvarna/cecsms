@@ -6,11 +6,18 @@ if (!isset($_SESSION["user_id"])) {
 }
 
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../config/crypto.php"; // Include crypto utilities
 
 $page_title = "Edit Service Entry";
 $page_icon  = "bi-pencil-square";
 
-$id = intval($_GET['id'] ?? 0); 
+// Decrypt Service ID parameter
+$enc_id = $_GET['id'] ?? '';
+$id = decrypt_id($enc_id);
+
+if (!$id) {
+    die("Invalid request or expired token.");
+}
 
 // Fetch service data
 $stmt = $conn->prepare("SELECT * FROM services WHERE id = ?");
@@ -181,7 +188,7 @@ ob_start();
             </div>
             <div>
                 <h3><?= htmlspecialchars($page_title) ?></h3>
-                <p>Modify existing information for Service Record ID: #<?= $id ?></p>
+                <p>Modify existing information for Service Record</p>
             </div>
         </div>
         <a href="view_services.php" class="btn btn-erp-cancel px-3">
@@ -198,7 +205,6 @@ ob_start();
             <div class="inst-form-title">
                 <i class="bi bi-card-checklist text-primary me-1"></i> Update Record Details
             </div>
-            <!-- <span class="badge-erp badge-erp-neutral">ID #<?= $id ?></span> -->
         </div>
         <div class="inst-form-body">
             <form method="POST">

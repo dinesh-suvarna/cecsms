@@ -6,11 +6,13 @@ if (!isset($_SESSION["user_id"])) {
 }
 
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../config/crypto.php";
 
-// Sanitize Service ID
-$id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+// Decrypt Service ID parameter
+$enc_id = $_GET['id'] ?? '';
+$id = decrypt_id($enc_id);
 
-if ($id > 0) {
+if ($id && is_numeric($id) && $id > 0) {
     // Delete record using Prepared Statements
     $stmt = $conn->prepare("DELETE FROM services WHERE id = ?");
     $stmt->bind_param("i", $id);

@@ -6,6 +6,7 @@ if (!isset($_SESSION["user_id"])) {
 }
 
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../config/crypto.php"; 
 require_once __DIR__ . "/../includes/functions.php";
 
 $page_title = "Service Records";
@@ -238,6 +239,8 @@ body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color:
             foreach ($grouped_data as $vendorName => $data): 
                 $v_index++;
                 $collapseId = "collapseVendor" . $v_index;
+                // Encrypt vendor_id for export link
+                $enc_vendor_id = encrypt_id($data['vendor_id']);
         ?>
             <div class="accordion-item border-0 border-bottom vendor-group" data-vendor="<?= strtolower($vendorName) ?>">
                 <h2 class="accordion-header">
@@ -261,7 +264,7 @@ body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color:
                             </div>
 
                             <div class="d-flex align-items-center gap-3">
-                                <a href="export_excel.php?vendor_id=<?= $data['vendor_id'] ?>&from=<?= $_GET['from'] ?? '' ?>&to=<?= $_GET['to'] ?? '' ?>" 
+                                <a href="export_excel.php?vendor_id=<?= urlencode($enc_vendor_id) ?>&from=<?= $_GET['from'] ?? '' ?>&to=<?= $_GET['to'] ?? '' ?>" 
                                    class="btn btn-sm btn-outline-success px-2 d-none d-md-inline-flex align-items-center gap-1" 
                                    onclick="event.stopPropagation();" style="font-size: 0.72rem;">
                                     <i class="bi bi-file-earmark-spreadsheet"></i> Export
@@ -293,6 +296,9 @@ body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color:
                                     <?php foreach ($data['services'] as $row): 
                                         $status = $row['bill_status'] ?? 'Unpaid';
                                         $badge_class = ($status == 'Paid') ? 'status-paid' : 'status-unpaid';
+
+                                        // Encrypt service ID for action links
+                                        $enc_service_id = encrypt_id($row['id']);
 
                                         $item_lower = strtolower($row['item_name'] ?? '');
                                         $icon = 'bi-wrench-adjustable'; 
@@ -347,7 +353,7 @@ body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color:
 
                                         <td>
                                             <button class="status-badge <?= $badge_class ?> toggle-pill" 
-                                                    data-id="<?= $row['id'] ?>" 
+                                                    data-token="<?= htmlspecialchars($enc_service_id) ?>" 
                                                     data-status="<?= $status ?>">
                                                 <span class="status-dot"></span> <?= strtoupper($status) ?>
                                             </button>
@@ -355,10 +361,10 @@ body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color:
 
                                         <td class="text-end pe-3">
                                             <div class="d-flex justify-content-end gap-1">
-                                                <a href="edit_service.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-light border p-1 text-primary">
+                                                <a href="edit_service.php?id=<?= urlencode($enc_service_id) ?>" class="btn btn-sm btn-light border p-1 text-primary">
                                                     <i class="bi bi-pencil-square fs-6"></i>
                                                 </a>
-                                                <button type="button" class="btn btn-sm btn-light border p-1 text-danger delete-btn" data-id="<?= $row['id'] ?>">
+                                                <button type="button" class="btn btn-sm btn-light border p-1 text-danger delete-btn" data-token="<?= htmlspecialchars($enc_service_id) ?>">
                                                     <i class="bi bi-trash3 fs-6"></i>
                                                 </button>
                                             </div>
@@ -394,7 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
-            const id = this.getAttribute('data-id');
+            const token = this.getAttribute('data-token');
 
             Swal.fire({
                 title: 'Delete Service Record?',
@@ -406,7 +412,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 confirmButtonText: 'Yes, delete it!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = `delete_service.php?id=${id}`;
+                    window.location.href = `delete_service.php?id=${encodeURIComponent(token)}`;
                 }
             });
         });
@@ -415,7 +421,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // SWEETALERT2 STATUS TOGGLE CONFIRMATION
     document.querySelectorAll('.toggle-pill').forEach(btn => {
         btn.addEventListener('click', function() {
-            const id = this.getAttribute('data-id');
+            const token = this.getAttribute('data-token');
             let currentStatus = this.getAttribute('data-status');
             let newStatus = currentStatus === 'Unpaid' ? 'Paid' : 'Unpaid';
 
@@ -423,7 +429,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 fetch('toggle_bill_status.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `id=${id}&status=${newStatus}`
+                    body: `id=${encodeURIComponent(token)}&status=${newStatus}`
                 })
                 .then(res => res.text())
                 .then(res => {

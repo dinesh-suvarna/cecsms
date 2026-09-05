@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once "../includes/session.php";
+require_once __DIR__ . "/../config/crypto.php";
 
 $error = "";
 $success = "";
@@ -8,13 +9,20 @@ $success = "";
 $role = $_SESSION['role'];
 $user_institution_id = $_SESSION['institution_id'] ?? null;
 
-// Validate ID
-if(!isset($_GET['id']) || !is_numeric($_GET['id'])){
+// Validate and Decrypt Token
+if (!isset($_GET['id'])) {
     header("Location: units.php");
     exit;
 }
 
-$unit_id = intval($_GET['id']);
+$unit_id = decrypt_id($_GET['id']);
+
+if ($unit_id === false || !ctype_digit((string)$unit_id)) {
+    header("Location: units.php");
+    exit;
+}
+
+$unit_id = intval($unit_id);
 
 // Fetch unit
 $stmt = $conn->prepare("SELECT * FROM units WHERE id=? AND status='Active'");
@@ -65,7 +73,13 @@ $display_inst_name = $inst_result['institution_name'] ?? 'N/A';
 $inst_stmt->close();
 
 // ================= UPDATE LOGIC =================
-if(isset($_POST['update_unit'])){
+if (isset($_POST['update_unit'])) {
+    $token = $_POST['id'] ?? '';
+    $decrypted_id = decrypt_id($token);
+    if ($decrypted_id === false || !ctype_digit((string)$decrypted_id)) {
+        $error = "Invalid transaction token.";
+    } else {
+    $unit_id = intval($decrypted_id);
     $unit_code   = strtoupper(trim($_POST['unit_code']));
     $unit_name   = ucwords(trim($_POST['unit_name']));
     $division_id = intval($_POST['division_id']);
@@ -99,7 +113,7 @@ if(isset($_POST['update_unit'])){
         $check->close();
     }
 }
-
+}
 ob_start();
 ?>
 
@@ -249,6 +263,9 @@ ob_start();
 
         <div class="inst-form-body">
             <form method="POST">
+                <!-- Hidden input for encrypted unit ID token -->
+                <input type="hidden" name="id" value="<?= htmlspecialchars($_GET['id'] ?? '') ?>">
+
                 <div class="row g-3">
                     
                     <!-- Institution (Readonly) -->

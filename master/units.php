@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once "../includes/session.php";
+require_once __DIR__ . "/../config/crypto.php";
 
 $role = $_SESSION['role'];
 $user_institution_id = $_SESSION['institution_id'] ?? null;
@@ -432,6 +433,7 @@ ob_start();
                                     </thead>
                                     <tbody>
                                         <?php foreach ($divData['units'] as $row): 
+                                            $token = encrypt_id($row['id']);
                                             $unit_type_val = strtolower($row['unit_type']);
                                             $badge_class = match($unit_type_val) {
                                                 'lab' => 'pill-lab',
@@ -468,11 +470,11 @@ ob_start();
                                                 </td>
                                                 <td class="text-center pe-4">
                                                     <div class="d-inline-flex gap-1">
-                                                        <a href="edit_unit.php?id=<?= $row['id'] ?>" class="action-btn-saas" title="Edit Facility">
+                                                        <a href="edit_unit.php?id=<?= urlencode($token) ?>" class="action-btn-saas" title="Edit Facility">
                                                             <i class="bi bi-pencil-square"></i>
                                                         </a>
                                                         <button type="button" class="action-btn-saas danger" 
-                                                                onclick="handleStatus(<?= $row['id'] ?>, '<?= addslashes($row['unit_name']) ?>', '<?= $row['status'] == 'Active' ? 'Deactivate' : 'Activate' ?>')"
+                                                                onclick="handleStatus('<?= $token ?>', '<?= addslashes($row['unit_name']) ?>', '<?= $row['status'] == 'Active' ? 'Deactivate' : 'Activate' ?>')"
                                                                 title="<?= $row['status'] == 'Active' ? 'Deactivate' : 'Activate' ?>">
                                                             <i class="bi <?= $row['status'] == 'Active' ? 'bi-trash3' : 'bi-check-circle' ?>"></i>
                                                         </button>
@@ -553,7 +555,7 @@ $(document).ready(function() {
     });
 });
 
-function handleStatus(id, name, action) {
+function handleStatus(token, name, action) {
     const isDeactivating = (action === 'Deactivate');
     Swal.fire({
         title: `${action} Facility?`,
@@ -569,12 +571,13 @@ function handleStatus(id, name, action) {
             const form = document.createElement('form');
             form.method = 'POST'; 
             form.action = 'unit_delete.php';
-            form.innerHTML = `<input type="hidden" name="id" value="${id}"><input type="hidden" name="status_action" value="${action}">`;
+            form.innerHTML = `<input type="hidden" name="token" value="${token}"><input type="hidden" name="status_action" value="${action}">`;
             document.body.appendChild(form); 
             form.submit();
         }
     });
 }
+
 </script>
 
 <?php 

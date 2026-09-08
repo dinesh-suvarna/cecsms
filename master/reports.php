@@ -71,16 +71,23 @@ $unit_cond_dm = $f_unit ? " AND dm.unit_id = '$f_unit'" : "";
 $unit_cond_fs = $f_unit ? " AND fs.unit_id = '$f_unit'" : "";
 $unit_cond_es = $f_unit ? " AND es.unit_id = '$f_unit'" : "";
 
-// Computer / IT Stock Query
+// Computer / IT Stock Query 
 if (empty($f_cats) || in_array('computer', $f_cats)) {
     $union_queries[] = "
-        SELECT 'Computer/IT' AS stock_type, im.item_name, SUM(dd.quantity) AS total_quantity
-        FROM dispatch_master dm
-        JOIN dispatch_details dd ON dm.id = dd.dispatch_id
-        JOIN stock_details sd ON dd.stock_detail_id = sd.id
+        SELECT 
+            'Computer/IT' AS stock_type, 
+            im.item_name, 
+            COUNT(da.id) AS total_quantity
+        FROM division_assets da
+        JOIN stock_details sd ON da.stock_detail_id = sd.id
         JOIN items_master im ON sd.stock_item_id = im.id
-        WHERE 1=1 $inst_cond_dm $dept_cond_dm $unit_cond_dm
+        JOIN dispatch_details dd ON da.dispatch_detail_id = dd.id
+        JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+        WHERE da.status = 'assigned' 
+          AND sd.status = 'dispatched'
+          $inst_cond_dm $dept_cond_dm $unit_cond_dm
         GROUP BY im.id, im.item_name
+        HAVING total_quantity > 0
     ";
 }
 

@@ -73,7 +73,10 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
                     $dd_id = $res->fetch_assoc()['dispatch_detail_id'] ?? null;
 
                     $conn->query("DELETE FROM division_assets WHERE id = $id");
-                    if ($dd_id) { $conn->query("DELETE FROM dispatch_details WHERE id = $dd_id"); }
+
+                    if ($dd_id) { 
+                        $conn->query("UPDATE dispatch_details SET returned_quantity = IFNULL(returned_quantity, 0) + 1 WHERE id = $dd_id"); 
+                    }
 
                     $status_icon = 'success';
                     $status_title = 'Return Approved';

@@ -129,32 +129,44 @@ ob_start();
 
 <style>
     :root {
-        --theme-navy: #07116e;
-        --theme-navy-light: #0d1e9e;
-        --theme-navy-bg: #f4f6fb;
+        --brand-primary: #123b63;
+        --brand-navy: #0b2942;
+        --brand-white: #ffffff;
+        --bg-surface: #f3f5f7;
+        --card-bg: #ffffff;
+        --card-border: #d9e0e7;
+        --card-border-hover: #b8c5d1;
+        --text-primary: #18344d;
+        --text-body: #4b5f72;
+        --text-muted: #6b7c8c;
+        --shadow-subtle: 0 1px 2px rgba(20, 45, 70, 0.06);
+        --shadow-hover: 0 4px 12px rgba(20, 45, 70, 0.10);
+        --transition-smooth: all 0.18s ease;
     }
 
-    /* Modern Blue Filter Card Design from Image */
+    /* Standard ERP Filter Card Design */
     .filter-card-modern {
-        background: #ffffff;
-        border: none;
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(7, 17, 110, 0.08);
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 6px;
+        box-shadow: var(--shadow-subtle);
         overflow: hidden;
     }
 
     .filter-card-header {
-        background: linear-gradient(135deg, var(--theme-navy), var(--theme-navy-light));
-        padding: 1rem 1.5rem;
-        color: #ffffff;
+        background-color: var(--brand-navy);
+        color: var(--brand-white);
+        padding: 0.75rem 1.25rem;
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
     }
 
     .form-label-custom {
         font-size: 0.75rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--theme-navy);
+        letter-spacing: 0.04em;
+        color: var(--brand-navy);
         margin-bottom: 6px;
         display: flex;
         align-items: center;
@@ -162,82 +174,103 @@ ob_start();
     }
 
     .form-control-custom, .form-select-custom, .auto-resize-select {
-    border-radius: 10px;
-    border: 1.5px solid #dbe2ef;
-    padding: 0.6rem 0.9rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #1e293b;
-    background-color: #f8fafc;
-    transition: width 0.15s ease-in-out, border-color 0.2s ease-in-out;
-    max-width: none !important; /* Allows it to expand as wide as the JS calculates */
-    min-width: 140px;
-    box-sizing: border-box;
-}
+        border-radius: 4px;
+        border: 1px solid var(--card-border);
+        padding: 0.5rem 0.8rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--text-primary);
+        background-color: #f8fafc;
+        transition: var(--transition-smooth);
+        max-width: none !important;
+        min-width: 140px;
+        box-sizing: border-box;
+    }
 
     .form-control-custom:focus, .form-select-custom:focus {
-        border-color: var(--theme-navy);
-        box-shadow: 0 0 0 3px rgba(7, 17, 110, 0.15);
+        border-color: var(--brand-primary);
+        box-shadow: 0 0 0 3px rgba(18, 59, 99, 0.12);
         background-color: #fff;
     }
 
-    .checkbox-group-container {
-        border: 1.5px solid #dbe2ef;
-        border-radius: 10px;
-        padding: 0.55rem 0.9rem;
-        background-color: #f8fafc;
+    /* Clear Interactive Category Select/Deselect Checkbox Pills */
+    .category-pills-container {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 8px;
         flex-wrap: wrap;
     }
 
-    .custom-check-label {
+    .category-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0.45rem 0.85rem;
         font-size: 0.82rem;
         font-weight: 600;
-        color: #334155;
+        color: var(--text-body);
+        background-color: #f6f8fa;
+        border: 1px solid var(--card-border);
+        border-radius: 4px;
         cursor: pointer;
         user-select: none;
+        transition: var(--transition-smooth);
+    }
+
+    .category-pill:hover {
+        border-color: var(--card-border-hover);
+        background-color: #eef3f7;
+        color: var(--brand-navy);
+    }
+
+    /* Style when checkbox is checked */
+    .category-pill:has(.custom-check-input:checked) {
+        background-color: #edf2f7;
+        border-color: var(--brand-primary);
+        color: var(--brand-navy);
+        box-shadow: var(--shadow-subtle);
     }
 
     .custom-check-input {
         cursor: pointer;
-        accent-color: var(--theme-navy);
-        width: 15px;
-        height: 15px;
+        accent-color: var(--brand-primary);
+        width: 16px;
+        height: 16px;
+        margin: 0;
     }
 
+    /* Buttons */
     .btn-navy {
-        background: linear-gradient(135deg, var(--theme-navy), var(--theme-navy-light));
-        color: #ffffff !important;
-        border: none;
-        border-radius: 10px;
-        font-weight: 600;
+        background-color: var(--brand-primary);
+        color: var(--brand-white) !important;
+        border: 1px solid var(--brand-navy);
+        border-radius: 4px;
+        font-weight: 500;
         font-size: 0.85rem;
-        padding: 0.6rem 1.2rem;
-        box-shadow: 0 4px 12px rgba(7, 17, 110, 0.2);
-        transition: all 0.2s ease;
+        padding: 0.5rem 1.2rem;
+        transition: var(--transition-smooth);
     }
 
     .btn-navy:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 18px rgba(7, 17, 110, 0.3);
+        background-color: var(--brand-navy);
+        box-shadow: var(--shadow-subtle);
     }
 
     .btn-outline-navy {
-        background: #ffffff;
-        color: var(--theme-navy) !important;
-        border: 2px solid var(--theme-navy);
-        border-radius: 10px;
-        font-weight: 600;
+        background-color: var(--card-bg);
+        color: var(--brand-primary) !important;
+        border: 1px solid var(--card-border);
+        border-radius: 4px;
+        font-weight: 500;
         font-size: 0.85rem;
-        padding: 0.6rem 1.2rem;
-        transition: all 0.2s ease;
+        padding: 0.5rem 1.2rem;
+        transition: var(--transition-smooth);
     }
 
     .btn-outline-navy:hover {
-        background: var(--theme-navy-bg);
-        transform: translateY(-2px);
+        background-color: #eef3f7;
+        color: var(--brand-navy) !important;
+        border-color: var(--card-border-hover);
     }
 
     /* --- Report & Print Styles --- */
@@ -337,12 +370,12 @@ ob_start();
 <div class="container-fluid mt-4">
     <div class="card mb-4 no-print filter-card-modern">
         <div class="filter-card-header d-flex justify-content-between align-items-center">
-            <h6 class="mb-0 fw-bold text-white d-flex align-items-center gap-2">
+            <h6 class="mb-0 fw-semibold text-white d-flex align-items-center gap-2">
                 <i class="bi bi-box-seam"></i> Consolidated Inventory Stock Report
             </h6>
-            <span class="badge bg-light text-primary fw-semibold px-2 py-1"><?= $badge_text ?></span>
+            <span class="badge bg-light text-dark fw-semibold px-2 py-1" style="font-size: 0.72rem; border-radius: 4px;"><?= $badge_text ?></span>
         </div>
-        <div class="card-body p-4">
+        <div class="card-body p-3">
             <form method="GET" id="filterForm" class="row g-3 align-items-end">
                 <div class="col-auto">
                     <label class="form-label-custom"><i class="bi bi-building me-1"></i>Institution</label>
@@ -379,20 +412,20 @@ ob_start();
                         ?>
                     </select>
                 </div>
-                <div class="col-xl-3 col-md-6">
-                    <label class="form-label-custom"><i class="bi bi-tags me-1"></i>Categories</label>
-                    <div class="checkbox-group-container">
-                        <label class="custom-check-label d-inline-flex align-items-center gap-1">
+                <div class="col-xl-4 col-md-6">
+                    <label class="form-label-custom"><i class="bi bi-tags me-1"></i>Categories (Select Multiple)</label>
+                    <div class="category-pills-container">
+                        <label class="category-pill">
                             <input type="checkbox" name="cat[]" value="computer" class="custom-check-input" onchange="this.form.submit()" <?= (empty($f_cats) || in_array('computer', $f_cats)) ? 'checked' : '' ?>>
-                            IT/Comp
+                             IT / Comp
                         </label>
-                        <label class="custom-check-label d-inline-flex align-items-center gap-1">
+                        <label class="category-pill">
                             <input type="checkbox" name="cat[]" value="furniture" class="custom-check-input" onchange="this.form.submit()" <?= (empty($f_cats) || in_array('furniture', $f_cats)) ? 'checked' : '' ?>>
-                            Furniture
+                             Furniture
                         </label>
-                        <label class="custom-check-label d-inline-flex align-items-center gap-1">
+                        <label class="category-pill"> 
                             <input type="checkbox" name="cat[]" value="electrical" class="custom-check-input" onchange="this.form.submit()" <?= (empty($f_cats) || in_array('electrical', $f_cats)) ? 'checked' : '' ?>>
-                            Electrical
+                             Electrical
                         </label>
                     </div>
                 </div>
@@ -497,19 +530,6 @@ function autoResizeSelect(selectElement) {
     document.body.removeChild(tempSpan);
 }
 
-// Auto-apply to all dropdowns (Institute, Division, Units, etc.)
-document.addEventListener('DOMContentLoaded', () => {
-    const dynamicDropdowns = document.querySelectorAll('.auto-resize-select');
-    
-    dynamicDropdowns.forEach(select => {
-        // Initial sizing on load
-        autoResizeSelect(select);
-        
-        // Resize when user changes selection
-        select.addEventListener('change', (e) => autoResizeSelect(e.target));
-    });
-});
-
 document.addEventListener('DOMContentLoaded', () => {
     const filterForm = document.getElementById('filterForm');
     
@@ -521,20 +541,20 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset all select elements to the first default option
         const dynamicDropdowns = filterForm.querySelectorAll('.auto-resize-select');
         dynamicDropdowns.forEach(select => {
-            select.selectedIndex = 0; // Selects "All Institutions", "All Divisions", etc.
-            autoResizeSelect(select); // Re-calculate dynamic width
+            select.selectedIndex = 0;
+            autoResizeSelect(select);
         });
         
-        // Optionally uncheck or reset category checkboxes
+        // Reset category checkboxes
         const checkboxes = filterForm.querySelectorAll('.custom-check-input');
         checkboxes.forEach(cb => cb.checked = true);
         
-        // Strip the query parameters from URL without reloading the page again
+        // Strip the query parameters from URL without reloading
         if (window.history.replaceState) {
             window.history.replaceState(null, null, window.location.pathname);
         }
     } else {
-        // Standard load (or form submit action)
+        // Standard load
         const dynamicDropdowns = document.querySelectorAll('.auto-resize-select');
         dynamicDropdowns.forEach(select => {
             autoResizeSelect(select);

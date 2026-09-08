@@ -89,32 +89,44 @@ ob_start();
 
 <style>
     :root {
-        --theme-navy: #07116e;
-        --theme-navy-light: #0d1e9e;
-        --theme-navy-bg: #f4f6fb;
+        --brand-primary: #123b63;
+        --brand-navy: #0b2942;
+        --brand-white: #ffffff;
+        --bg-surface: #f3f5f7;
+        --card-bg: #ffffff;
+        --card-border: #d9e0e7;
+        --card-border-hover: #b8c5d1;
+        --text-primary: #18344d;
+        --text-body: #4b5f72;
+        --text-muted: #6b7c8c;
+        --shadow-subtle: 0 1px 2px rgba(20, 45, 70, 0.06);
+        --shadow-hover: 0 4px 12px rgba(20, 45, 70, 0.10);
+        --transition-smooth: all 0.18s ease;
     }
 
-    /* Modern Blue Filter Card Design */
+    /* Standard ERP Filter Card Design */
     .filter-card-modern {
-        background: #ffffff;
-        border: none;
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(7, 17, 110, 0.08);
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 6px;
+        box-shadow: var(--shadow-subtle);
         overflow: hidden;
     }
 
     .filter-card-header {
-        background: linear-gradient(135deg, var(--theme-navy), var(--theme-navy-light));
-        padding: 1rem 1.5rem;
-        color: #ffffff;
+        background-color: var(--brand-navy);
+        color: var(--brand-white);
+        padding: 0.75rem 1.25rem;
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
     }
 
     .form-label-custom {
         font-size: 0.75rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--theme-navy);
+        letter-spacing: 0.04em;
+        color: var(--brand-navy);
         margin-bottom: 6px;
         display: flex;
         align-items: center;
@@ -122,72 +134,74 @@ ob_start();
     }
 
     .form-control-custom, .form-select-custom, .auto-resize-select {
-        border-radius: 10px;
-        border: 1.5px solid #dbe2ef;
-        padding: 0.6rem 0.9rem;
-        font-size: 0.875rem;
+        border-radius: 4px;
+        border: 1px solid var(--card-border);
+        padding: 0.5rem 0.8rem;
+        font-size: 0.85rem;
         font-weight: 500;
-        color: #1e293b;
+        color: var(--text-primary);
         background-color: #f8fafc;
-        transition: width 0.15s ease-in-out, border-color 0.2s ease-in-out;
+        transition: var(--transition-smooth);
         max-width: none !important;
         min-width: 140px;
         box-sizing: border-box;
     }
 
     .form-control-custom:focus, .form-select-custom:focus {
-        border-color: var(--theme-navy);
-        box-shadow: 0 0 0 3px rgba(7, 17, 110, 0.15);
+        border-color: var(--brand-primary);
+        box-shadow: 0 0 0 3px rgba(18, 59, 99, 0.12);
         background-color: #fff;
     }
 
+    /* ERP Action Buttons */
     .btn-navy {
-        background: linear-gradient(135deg, var(--theme-navy), var(--theme-navy-light));
-        color: #ffffff !important;
-        border: none;
-        border-radius: 10px;
-        font-weight: 600;
+        background-color: var(--brand-primary);
+        color: var(--brand-white) !important;
+        border: 1px solid var(--brand-navy);
+        border-radius: 4px;
+        font-weight: 500;
         font-size: 0.85rem;
-        padding: 0.6rem 1.2rem;
-        box-shadow: 0 4px 12px rgba(7, 17, 110, 0.2);
-        transition: all 0.2s ease;
+        padding: 0.5rem 1.2rem;
+        transition: var(--transition-smooth);
     }
 
     .btn-navy:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 18px rgba(7, 17, 110, 0.3);
+        background-color: var(--brand-navy);
+        box-shadow: var(--shadow-subtle);
     }
 
     .btn-outline-navy {
-        background: #ffffff;
-        color: var(--theme-navy) !important;
-        border: 2px solid var(--theme-navy);
-        border-radius: 10px;
-        font-weight: 600;
+        background-color: var(--card-bg);
+        color: var(--brand-primary) !important;
+        border: 1px solid var(--card-border);
+        border-radius: 4px;
+        font-weight: 500;
         font-size: 0.85rem;
-        padding: 0.6rem 1.2rem;
-        transition: all 0.2s ease;
+        padding: 0.5rem 1.2rem;
+        transition: var(--transition-smooth);
     }
 
     .btn-outline-navy:hover {
-        background: var(--theme-navy-bg);
-        transform: translateY(-2px);
+        background-color: #eef3f7;
+        color: var(--brand-navy) !important;
+        border-color: var(--card-border-hover);
     }
 
+    /* KPI Summary Card */
     .kpi-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 6px;
         padding: 1rem 1.25rem;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-        border-left: 4px solid var(--theme-navy);
+        box-shadow: var(--shadow-subtle);
+        border-left: 4px solid var(--brand-primary);
     }
 
     .report-card-container {
-        background: #ffffff;
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-        border: 1px solid #e2e8f0;
+        background: var(--card-bg);
+        border-radius: 6px;
+        box-shadow: var(--shadow-subtle);
+        border: 1px solid var(--card-border);
     }
 
     .table-custom {
@@ -197,9 +211,9 @@ ob_start();
     }
 
     .table-custom th, .table-custom td {
-        border: 1px solid #cbd5e1 !important;
+        border: 1px solid #d9e0e7 !important;
         padding: 8px 10px;
-        color: #0f172a;
+        color: var(--text-primary);
     }
 
     .table-custom thead {
@@ -212,8 +226,8 @@ ob_start();
     }
 
     .table-custom thead th {
-        background-color: var(--theme-navy-bg) !important;
-        color: var(--theme-navy) !important;
+        background-color: #f1f5f9 !important;
+        color: var(--brand-navy) !important;
         font-weight: 700;
         text-transform: uppercase;
         font-size: 0.78rem;
@@ -222,8 +236,9 @@ ob_start();
 
     .config-badge {
         font-size: 0.75rem;
-        background: #e2e8f0;
-        color: #1e293b;
+        background: #edf2f7;
+        color: var(--text-primary);
+        border: 1px solid #dbe2ef;
         padding: 2px 6px;
         border-radius: 4px;
         display: inline-block;
@@ -308,12 +323,12 @@ ob_start();
     <!-- Filter Card -->
     <div class="card mb-4 no-print filter-card-modern">
         <div class="filter-card-header d-flex justify-content-between align-items-center">
-            <h6 class="mb-0 fw-bold text-white d-flex align-items-center gap-2">
+            <h6 class="mb-0 fw-semibold text-white d-flex align-items-center gap-2">
                 <i class="bi bi-cpu"></i> Detailed Computer Hardware Configuration Report
             </h6>
-            <span class="badge bg-light text-primary fw-semibold px-2 py-1">IT Inventory</span>
+            <span class="badge bg-light text-dark fw-semibold px-2 py-1" style="font-size: 0.72rem; border-radius: 4px;">IT Inventory</span>
         </div>
-        <div class="card-body p-4">
+        <div class="card-body p-3">
             <form method="GET" id="filterForm" class="row g-3 align-items-end">
                 <div class="col-auto">
                     <label class="form-label-custom"><i class="bi bi-building me-1"></i>Institution</label>
@@ -377,7 +392,7 @@ ob_start();
         <div class="col-md-4">
             <div class="kpi-card">
                 <div class="text-muted small fw-bold text-uppercase">Total Computer Records</div>
-                <div class="h3 fw-bold my-1 text-primary"><?= inr($total_systems) ?></div>
+                <div class="h3 fw-bold my-1" style="color: var(--brand-primary);"><?= inr($total_systems) ?></div>
                 <div class="small text-muted"><i class="bi bi-pc-display me-1"></i> Listed individual assets</div>
             </div>
         </div>
@@ -388,7 +403,7 @@ ob_start();
         <div class="text-center mb-4">
             <img src="../admin/assets/header.PNG" alt="Header" style="width:100%; max-width:850px;" class="mb-3">
             
-            <h4 class="fw-bold text-uppercase mb-1" style="color: var(--theme-navy);">Computer Hardware Specification Report</h4>
+            <h4 class="fw-bold text-uppercase mb-1" style="color: var(--brand-navy);">Computer Hardware Specification Report</h4>
             <h6 class="text-dark fw-bold mb-1"><?= $filter_display ?></h6>
             <p class="text-muted small">Report Generated: <?= date('d-m-Y h:i A') ?></p>
         </div>
@@ -413,7 +428,7 @@ ob_start();
                     foreach($config_rows as $row): ?>
                     <tr>
                         <td class="text-center"><?= $sl++ ?></td>
-                        <td class="fw-bold text-primary">
+                        <td class="fw-bold" style="color: var(--brand-primary);">
                             <?= htmlspecialchars($row['item_name']) ?>
                             <div class="small text-muted fw-normal"><?= htmlspecialchars($row['model_name']) ?></div>
                         </td>

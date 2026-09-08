@@ -87,22 +87,258 @@ while($row = $result->fetch_assoc()){
 }
 ?>
 
-<div class="container mt-4">
-    <div class="sticky-top no-print" style="top: 0; z-index: 1050; background: #f8f9fa; padding-top: 10px; padding-bottom: 10px;">
-        <div class="card shadow border-0 rounded-3">
+<style>
+    :root {
+        --brand-primary: #123b63;
+        --brand-navy: #0b2942;
+        --brand-white: #ffffff;
+        --bg-surface: #f3f5f7;
+        --card-bg: #ffffff;
+        --card-border: #d9e0e7;
+        --card-border-hover: #b8c5d1;
+        --text-primary: #18344d;
+        --text-body: #4b5f72;
+        --text-muted: #6b7c8c;
+        --shadow-subtle: 0 1px 2px rgba(20, 45, 70, 0.06);
+        --shadow-hover: 0 4px 12px rgba(20, 45, 70, 0.10);
+        --transition-smooth: all 0.18s ease;
+    }
+
+    html { overflow-y: scroll; scrollbar-gutter: stable; }
+
+    /* Sticky Control Header Card */
+    .filter-card-modern {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 6px;
+        box-shadow: var(--shadow-subtle);
+        overflow: hidden;
+    }
+
+    .filter-card-header {
+        background-color: var(--brand-navy);
+        color: var(--brand-white);
+        padding: 0.75rem 1.25rem;
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
+    }
+
+    .form-label-custom {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--brand-navy);
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .form-control-custom, .form-select-custom, .auto-resize-select {
+        border-radius: 4px;
+        border: 1px solid var(--card-border);
+        padding: 0.4rem 0.75rem;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: var(--text-primary);
+        background-color: #f8fafc;
+        transition: var(--transition-smooth);
+    }
+
+    .form-control-custom:focus, .form-select-custom:focus {
+        border-color: var(--brand-primary);
+        box-shadow: 0 0 0 3px rgba(18, 59, 99, 0.12);
+        background-color: #fff;
+    }
+
+    .btn-navy {
+        background-color: var(--brand-primary);
+        color: var(--brand-white) !important;
+        border: 1px solid var(--brand-navy);
+        border-radius: 4px;
+        font-weight: 500;
+        font-size: 0.82rem;
+        padding: 0.4rem 1rem;
+        transition: var(--transition-smooth);
+    }
+
+    .btn-navy:hover {
+        background-color: var(--brand-navy);
+        box-shadow: var(--shadow-subtle);
+    }
+
+    .btn-outline-navy {
+        background-color: var(--card-bg);
+        color: var(--brand-primary) !important;
+        border: 1px solid var(--card-border);
+        border-radius: 4px;
+        font-weight: 500;
+        font-size: 0.82rem;
+        padding: 0.4rem 1rem;
+        transition: var(--transition-smooth);
+    }
+
+    .btn-outline-navy:hover {
+        background-color: #eef3f7;
+        color: var(--brand-navy) !important;
+        border-color: var(--card-border-hover);
+    }
+
+    /* Hierarchy Accordion Styles */
+    .institution-card { 
+        border: 1px solid var(--card-border) !important;
+        border-radius: 6px;
+        background: var(--card-bg);
+        box-shadow: var(--shadow-subtle);
+    }
+
+    .inst-header {
+        background-color: #ffffff !important;
+        border-left: 5px solid var(--brand-navy) !important;
+        padding: 1rem 1.25rem;
+        transition: background 0.2s ease;
+    }
+    .inst-header:hover {
+        background-color: #f8fafc !important;
+    }
+
+    .division-header { 
+        background-color: #f1f5f9 !important; 
+        border-left: 4px solid var(--brand-primary) !important;
+        border-radius: 4px;
+        margin: 6px 0;
+        padding: 10px 16px !important;
+        transition: all 0.2s ease;
+    }
+    .division-header:hover { 
+        background-color: #e2e8f0 !important; 
+    }
+
+    .unit-block {
+        background-color: #ffffff;
+        border: 1px solid var(--card-border);
+        border-left: 3px solid var(--brand-primary);
+        border-radius: 6px;
+        margin: 6px 0 12px 18px; 
+        padding: 12px 16px;
+        box-shadow: var(--shadow-subtle); 
+    }
+
+    .category-section {
+        border: 1px solid var(--card-border);
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+    .category-section:hover {
+        box-shadow: var(--shadow-hover);
+    }
+
+    .category-header {
+        background-color: #f8fafc;
+        border-bottom: 1px solid var(--card-border);
+        padding: 8px 12px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--brand-navy);
+    }
+
+    /* Table Custom Styles */
+    .table-custom {
+        table-layout: fixed !important;
+        width: 100% !important;
+        margin-bottom: 0;
+    }
+
+    .table-custom th {
+        background-color: #f1f5f9 !important;
+        color: var(--brand-navy) !important;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.72rem;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid var(--card-border);
+        padding: 8px 12px;
+    }
+
+    .table-custom td {
+        padding: 8px 12px;
+        font-size: 0.82rem;
+        border-bottom: 1px solid #eef2f6;
+        color: var(--text-primary);
+    }
+
+    .toggle-icon {
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-size: 0.8rem;
+        color: var(--text-muted); 
+    }
+
+    [aria-expanded="true"] .toggle-icon {
+        transform: rotate(90deg);
+        color: var(--brand-primary);
+    }
+
+    .badge-navy {
+        background-color: #eef3f7;
+        color: var(--brand-navy);
+        border: 1px solid var(--card-border);
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+
+    .status-dispatched {
+        color: #0d9488;
+        font-weight: 700;
+        font-size: 0.75rem;
+        letter-spacing: 0.03em;
+    }
+
+    .match-group-highlight {
+        background: rgba(255, 193, 7, 0.15); 
+        border-left: 4px solid #ffc107;
+        border-radius: 6px;
+        padding: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .report-row.match-highlight {
+        background-color: #fff3cd !important;
+        outline: 2px solid #ffc107;
+    }
+
+    @media print { 
+        .no-print { display: none !important; }
+        .collapse { display: block !important; height: auto !important; overflow: visible !important; }
+        .toggle-icon { display: none !important; }
+        .sticky-top { position: static !important; }
+    }
+</style>
+
+<div class="container-fluid mt-4 mb-5">
+
+    <!-- Filter Control Bar -->
+    <div class="sticky-top no-print mb-4" style="top: 0; z-index: 1030;">
+        <div class="card filter-card-modern">
+            <div class="filter-card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-semibold text-white d-flex align-items-center gap-2">
+                    <i class="bi <?= $page_icon ?>"></i> <?= $page_title ?>
+                </h6>
+                <span class="badge bg-light text-dark fw-semibold px-2 py-1" style="font-size: 0.72rem;">Dispatch Audit</span>
+            </div>
             <div class="card-body p-3">
                 <form method="GET" class="row g-2 align-items-end border-bottom pb-3 mb-3">
                     <div class="col-md-3">
-                        <label class="small fw-bold text-muted">From</label>
-                        <input type="date" name="from_date" class="form-control form-control-sm" value="<?= $from_date ?>">
+                        <label class="form-label-custom"><i class="bi bi-calendar-event me-1"></i>From Date</label>
+                        <input type="date" name="from_date" class="form-control form-control-custom w-100" value="<?= $from_date ?>">
                     </div>
                     <div class="col-md-3">
-                        <label class="small fw-bold text-muted">To</label>
-                        <input type="date" name="to_date" class="form-control form-control-sm" value="<?= $to_date ?>">
+                        <label class="form-label-custom"><i class="bi bi-calendar-event me-1"></i>To Date</label>
+                        <input type="date" name="to_date" class="form-control form-control-custom w-100" value="<?= $to_date ?>">
                     </div>
                     <div class="col-md-4">
-                        <label class="small fw-bold text-muted">Institution</label>
-                        <select name="institution_id" class="form-select form-select-sm">
+                        <label class="form-label-custom"><i class="bi bi-building me-1"></i>Institution</label>
+                        <select name="institution_id" class="form-select form-select-custom w-100">
                             <option value="">All Institutions</option>
                             <?php $institutions->data_seek(0); while($inst_row = $institutions->fetch_assoc()): ?>
                                 <option value="<?= $inst_row['id'] ?>" <?= $institution_filter == $inst_row['id'] ? 'selected' : '' ?>><?= $inst_row['institution_name'] ?></option>
@@ -110,50 +346,49 @@ while($row = $result->fetch_assoc()){
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-primary btn-sm w-100 shadow-sm">Apply</button>
+                        <button type="submit" class="btn btn-navy w-100">
+                            <i class="bi bi-filter me-1"></i> Apply
+                        </button>
                     </div>
                 </form>
 
                 <div class="row g-2 align-items-center">
-                    <div class="col-md-9">
+                    <div class="col-md-8">
                         <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
-                            <input type="text" id="reportSearch" class="form-control bg-light border-start-0 ps-0" placeholder="Type to search">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" id="reportSearch" class="form-control form-control-custom border-start-0 ps-0" placeholder="Search by Model, Item, or Serial Number...">
                         </div>
                     </div>
-                    <div class="col-md-3 text-end">
-                        <button type="button" id="globalToggleBtn" class="btn btn-outline-secondary btn-sm w-100" onclick="handleGlobalToggle()">
+                    <div class="col-md-4 d-flex justify-content-end gap-2">
+                        <button type="button" id="globalToggleBtn" class="btn btn-outline-navy w-100" onclick="handleGlobalToggle()">
                             <i class="bi bi-arrows-angle-expand me-1"></i> <span id="toggleText">Expand All</span>
                         </button>
-                        <div>
-                        <button id="clearHighlightBtn" 
-                                class="btn btn-warning btn-sm ms-2" 
-                                style="display:none;">
-                            <i class="bi bi-x-circle me-1"></i> Clear Highlight
+                        <button id="clearHighlightBtn" class="btn btn-warning btn-sm text-nowrap" style="display:none;">
+                            <i class="bi bi-x-circle me-1"></i> Clear Match
                         </button>
-                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Main Accordion Report Hierarchy -->
     <div id="reportContent">
         <?php foreach($grouped as $institution => $instData): 
             $inst_id = "inst_" . md5($institution); 
         ?>
-        <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-3 institution-card">
-            <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center toggle-header border-start border-4 border-primary" 
+        <div class="card institution-card overflow-hidden mb-3">
+            <div class="card-header inst-header d-flex justify-content-between align-items-center toggle-header" 
                  data-bs-toggle="collapse" data-bs-target="#body_<?= $inst_id ?>" style="cursor:pointer;">
-                <h5 class="mb-0 fw-bold text-dark">
-                    <i class="bi bi-caret-right-fill me-2 toggle-icon small text-muted"></i>
-                    <i class="bi bi-building me-1 text-primary"></i> <?= htmlspecialchars($institution) ?>
-                </h5>
-                <span class="badge bg-light text-primary border border-primary rounded-pill"><?= $instData['computer_total'] ?> PCs</span>
+                <h6 class="mb-0 fw-bold d-flex align-items-center gap-2" style="color: var(--brand-navy);">
+                    <i class="bi bi-caret-right-fill toggle-icon"></i>
+                    <i class="bi bi-building me-1" style="color: var(--brand-primary);"></i> <?= htmlspecialchars($institution) ?>
+                </h6>
+                <span class="badge badge-navy rounded-pill px-3 py-1"><?= $instData['computer_total'] ?> PCs</span>
             </div>
 
             <div id="body_<?= $inst_id ?>" class="collapse">
-                <div class="card-body p-0 border-top">
+                <div class="card-body p-3 border-top">
                     <?php foreach($instData['divisions'] as $division => $divData): 
                         $div_id = "div_" . md5($institution . $division);
                     ?>
@@ -163,45 +398,45 @@ while($row = $result->fetch_assoc()){
                             style="cursor:pointer;">
                             
                             <div class="fw-bold d-flex align-items-center">
-                                <i class="bi bi-caret-right-fill me-3 toggle-icon"></i>
-                                <span class="text-dark">
+                                <i class="bi bi-caret-right-fill me-2 toggle-icon"></i>
+                                <span class="text-dark me-2">
                                     <i class="bi bi-diagram-3 me-2 opacity-50"></i><?= htmlspecialchars($division) ?>
                                 </span>
                             </div>
 
                             <div class="d-flex align-items-center gap-2">
-                                <span class="badge rounded-pill bg-white text-dark border px-3 py-2 me-2">
+                                <span class="badge bg-white text-dark border px-2 py-1 me-2" style="font-size: 0.72rem;">
                                     <?= $divData['computer_total'] ?> computers
                                 </span>
                                 
                                 <a href="print_report.php?type=division&id=<?= $divData['id'] ?>" 
                                 target="_blank" 
-                                class="btn btn-primary btn-sm"
+                                class="btn btn-navy btn-sm"
                                 onclick="event.stopPropagation(); window.open(this.href, '_blank'); return false;">
-                                    <i class="bi bi-file-earmark-pdf me-2"></i> Division Report
+                                    <i class="bi bi-file-earmark-pdf me-1"></i> Division Report
                                 </a>
                             </div>
                         </div>
 
                         <div id="div_body_<?= $div_id ?>" class="collapse">
-                            <div class="px-4 py-3 bg-white">
+                            <div class="px-2 py-2">
                                 <?php foreach($divData['units'] as $unit => $unitData): 
                                     $unit_id = "unit_" . md5($institution . $division . $unit);
                                 ?>
-                                    <div class="unit-block mb-4 ps-3">
+                                    <div class="unit-block">
                                         <div class="d-flex justify-content-between align-items-center mb-2 toggle-header" 
                                              data-bs-toggle="collapse" data-bs-target="#unit_container_<?= $unit_id ?>" style="cursor:pointer;">
-                                            <h6 class="fw-bold text-dark mb-0">
-                                                <i class="bi bi-caret-right-fill me-1 toggle-icon small"></i>
+                                            <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1" style="font-size: 0.88rem;">
+                                                <i class="bi bi-caret-right-fill me-1 toggle-icon"></i>
                                                 <?= htmlspecialchars($unit) ?>
                                             </h6>
                                             <div class="d-flex align-items-center gap-3">
-                                                <span class="text-muted small"><?= $unitData['computer_total'] ?> PCs</span>
+                                                <span class="text-muted small fw-semibold"><?= $unitData['computer_total'] ?> PCs</span>
                                                 <a href="print_unit_report.php?id=<?= $unitData['id'] ?>" 
                                                 target="_blank" 
-                                                class="btn btn-outline-info btn-xs no-print px-2 py-0" 
+                                                class="btn btn-outline-navy btn-sm no-print px-2 py-0" 
                                                 onclick="event.stopPropagation(); window.open(this.href, '_blank'); return false;">
-                                                <i class="bi bi-printer me-1"></i> Print Voucher
+                                                    <i class="bi bi-printer me-1"></i> Print Voucher
                                                 </a>
                                             </div>
                                         </div>
@@ -210,79 +445,57 @@ while($row = $result->fetch_assoc()){
                                             <?php foreach($unitData['models'] as $modelName => $modelData): 
                                                 $model_md5 = md5($institution . $division . $unit . $modelName);
                                                 
-                                              // --- INTEGRATED DYNAMIC ICON LOGIC (FIXED FOR BI-PC-DISPLAY) ---
                                                 $firstRow   = reset($modelData['rows']);
                                                 $lowerCat   = strtolower($firstRow['category'] ?? '');
                                                 $lowerItem  = strtolower($firstRow['item_name'] ?? '');
 
-                                                // 1. Mice
                                                 if (str_contains($lowerCat, 'mouse') || str_contains($lowerItem, 'mouse')) { 
                                                     $itemIcon = 'bi-mouse3'; 
-                                                }
-                                                // 2. Keyboards
-                                                elseif (str_contains($lowerCat, 'keyboard') || str_contains($lowerItem, 'keyboard')) { 
+                                                } elseif (str_contains($lowerCat, 'keyboard') || str_contains($lowerItem, 'keyboard')) { 
                                                     $itemIcon = 'bi-keyboard'; 
-                                                }
-                                                // 3. Computers / Desktops / Monitors -> Always maps to bi-pc-display
-                                                elseif (
+                                                } elseif (
                                                     str_contains($lowerCat, 'computer') || 
                                                     str_contains($lowerCat, 'desktop') || 
-                                                    // str_contains($lowerCat, 'monitor') ||
                                                     str_contains($lowerItem, 'computer') || 
-                                                    str_contains($lowerItem, 'desktop') )
-                                                    // str_contains($lowerItem, 'monitor')
-                                                 { 
+                                                    str_contains($lowerItem, 'desktop')
+                                                ) { 
                                                     $itemIcon = 'bi-pc-display'; 
-                                                }
-                                                // 4. monitor
-                                                elseif (str_contains($lowerCat, 'monitor') || str_contains($lowerItem, 'monitor')) { 
+                                                } elseif (str_contains($lowerCat, 'monitor') || str_contains($lowerItem, 'monitor')) { 
                                                     $itemIcon = 'bi-display'; 
-                                                }
-                                                // 5. Printers
-                                                elseif (str_contains($lowerCat, 'printer') || str_contains($lowerItem, 'printer')) { 
+                                                } elseif (str_contains($lowerCat, 'printer') || str_contains($lowerItem, 'printer')) { 
                                                     $itemIcon = 'bi-printer'; 
-                                                }
-                                                // 6. Scanners
-                                                elseif (str_contains($lowerCat, 'scanner') || str_contains($lowerItem, 'scanner')) { 
+                                                } elseif (str_contains($lowerCat, 'scanner') || str_contains($lowerItem, 'scanner')) { 
                                                     $itemIcon = 'bi-qr-code-scan'; 
-                                                }
-                                                // 7. Cameras / CCTV
-                                                elseif (
+                                                } elseif (
                                                     str_contains($lowerCat, 'cctv') || str_contains($lowerCat, 'camera') || 
                                                     str_contains($lowerItem, 'cctv') || str_contains($lowerItem, 'camera')
                                                 ) { 
                                                     $itemIcon = 'bi-camera-video'; 
-                                                }
-                                                // 8. Power / UPS / Batteries
-                                                elseif (
+                                                } elseif (
                                                     str_contains($lowerCat, 'ups') || str_contains($lowerCat, 'battery') || str_contains($lowerCat, 'power') || 
                                                     str_contains($lowerItem, 'ups') || str_contains($lowerItem, 'battery') || str_contains($lowerItem, 'power')
                                                 ) { 
                                                     $itemIcon = 'bi-lightning-charge'; 
-                                                }
-                                                //9. Rack
-                                                elseif (str_contains($lowerCat, 'rack') || str_contains($lowerItem, 'rack')) { 
+                                                } elseif (str_contains($lowerCat, 'rack') || str_contains($lowerItem, 'rack')) { 
                                                     $itemIcon = 'bi-hdd-rack'; 
-                                                }
-                                                // Default Fallback
-                                                else { 
+                                                } else { 
                                                     $itemIcon = 'bi-box'; 
                                                 }
                                             ?>
-                                                <div class="category-section mt-3 mb-2 border rounded-3 overflow-hidden bg-light shadow-2xs">
-                                                    <div class="p-2 px-3 bg-light border-bottom d-flex justify-content-between align-items-center text-dark" 
+                                                <div class="category-section mt-3 mb-2 overflow-hidden bg-light">
+                                                    <div class="category-header d-flex justify-content-between align-items-center" 
                                                          data-bs-toggle="collapse" data-bs-target="#table_<?= $model_md5 ?>" style="cursor: pointer;">
-                                                        <span class="fw-semibold small text-uppercase tracking-wider">
-                                                            <i class="bi <?= $itemIcon ?> me-2 text-secondary"></i><?= htmlspecialchars($modelName) ?>
+                                                        <span class="tracking-wider d-flex align-items-center">
+                                                            <i class="bi <?= $itemIcon ?> me-2" style="color: var(--brand-primary);"></i><?= htmlspecialchars($modelName) ?>
                                                         </span>
-                                                        <span class="badge bg-secondary text-white rounded-pill small"><?= $modelData['total_qty'] ?> Qty</span>
+                                                        <span class="badge bg-secondary text-white rounded-pill" style="font-size:0.7rem;"><?= $modelData['total_qty'] ?> Qty</span>
                                                     </div>
                                                     
                                                     <div id="table_<?= $model_md5 ?>" class="collapse show bg-white">
                                                         <div class="table-responsive">
-                                                            <table class="table table-hover mb-0 align-middle searchable-table">
-                                                                <thead class="table-light">
-                                                                    <tr class="small text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">
+                                                            <table class="table table-custom align-middle searchable-table">
+                                                                <thead>
+                                                                    <tr>
                                                                         <th style="width: 15%;" class="ps-3">ID</th>
                                                                         <th style="width: 20%;">Date</th>
                                                                         <th style="width: 35%;">Item Detail</th>
@@ -292,15 +505,13 @@ while($row = $result->fetch_assoc()){
                                                                 </thead>
                                                                 <tbody>
                                                                     <?php foreach($modelData['rows'] as $row): ?>
-                                                                    <tr style="font-size: 0.85rem;" 
-                                                                        class="report-row" 
-                                                                        data-stock-id="<?= $row['stock_detail_id'] ?>">
-                                                                        <td class="ps-3 text-muted">DSP-<?= str_pad($row['dispatch_id'], 4, '0', STR_PAD_LEFT) ?></td>
+                                                                    <tr class="report-row" data-stock-id="<?= $row['stock_detail_id'] ?>">
+                                                                        <td class="ps-3 text-muted font-monospace">DSP-<?= str_pad($row['dispatch_id'], 4, '0', STR_PAD_LEFT) ?></td>
                                                                         <td class="text-muted"><?= date("d M, Y", strtotime($row['dispatch_date'])) ?></td>
-                                                                        <td class="fw-bold text-dark item-name">
+                                                                        <td class="fw-bold item-name" style="color: var(--brand-primary);">
                                                                             <a href="view_stock_details.php?highlight_id=<?= $row['stock_detail_id'] ?>" 
-                                                                            class="text-decoration-none text-dark hover-link">
-                                                                                <i class="bi <?= $itemIcon ?> small text-primary me-1"></i>
+                                                                            class="text-decoration-none hover-link" style="color: var(--brand-primary);">
+                                                                                <i class="bi <?= $itemIcon ?> small me-1"></i>
                                                                                 <?= htmlspecialchars($row['model_name'] ?? $row['item_name']) ?>
                                                                             </a>
                                                                         </td>
@@ -308,13 +519,13 @@ while($row = $result->fetch_assoc()){
                                                                             <?php if(!empty($row['serial_number'])): ?>
                                                                                 <span class="text-dark font-monospace fw-normal serial-text"><?= htmlspecialchars($row['serial_number']) ?></span>
                                                                             <?php else: ?>
-                                                                                <span class="fw-bold text-primary"><?= $row['quantity'] ?></span> <small class="text-muted">Units</small>
+                                                                                <span class="fw-bold" style="color: var(--brand-primary);"><?= $row['quantity'] ?></span> <small class="text-muted">Units</small>
                                                                             <?php endif; ?>
                                                                         </td>
                                                                         <td class="text-nowrap">
                                                                             <div class="d-flex align-items-center">
-                                                                                <i class="bi bi-truck text-emerald fs-5 me-2"></i> 
-                                                                                <span class="text-emerald fw-bold" style="letter-spacing: 0.3px;">DISPATCHED</span>
+                                                                                <i class="bi bi-truck fs-6 me-1" style="color: #0d9488;"></i> 
+                                                                                <span class="status-dispatched">DISPATCHED</span>
                                                                             </div>
                                                                         </td>
                                                                     </tr>
@@ -342,7 +553,7 @@ while($row = $result->fetch_assoc()){
 document.addEventListener("DOMContentLoaded", function() {
     let isAllExpanded = false; 
 
-    // 1. BOOTSTRAP COLLAPSE LISTENERS 
+    // Bootstrap collapse listeners
     const collapseElements = document.querySelectorAll('.collapse');
     collapseElements.forEach(el => {
         el.addEventListener('show.bs.collapse', function (e) {
@@ -365,7 +576,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-    // 2. UNIFIED TOGGLE BUTTON LOGIC
+    // Global toggle button logic
     window.handleGlobalToggle = function() {
         isAllExpanded = !isAllExpanded;
         updateToggleUI(isAllExpanded);
@@ -382,32 +593,29 @@ document.addEventListener("DOMContentLoaded", function() {
             show ? bsCollapse.show() : bsCollapse.hide();
         });
 
-        // Update Button Appearance
         if (show) {
             txt.innerText = "Collapse All";
             icon.classList.replace('bi-arrows-angle-expand', 'bi-arrows-angle-contract');
-            btn.classList.replace('btn-outline-secondary', 'btn-secondary');
+            btn.classList.replace('btn-outline-navy', 'btn-navy');
         } else {
             txt.innerText = "Expand All";
             icon.classList.replace('bi-arrows-angle-contract', 'bi-arrows-angle-expand');
-            btn.classList.replace('btn-secondary', 'btn-outline-secondary');
+            btn.classList.replace('btn-navy', 'btn-outline-navy');
         }
         isAllExpanded = show;
     }
 
-    // 3. SMART LIVE SEARCH LOGIC
+    // Live search logic
     document.getElementById('reportSearch').addEventListener('input', function() {
         let filter = this.value.toUpperCase();
         let rows = document.querySelectorAll('.report-row');
 
-        // IF SEARCH IS EMPTY: Collapse all and reset rows
         if (filter.length === 0) {
             updateToggleUI(false); 
             rows.forEach(row => row.style.display = ""); 
             return;
         }
 
-        // IF SEARCH HAS VALUE: Show matches and expand parents
         rows.forEach(row => {
             let itemName = row.querySelector('.item-name').textContent.toUpperCase();
             let serial = row.querySelector('.serial-text') ? row.querySelector('.serial-text').textContent.toUpperCase() : "";
@@ -421,7 +629,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-    // Helper to expand parents during search
     function expandParents(el) {
         let parent = el.closest('.collapse');
         while(parent) {
@@ -442,7 +649,6 @@ window.addEventListener("load", function(){
             if(rows.length > 0){
                 let affectedUnits = new Set();
                 rows.forEach(row => {
-                    // Expand all parent collapses
                     let parent = row.closest('.collapse');
                     while(parent){
                         let bsCollapse = bootstrap.Collapse.getInstance(parent) || new bootstrap.Collapse(parent, { toggle: false });
@@ -450,26 +656,20 @@ window.addEventListener("load", function(){
                         parent = parent.parentElement.closest('.collapse');
                     }
 
-                    // Highlight row
                     row.classList.add("match-highlight");
 
-                    // Add badge safely
                     if(!row.querySelector('.match-badge')){
-                        row.insertAdjacentHTML("beforeend", "<span class='badge bg-warning ms-2 match-badge'>Matched</span>");
+                        row.insertAdjacentHTML("beforeend", "<span class='badge bg-warning text-dark ms-2 match-badge'>Matched</span>");
                     }
 
-                    // Collect parent unit container
                     let unitBlock = row.closest('.unit-block');
                     if(unitBlock){ affectedUnits.add(unitBlock); }
                 });
 
-                // Highlight entire unit blocks
                 affectedUnits.forEach(unit => { unit.classList.add("match-group-highlight"); });
 
-                // Scroll to first match
                 rows[0].scrollIntoView({ behavior: "smooth", block: "center" });
 
-                // SHOW CLEAR BUTTON
                 document.getElementById("clearHighlightBtn").style.display = "inline-block";
             }
         }, 400);
@@ -488,168 +688,6 @@ document.getElementById("clearHighlightBtn").addEventListener("click", function(
     this.style.display = "none";
 });
 </script>
-
-<style>
-:root {
-    --brand-emerald: #0d6efd;    
-    --brand-forest: #065f46;    
-    --brand-hover: rgba(16, 185, 129, 0.05);
-    --div-bg: #f9fafb;           
-}
-
-html { overflow-y: scroll; scrollbar-gutter: stable; }
-
-.sticky-top {
-    background-color: #f8f9fa; 
-    padding: 10px 0 5px 0;
-    z-index: 1030 !important;
-    transition: all 0.3s ease;
-}
-
-.sticky-top .card {
-    box-shadow: 0 8px 30px rgba(0,0,0,0.12) !important;
-    border: 1px solid rgba(16, 185, 129, 0.1) !important;
-    border-bottom: 2px solid var(--brand-emerald) !important;
-}
-
-.institution-card { 
-    border: 1px solid #eef0f3 !important;
-     transition: box-shadow 0.3s ease;
-}
-
-.division-header { 
-    background-color: var(--div-bg) !important; 
-    border-left: 4px solid #6c757d !important;
-    border-bottom: 1px solid #f3f4f6;
-}
-
-.unit-block { 
-    border-left: 3px solid var(--brand-emerald); 
-    transition: background 0.2s; 
-}
-
-.collapse { 
-    transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1); 
-    will-change: height; 
-}
-.collapsing { 
-    position: relative;
-    height: 0;
-    overflow: hidden !important; 
-    transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.searchable-table {
-    table-layout: fixed !important; 
-    width: 100% !important;
-}
-
-.text-forest { color: var(--brand-forest) !important; }
-.text-emerald { color: var(--brand-emerald) !important; }
-.bg-emerald { background-color: var(--brand-emerald) !important; }
-.badge.bg-primary { background-color: var(--brand-emerald) !important; }
-
-.btn-primary { 
-    background-color: var(--brand-emerald) !important; 
-    border-color: var(--brand-emerald) !important; 
-}
-.border-primary {
-    --bs-border-opacity: 1;
-    border-color: rgb(16 185 129) !important;
-}
-.btn-primary:hover { background-color: #059669 !important; }
-
-.toggle-icon {
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 0.8rem;
-    color: #64748b; 
-}
-
-.division-header .btn {
-    position: relative;
-    z-index: 10; 
-    white-space: nowrap;
-}
-
-[aria-expanded="true"] .toggle-icon {
-    transform: rotate(90deg);
-    color: var(--brand-forest);
-}
-
-.division-header {
-    background-color: #f1f5f9 !important; 
-    border-left: 5px solid #475569 !important;
-    border-radius: 6px;
-    margin: 8px 0;
-    padding: 12px 20px !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    transition: all 0.2s ease;
-}
-
-.division-header:hover { background-color: #e2e8f0 !important; }
-.division-header .btn { white-space: nowrap; font-weight: 500; transition: transform 0.2s ease; }
-.division-header .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important; }
-.division-header .badge { font-size: 0.75rem; letter-spacing: 0.5px; }
-
-.unit-block {
-    background-color: #ffffff;
-    border: 1px solid #eef0f3;
-    border-left: 4px solid var(--brand-emerald);
-    border-radius: 8px;
-    margin: 5px 0 15px 30px; 
-    padding: 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04); 
-}
-
-.category-section {
-    transition: all 0.2s ease;
-}
-.category-section:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-
-.unit-block .table thead th {
-    background-color: #f8fafc;
-    border-top: none;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #64748b;
-}
-
-.report-row:hover .bi-truck {
-    transform: translateX(3px);
-    transition: transform 0.2s ease-in-out;
-    display: inline-block;
-}
-
-.match-group-highlight {
-    background: rgba(255, 243, 205, 0.35); 
-    border-left: 4px solid #ffc107;
-    border-radius: 6px;
-    padding: 8px;
-    transition: all 0.3s ease;
-}
-
-.report-row.match-highlight {
-    background-color: #fff3cd !important;
-    outline: 2px solid #ffc107;
-}
-
-#clearHighlightBtn { transition: all 0.3s ease; }
-#clearHighlightBtn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
-
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: #f1f1f1; }
-::-webkit-scrollbar-thumb { background: var(--brand-emerald); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #059669; }
-
-@media print { 
-    .no-print { display: none !important; }
-    .collapse { display: block !important; height: auto !important; overflow: visible !important; }
-    .toggle-icon { display: none !important; }
-    .sticky-top { position: static !important; }
-}
-</style>
 
 <?php
 $content = ob_get_clean();

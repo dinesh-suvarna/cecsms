@@ -35,33 +35,40 @@ if (isset($_POST['update_ewaste_status'])) {
         $stmt_fetch->execute();
         $res = $stmt_fetch->get_result()->fetch_assoc();
         
-        if ($res) {
-            $stock_id = $res['stock_detail_id'];
-            
-            if ($new_status === 'Scrapped') {
-                // Keep master stock history accurate
-                $stmt_stock = $conn->prepare("UPDATE stock_details SET status = 'disposed' WHERE id = ?");
-                $stmt_stock->bind_param("i", $stock_id);
-                $stmt_stock->execute();
-            } elseif ($new_status === 'Refurbished') {
-                // Item salvaged! Put it back in master inventory circulation pools
-                $stmt_stock = $conn->prepare("UPDATE stock_details SET status = 'available' WHERE id = ?");
-                $stmt_stock->bind_param("i", $stock_id);
-                $stmt_stock->execute();
-            }
-        }
+       if ($res) {
+        $stock_id = $res['stock_detail_id'];
         
-        $conn->commit();
-        $_SESSION['swal_type'] = "success";
-        $_SESSION['swal_msg'] = "E-waste status updated to " . str_replace('_', ' ', $new_status);
+        if ($new_status === 'Scrapped') {
+            $stmt_stock = $conn->prepare("UPDATE stock_details SET status = 'disposed' WHERE id = ?");
+            $stmt_stock->bind_param("i", $stock_id);
+            $stmt_stock->execute();
+        } elseif ($new_status === 'Refurbished') {
+            // 1. Restore item to central inventory pool
+            $stmt_stock = $conn->prepare("UPDATE stock_details SET status = 'available' WHERE id = ?");
+            $stmt_stock->bind_param("i", $stock_id);
+            $stmt_stock->execute();
+
+            // 2. Clear any lingering division assignment mapping
+            $stmt_clear_alloc = $conn->prepare("DELETE FROM division_assets WHERE stock_detail_id = ?");
+            $stmt_clear_alloc->bind_param("i", $stock_id);
+            $stmt_clear_alloc->execute();
+        }
+    } else {
+        throw new Exception("Linked stock detail record not found.");
+    }
+
+    $conn->commit();
+    $_SESSION['swal_type'] = "success";
+    $_SESSION['swal_msg'] = "E-waste status updated to " . str_replace('_', ' ', $new_status);
+
     } catch (Exception $e) {
         $conn->rollback();
         $_SESSION['swal_type'] = "error";
         $_SESSION['swal_msg'] = "Failed to update e-waste ledger record: " . $e->getMessage();
     }
-    
-    header("Location: " . $_SERVER['PHP_SELF']);
-    exit;
+
+header("Location: " . $_SERVER['PHP_SELF']);
+exit;
 }
 
 /* ================= FETCH UNCOMMENTED & ADJUSTED DATA ================= */

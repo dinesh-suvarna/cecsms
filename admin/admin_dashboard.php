@@ -4,22 +4,27 @@ require_once __DIR__ . "/../includes/session.php";
 
 $role = $_SESSION['role'] ?? '';
 
-// Handle Session-based hiding of dismissible broadcasts
+// Handle AJAX or POST dismissal for the current page state
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dismiss_announcement_id'])) {
     $dismiss_id = intval($_POST['dismiss_announcement_id']);
     if (!isset($_SESSION['dismissed_announcements'])) {
         $_SESSION['dismissed_announcements'] = [];
     }
     $_SESSION['dismissed_announcements'][] = $dismiss_id;
-    
-    // Maintain auto-open parameter if present, otherwise clean URL
-    header("Location: " . strtok($_SERVER['REQUEST_URI'], '?'));
+
+    // Redirect with a flag so we know this GET came from a dismissal action
+    header("Location: " . strtok($_SERVER['REQUEST_URI'], '?') . "?dismissed=1");
     exit;
+}
+
+// Clear session dismissals ONLY when user navigates fresh (not during post-dismissal redirect or published redirect)
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['broadcast_published']) && !isset($_GET['dismissed'])) {
+    unset($_SESSION['dismissed_announcements']);
 }
 
 $dismissed_ids = $_SESSION['dismissed_announcements'] ?? [];
 
-// Automatically expand broadcast viewer if freshly published
+// Automatically expand broadcast viewer if freshly published or newly dismissed
 $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published'] === '1';
 ?>
 
@@ -50,7 +55,7 @@ $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published
     max-width: 1320px;
 }
 
-/* Eye-Catching ERP Broadcast Styling */
+/*ERP Broadcast Styling */
 .erp-announcement-card {
     border: 1px solid var(--card-border);
     border-radius: 6px;
@@ -88,8 +93,8 @@ $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published
     border-color: var(--card-border-hover);
 }
 
-/* Modern Eye-Catching Alert Box */
-.erp-alert-item-eye-catchy {
+/* Modern Alert Box */
+.erp-alert-item {
     background: linear-gradient(135deg, #ffffff 0%, #f4f8fc 100%);
     border: 1px solid #b8d3e8;
     border-left: 5px solid #0066cc !important;
@@ -99,7 +104,7 @@ $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published
     position: relative;
     transition: var(--transition-smooth);
 }
-.erp-alert-item-eye-catchy:hover {
+.erp-alert-item:hover {
     border-color: #70a6d4;
     box-shadow: 0 6px 18px rgba(0, 102, 204, 0.14);
 }
@@ -116,15 +121,9 @@ $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published
 }
 
 @keyframes broadcastPulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(0, 102, 204, 0.7);
-    }
-    70% {
-        box-shadow: 0 0 0 8px rgba(0, 102, 204, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(0, 102, 204, 0);
-    }
+    0% { box-shadow: 0 0 0 0 rgba(0, 102, 204, 0.7); }
+    70% { box-shadow: 0 0 0 8px rgba(0, 102, 204, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 102, 204, 0); }
 }
 
 .erp-badge-role {
@@ -324,40 +323,53 @@ $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published
     color: #eef3f7;
 }
 
-@media (max-width: 991.98px) {
-    .dashboard-wrapper {
-        padding: 22px 0 30px;
-    }
+/* Continuous Bell Vibration Animation */
+@keyframes bellVibrate {
+    0% { transform: rotate(0); }
+    15% { transform: rotate(14deg); }
+    30% { transform: rotate(-14deg); }
+    45% { transform: rotate(10deg); }
+    60% { transform: rotate(-10deg); }
+    75% { transform: rotate(6deg); }
+    85% { transform: rotate(-6deg); }
+    100% { transform: rotate(0); }
+}
 
-    .elite-card {
-        min-height: 210px;
-    }
+.bell-vibrate {
+    display: inline-block;
+    animation: bellVibrate 1.5s infinite ease-in-out;
+    transform-origin: top center;
+}
+
+@media (max-width: 991.98px) {
+    .dashboard-wrapper { padding: 22px 0 30px; }
+    .elite-card { min-height: 210px; }
 }
 
 @media (max-width: 575.98px) {
-    .dashboard-wrapper {
-        padding: 16px 0 24px;
-    }
-
-    .dashboard-wrapper .row {
-        --bs-gutter-y: 1rem;
-    }
-
-    .elite-card {
-        min-height: 205px;
-        padding: 18px 18px 16px;
-    }
-
-    .status-badge {
-        font-size: 0.63rem;
-        padding: 4px 7px;
-    }
+    .dashboard-wrapper { padding: 16px 0 24px; }
+    .dashboard-wrapper .row { --bs-gutter-y: 1rem; }
+    .elite-card { min-height: 205px; padding: 18px 18px 16px; }
+    .status-badge { font-size: 0.63rem; padding: 4px 7px; }
 }
 </style>
 
 <div class="dashboard-wrapper">
     <div class="container">
+        <?php
+            require_once __DIR__ . "/../includes/announcement_fetcher.php";
+            $announcements = get_role_announcements();
+            $active_broadcast_count = 0;
 
+            if ($announcements && $announcements->num_rows > 0) {
+                while ($c_row = $announcements->fetch_assoc()) {
+                    if (!in_array($c_row['id'], $dismissed_ids)) {
+                        $active_broadcast_count++;
+                    }
+                }
+                $announcements->data_seek(0);
+            }
+        ?>
         <!-- Toolbar -->
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
@@ -370,10 +382,21 @@ $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published
                         type="button" 
                         data-bs-toggle="collapse" 
                         data-bs-target="#announcementsDisplayCollapse" 
-                        aria-expanded="<?= $auto_expand ? 'true' : 'false' ?>" 
+                        aria-expanded="<?= ($active_broadcast_count > 0 || $auto_expand) ? 'true' : 'false' ?>" 
                         aria-controls="announcementsDisplayCollapse">
                     <i class="bi bi-megaphone-fill text-primary"></i>
                     <span>Show Broadcast Messages</span>
+                    
+                    <!-- Active Counter Badge -->
+                    <?php if ($active_broadcast_count > 0): ?>
+                        <span class="badge bg-danger rounded-pill px-2 py-1 ms-1" style="font-size: 0.72rem;">
+                            <?= $active_broadcast_count ?>
+                        </span>
+                    <?php else: ?>
+                        <span class="badge bg-secondary rounded-pill px-2 py-1 ms-1 opacity-75" style="font-size: 0.72rem;">
+                            0
+                        </span>
+                    <?php endif; ?>
                 </button>
 
                 <!-- Broadcast Update Button (SuperAdmin Only) -->
@@ -397,7 +420,6 @@ $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published
             <div class="card erp-announcement-card">
                 <div class="card-header erp-announcement-header d-flex align-items-center justify-content-between py-2 px-3">
                     <span class="small fw-semibold"><i class="bi bi-megaphone me-2"></i> Create System Announcement</span>
-                    <!-- <span class="badge bg-secondary text-light fw-normal" style="font-size: 0.68rem;">Developer Console</span> -->
                 </div>
                 <div class="card-body p-3">
                     <form action="/cecsms/includes/post_announcement.php" method="POST">
@@ -432,24 +454,22 @@ $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published
         <?php endif; ?>
 
         <!-- Collapsible Active Broadcast Messages Container -->
-        <!-- Automatically opens ONLY when $auto_expand is true (i.e. fresh publish) -->
-        <div class="collapse <?= $auto_expand ? 'show' : '' ?> mb-3" id="announcementsDisplayCollapse">
+        <div class="collapse <?= ($active_broadcast_count > 0 || $auto_expand) ? 'show' : '' ?> mb-3" id="announcementsDisplayCollapse">
             <?php 
-            require_once __DIR__ . "/../includes/announcement_fetcher.php";
-            $announcements = get_role_announcements();
             $has_visible = false;
 
             if ($announcements && $announcements->num_rows > 0):
                 while ($row = $announcements->fetch_assoc()):
                     $is_dismissed = in_array($row['id'], $dismissed_ids);
-                    if (!$is_dismissed) {
+                    if (!$is_dismissed):
                         $has_visible = true;
-                    }
             ?>
-                <!-- Eye-Catchy Broadcast Card -->
-                <div class="erp-alert-item-eye-catchy d-flex align-items-center justify-content-between mb-2 <?= $is_dismissed ? 'opacity-50' : '' ?>">
+                <!-- Broadcast Card -->
+                <div class="erp-alert-item d-flex align-items-center justify-content-between mb-2">
                     <div class="d-flex align-items-center gap-3 overflow-hidden me-3">
-                        <span class="broadcast-pulse-dot flex-shrink-0" title="Active Broadcast"></span>
+                        <div class="bg-primary-subtle p-1.5 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 28px; height: 28px;">
+                            <i class="bi bi-bell-fill text-primary bell-vibrate"></i>
+                        </div>
                         <span class="erp-badge-role text-uppercase flex-shrink-0"><?= htmlspecialchars($row['sender_role']) ?></span>
                         <div class="text-truncate small text-dark">
                             <strong class="text-primary me-1"><?= htmlspecialchars($row['title']) ?>:</strong> 
@@ -470,21 +490,18 @@ $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published
                         <?php endif; ?>
 
                         <!-- Session Hide / Dismiss -->
-                        <?php if (!$is_dismissed): ?>
                         <form method="POST" class="d-inline">
                             <input type="hidden" name="dismiss_announcement_id" value="<?= $row['id'] ?>">
                             <button type="submit" class="btn-close small opacity-75 ms-1" aria-label="Close" title="Hide for this session"></button>
                         </form>
-                        <?php else: ?>
-                        <span class="badge bg-light text-muted border ms-1" style="font-size:0.65rem;">Dismissed</span>
-                        <?php endif; ?>
                     </div>
                 </div>
             <?php 
+                    endif;
                 endwhile;
             endif;
 
-            if (!$has_visible && (!$announcements || $announcements->num_rows === 0)):
+            if (!$has_visible):
             ?>
                 <div class="text-muted small italic p-3 text-center border rounded bg-white shadow-sm">
                     <i class="bi bi-info-circle text-primary me-1"></i> No broadcast announcements found.
@@ -494,7 +511,6 @@ $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published
 
         <!-- Dashboard Module Grid -->
         <div class="row g-4">
-
             <?php if(in_array($role, ['Admin', 'SuperAdmin'])): ?>
             <div class="col-lg-4 col-md-6">
                 <a href="/cecsms/users/manage_users.php" class="elite-card accent-blue">
@@ -547,14 +563,7 @@ $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published
                 <a href="/cecsms/services/index.php" class="elite-card accent-navy">
                     <div class="card-header-row">
                          <div class="icon-wrapper service-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 64 64"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2.2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <rect x="5" y="9" width="28" height="20" rx="2"/>
                                 <rect x="8" y="12" width="22" height="14" rx="1"/>
                                 <path d="M16 29v5"/>
@@ -602,14 +611,7 @@ $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published
                 <a href="/cecsms/furniture_stock/furniture_dashboard.php" class="elite-card accent-navy">
                     <div class="card-header-row">
                          <div class="icon-wrapper furniture-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 64 64"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2.5"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M10 22h40"/>
                                 <path d="M14 22v27"/>
                                 <path d="M46 22v27"/>
@@ -637,14 +639,7 @@ $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published
                 <a href="/cecsms/electrical_stock/electricals_dashboard.php" class="elite-card accent-blue">
                     <div class="card-header-row">
                          <div class="icon-wrapper electrical-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 64 64"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2.2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M27 5h10"/>
                                 <path d="M27 5c0 3 2 5 5 5s5-2 5-5"/>
                                 <path d="M31 10v10"/>
@@ -693,7 +688,6 @@ $auto_expand = isset($_GET['broadcast_published']) && $_GET['broadcast_published
                 </a>
             </div>
             <?php endif; ?>
-
         </div>
     </div>
 </div>

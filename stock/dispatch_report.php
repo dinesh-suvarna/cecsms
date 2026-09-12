@@ -57,7 +57,6 @@ while($row = $result->fetch_assoc()){
     $div  = $row['division_name'] ?? 'Unknown';
     $unit_label = ($row['unit_code'] ? $row['unit_code'] . " - " : "") . ($row['unit_name'] ?? 'General/Unassigned');
     
-    // Grouping identifier using Model Name, falling back to Item Name if no model exists
     $model_group = !empty($row['model_name']) ? $row['model_name'] : (!empty($row['item_name']) ? $row['item_name'] : 'Unknown Model');
 
     $grouped[$inst]['id'] = $row['institution_id'];
@@ -69,16 +68,13 @@ while($row = $result->fetch_assoc()){
     $grouped[$inst]['divisions'][$div]['units'][$unit_label]['id'] = $row['unit_id'];
     $grouped[$inst]['divisions'][$div]['units'][$unit_label]['computer_total'] ??= 0;
     
-    // Grouping by Model Group inside the Unit array
     $grouped[$inst]['divisions'][$div]['units'][$unit_label]['models'][$model_group]['rows'][] = $row;
     $grouped[$inst]['divisions'][$div]['units'][$unit_label]['models'][$model_group]['total_qty'] ??= 0;
 
     $qty = !empty($row['serial_number']) ? 1 : (int)$row['quantity'];
     
-    // Increment the total count for this model subset
     $grouped[$inst]['divisions'][$div]['units'][$unit_label]['models'][$model_group]['total_qty'] += $qty;
     
-    // Keep target metric tracking specifically for PC categories
     if($row['category'] === 'Computer'){
         $grouped[$inst]['computer_total'] += $qty;
         $grouped[$inst]['divisions'][$div]['computer_total'] += $qty;
@@ -92,25 +88,25 @@ while($row = $result->fetch_assoc()){
         --brand-primary: #123b63;
         --brand-navy: #0b2942;
         --brand-white: #ffffff;
-        --bg-surface: #f3f5f7;
+        --bg-surface: #f8fafc;
         --card-bg: #ffffff;
-        --card-border: #d9e0e7;
-        --card-border-hover: #b8c5d1;
-        --text-primary: #18344d;
-        --text-body: #4b5f72;
-        --text-muted: #6b7c8c;
-        --shadow-subtle: 0 1px 2px rgba(20, 45, 70, 0.06);
-        --shadow-hover: 0 4px 12px rgba(20, 45, 70, 0.10);
-        --transition-smooth: all 0.18s ease;
+        --card-border: #e2e8f0;
+        --card-border-hover: #cbd5e1;
+        --text-primary: #1e293b;
+        --text-body: #475569;
+        --text-muted: #64748b;
+        --shadow-subtle: 0 1px 3px rgba(15, 23, 42, 0.05);
+        --shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.08);
+        --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     html { overflow-y: scroll; scrollbar-gutter: stable; }
 
-    /* Sticky Control Header Card */
+    /* Sticky Filter Card */
     .filter-card-modern {
         background: var(--card-bg);
         border: 1px solid var(--card-border);
-        border-radius: 6px;
+        border-radius: 8px;
         box-shadow: var(--shadow-subtle);
         overflow: hidden;
     }
@@ -119,8 +115,6 @@ while($row = $result->fetch_assoc()){
         background-color: var(--brand-navy);
         color: var(--brand-white);
         padding: 0.75rem 1.25rem;
-        border-top-left-radius: 5px;
-        border-top-right-radius: 5px;
     }
 
     .form-label-custom {
@@ -135,11 +129,11 @@ while($row = $result->fetch_assoc()){
         gap: 4px;
     }
 
-    .form-control-custom, .form-select-custom, .auto-resize-select {
-        border-radius: 4px;
+    .form-control-custom, .form-select-custom {
+        border-radius: 6px;
         border: 1px solid var(--card-border);
-        padding: 0.4rem 0.75rem;
-        font-size: 0.82rem;
+        padding: 0.45rem 0.75rem;
+        font-size: 0.84rem;
         font-weight: 500;
         color: var(--text-primary);
         background-color: #f8fafc;
@@ -156,10 +150,10 @@ while($row = $result->fetch_assoc()){
         background-color: var(--brand-primary);
         color: var(--brand-white) !important;
         border: 1px solid var(--brand-navy);
-        border-radius: 4px;
-        font-weight: 500;
-        font-size: 0.82rem;
-        padding: 0.4rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.84rem;
+        padding: 0.45rem 1rem;
         transition: var(--transition-smooth);
     }
 
@@ -172,66 +166,70 @@ while($row = $result->fetch_assoc()){
         background-color: var(--card-bg);
         color: var(--brand-primary) !important;
         border: 1px solid var(--card-border);
-        border-radius: 4px;
-        font-weight: 500;
-        font-size: 0.82rem;
-        padding: 0.4rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.84rem;
+        padding: 0.45rem 1rem;
         transition: var(--transition-smooth);
     }
 
     .btn-outline-navy:hover {
-        background-color: #eef3f7;
+        background-color: #f1f5f9;
         color: var(--brand-navy) !important;
         border-color: var(--card-border-hover);
     }
 
-    /* Hierarchy Accordion Styles */
+    /* Hierarchy Accordion Core UI */
     .institution-card { 
         border: 1px solid var(--card-border) !important;
-        border-radius: 6px;
+        border-radius: 8px !important;
         background: var(--card-bg);
         box-shadow: var(--shadow-subtle);
+        transition: var(--transition-smooth);
     }
 
     .inst-header {
         background-color: #ffffff !important;
         border-left: 5px solid var(--brand-navy) !important;
-        padding: 1rem 1.25rem;
+        padding: 0.9rem 1.25rem;
         transition: background 0.2s ease;
     }
-    .inst-header:hover {
-        background-color: #f8fafc !important;
-    }
+    .inst-header:hover { background-color: #f8fafc !important; }
 
     .division-header { 
-        background-color: #f1f5f9 !important; 
+        background-color: #f8fafc !important; 
+        border: 1px solid var(--card-border);
         border-left: 4px solid var(--brand-primary) !important;
-        border-radius: 4px;
-        margin: 6px 0;
-        padding: 10px 16px !important;
-        transition: all 0.2s ease;
+        border-radius: 6px;
+        margin: 8px 0;
+        padding: 10px 14px !important;
+        transition: var(--transition-smooth);
     }
-    .division-header:hover { 
-        background-color: #e2e8f0 !important; 
-    }
+    .division-header:hover { background-color: #f1f5f9 !important; }
 
+    /* Collapsible Unit Card */
     .unit-block {
         background-color: #ffffff;
         border: 1px solid var(--card-border);
-        border-left: 3px solid var(--brand-primary);
+        border-left: 3px solid #0284c7;
         border-radius: 6px;
-        margin: 6px 0 12px 18px; 
-        padding: 12px 16px;
-        box-shadow: var(--shadow-subtle); 
+        margin: 6px 0 10px 16px; 
+        box-shadow: var(--shadow-subtle);
+        overflow: hidden;
     }
+
+    .unit-header {
+        padding: 10px 14px;
+        background-color: #ffffff;
+        transition: background 0.2s ease;
+    }
+    .unit-header:hover { background-color: #f8fafc; }
 
     .category-section {
         border: 1px solid var(--card-border);
-        border-radius: 4px;
-        transition: all 0.2s ease;
-    }
-    .category-section:hover {
-        box-shadow: var(--shadow-hover);
+        border-radius: 6px;
+        margin-bottom: 8px;
+        overflow: hidden;
     }
 
     .category-header {
@@ -241,9 +239,13 @@ while($row = $result->fetch_assoc()){
         font-size: 0.78rem;
         font-weight: 700;
         color: var(--brand-navy);
+        transition: background 0.2s ease;
+    }
+    .category-header:hover {
+        background-color: #f1f5f9;
     }
 
-    /* Table Custom Styles */
+    /* Modern Table UI */
     .table-custom {
         table-layout: fixed !important;
         width: 100% !important;
@@ -251,12 +253,12 @@ while($row = $result->fetch_assoc()){
     }
 
     .table-custom th {
-        background-color: #f1f5f9 !important;
-        color: var(--brand-navy) !important;
+        background-color: #f8fafc !important;
+        color: var(--text-muted) !important;
         font-weight: 700;
         text-transform: uppercase;
-        font-size: 0.72rem;
-        letter-spacing: 0.04em;
+        font-size: 0.70rem;
+        letter-spacing: 0.05em;
         border-bottom: 1px solid var(--card-border);
         padding: 8px 12px;
     }
@@ -264,12 +266,12 @@ while($row = $result->fetch_assoc()){
     .table-custom td {
         padding: 8px 12px;
         font-size: 0.82rem;
-        border-bottom: 1px solid #eef2f6;
+        border-bottom: 1px solid #f1f5f9;
         color: var(--text-primary);
     }
 
     .toggle-icon {
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: transform 0.25s ease;
         font-size: 0.8rem;
         color: var(--text-muted); 
     }
@@ -280,9 +282,9 @@ while($row = $result->fetch_assoc()){
     }
 
     .badge-navy {
-        background-color: #eef3f7;
-        color: var(--brand-navy);
-        border: 1px solid var(--card-border);
+        background-color: #eff6ff;
+        color: var(--brand-primary);
+        border: 1px solid #bfdbfe;
         font-weight: 600;
         font-size: 0.75rem;
     }
@@ -295,16 +297,13 @@ while($row = $result->fetch_assoc()){
     }
 
     .match-group-highlight {
-        background: rgba(255, 193, 7, 0.15); 
-        border-left: 4px solid #ffc107;
+        background: rgba(255, 193, 7, 0.12); 
+        border-left: 4px solid #ffc107 !important;
         border-radius: 6px;
-        padding: 8px;
-        transition: all 0.3s ease;
     }
 
     .report-row.match-highlight {
-        background-color: #fff3cd !important;
-        outline: 2px solid #ffc107;
+        background-color: #fef3c7 !important;
     }
 
     @media print { 
@@ -336,7 +335,7 @@ while($row = $result->fetch_assoc()){
                         <label class="form-label-custom"><i class="bi bi-calendar-event me-1"></i>To Date</label>
                         <input type="date" name="to_date" class="form-control form-control-custom w-100" value="<?= $to_date ?>">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label-custom"><i class="bi bi-building me-1"></i>Institution</label>
                         <select name="institution_id" class="form-select form-select-custom w-100">
                             <option value="">All Institutions</option>
@@ -345,10 +344,13 @@ while($row = $result->fetch_assoc()){
                             <?php endwhile; ?>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-navy w-100">
+                    <div class="col-md-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-navy flex-fill">
                             <i class="bi bi-filter me-1"></i> Apply
                         </button>
+                        <a href="dispatch_report.php" class="btn btn-outline-navy flex-fill text-center">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                        </a>
                     </div>
                 </form>
 
@@ -379,9 +381,9 @@ while($row = $result->fetch_assoc()){
         ?>
         <div class="card institution-card overflow-hidden mb-3">
             <div class="card-header inst-header d-flex justify-content-between align-items-center toggle-header" 
-                 data-bs-toggle="collapse" data-bs-target="#body_<?= $inst_id ?>" style="cursor:pointer;">
+                 data-bs-toggle="collapse" data-bs-target="#body_<?= $inst_id ?>" style="cursor:pointer;" aria-expanded="false">
                 <h6 class="mb-0 fw-bold d-flex align-items-center gap-2" style="color: var(--brand-navy);">
-                    <i class="bi bi-caret-right-fill toggle-icon"></i>
+                    <i class="bi bi-chevron-right toggle-icon"></i>
                     <i class="bi bi-building me-1" style="color: var(--brand-primary);"></i> <?= htmlspecialchars($institution) ?>
                 </h6>
                 <span class="badge badge-navy rounded-pill px-3 py-1"><?= $instData['computer_total'] ?> PCs</span>
@@ -395,10 +397,10 @@ while($row = $result->fetch_assoc()){
                         <div class="division-header d-flex justify-content-between align-items-center toggle-header" 
                             data-bs-toggle="collapse" 
                             data-bs-target="#div_body_<?= $div_id ?>" 
-                            style="cursor:pointer;">
+                            style="cursor:pointer;" aria-expanded="false">
                             
                             <div class="fw-bold d-flex align-items-center">
-                                <i class="bi bi-caret-right-fill me-2 toggle-icon"></i>
+                                <i class="bi bi-chevron-right me-2 toggle-icon"></i>
                                 <span class="text-dark me-2">
                                     <i class="bi bi-diagram-3 me-2 opacity-50"></i><?= htmlspecialchars($division) ?>
                                 </span>
@@ -423,15 +425,17 @@ while($row = $result->fetch_assoc()){
                                 <?php foreach($divData['units'] as $unit => $unitData): 
                                     $unit_id = "unit_" . md5($institution . $division . $unit);
                                 ?>
+                                    <!-- LEVEL 3: UNIT COLLAPSIBLE CONTAINER -->
                                     <div class="unit-block">
-                                        <div class="d-flex justify-content-between align-items-center mb-2 toggle-header" 
-                                             data-bs-toggle="collapse" data-bs-target="#unit_container_<?= $unit_id ?>" style="cursor:pointer;">
-                                            <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1" style="font-size: 0.88rem;">
-                                                <i class="bi bi-caret-right-fill me-1 toggle-icon"></i>
+                                        <div class="unit-header d-flex justify-content-between align-items-center toggle-header" 
+                                             data-bs-toggle="collapse" data-bs-target="#unit_container_<?= $unit_id ?>" style="cursor:pointer;" aria-expanded="false">
+                                            <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2" style="font-size: 0.86rem;">
+                                                <i class="bi bi-chevron-right toggle-icon"></i>
+                                                <i class="bi bi-geo-alt text-secondary"></i>
                                                 <?= htmlspecialchars($unit) ?>
                                             </h6>
                                             <div class="d-flex align-items-center gap-3">
-                                                <span class="text-muted small fw-semibold"><?= $unitData['computer_total'] ?> PCs</span>
+                                                <span class="badge bg-light text-dark border" style="font-size:0.7rem;"><?= $unitData['computer_total'] ?> PCs</span>
                                                 <a href="print_unit_report.php?id=<?= $unitData['id'] ?>" 
                                                 target="_blank" 
                                                 class="btn btn-outline-navy btn-sm no-print px-2 py-0" 
@@ -441,7 +445,7 @@ while($row = $result->fetch_assoc()){
                                             </div>
                                         </div>
 
-                                        <div id="unit_container_<?= $unit_id ?>" class="collapse show">
+                                        <div id="unit_container_<?= $unit_id ?>" class="collapse p-3 border-top bg-light">
                                             <?php foreach($unitData['models'] as $modelName => $modelData): 
                                                 $model_md5 = md5($institution . $division . $unit . $modelName);
                                                 
@@ -482,16 +486,18 @@ while($row = $result->fetch_assoc()){
                                                     $itemIcon = 'bi-box'; 
                                                 }
                                             ?>
-                                                <div class="category-section mt-3 mb-2 overflow-hidden bg-light">
-                                                    <div class="category-header d-flex justify-content-between align-items-center" 
-                                                         data-bs-toggle="collapse" data-bs-target="#table_<?= $model_md5 ?>" style="cursor: pointer;">
+                                                <!-- LEVEL 4: MODEL / CATEGORY COLLAPSIBLE SECTION (DEFAULT COLLAPSED) -->
+                                                <div class="category-section bg-white">
+                                                    <div class="category-header d-flex justify-content-between align-items-center toggle-header" 
+                                                         data-bs-toggle="collapse" data-bs-target="#table_<?= $model_md5 ?>" style="cursor: pointer;" aria-expanded="false">
                                                         <span class="tracking-wider d-flex align-items-center">
+                                                            <i class="bi bi-chevron-right me-2 toggle-icon"></i>
                                                             <i class="bi <?= $itemIcon ?> me-2" style="color: var(--brand-primary);"></i><?= htmlspecialchars($modelName) ?>
                                                         </span>
                                                         <span class="badge bg-secondary text-white rounded-pill" style="font-size:0.7rem;"><?= $modelData['total_qty'] ?> Qty</span>
                                                     </div>
                                                     
-                                                    <div id="table_<?= $model_md5 ?>" class="collapse show bg-white">
+                                                    <div id="table_<?= $model_md5 ?>" class="collapse bg-white">
                                                         <div class="table-responsive">
                                                             <table class="table table-custom align-middle searchable-table">
                                                                 <thead>
@@ -553,29 +559,6 @@ while($row = $result->fetch_assoc()){
 document.addEventListener("DOMContentLoaded", function() {
     let isAllExpanded = false; 
 
-    // Bootstrap collapse listeners
-    const collapseElements = document.querySelectorAll('.collapse');
-    collapseElements.forEach(el => {
-        el.addEventListener('show.bs.collapse', function (e) {
-            e.stopPropagation();
-            this.style.overflow = 'hidden'; 
-            const header = document.querySelector(`[data-bs-target="#${this.id}"]`);
-            if (header) {
-                const icon = header.querySelector('.toggle-icon');
-                if (icon) icon.classList.replace('bi-caret-right-fill', 'bi-chevron-down');
-            }
-        });
-
-        el.addEventListener('hide.bs.collapse', function (e) {
-            e.stopPropagation();
-            const header = document.querySelector(`[data-bs-target="#${this.id}"]`);
-            if (header) {
-                const icon = header.querySelector('.toggle-icon');
-                if (icon) icon.classList.replace('bi-chevron-down', 'bi-caret-right-fill');
-            }
-        });
-    });
-
     // Global toggle button logic
     window.handleGlobalToggle = function() {
         isAllExpanded = !isAllExpanded;
@@ -583,7 +566,7 @@ document.addEventListener("DOMContentLoaded", function() {
     };
 
     function updateToggleUI(show) {
-        const allCollapsibles = document.querySelectorAll('.collapse');
+        const allCollapsibles = document.querySelectorAll('#reportContent .collapse');
         const btn = document.getElementById('globalToggleBtn');
         const txt = document.getElementById('toggleText');
         const icon = btn.querySelector('i');
@@ -605,16 +588,28 @@ document.addEventListener("DOMContentLoaded", function() {
         isAllExpanded = show;
     }
 
-    // Live search logic
+    // Dynamic Search & Smart Filtered Accordion Expansion Logic
     document.getElementById('reportSearch').addEventListener('input', function() {
-        let filter = this.value.toUpperCase();
+        let filter = this.value.toUpperCase().trim();
         let rows = document.querySelectorAll('.report-row');
 
         if (filter.length === 0) {
+            // Reset state: Hide all collapsibles and show all structural containers
+            document.querySelectorAll('#reportContent .collapse').forEach(el => {
+                let bs = bootstrap.Collapse.getInstance(el) || new bootstrap.Collapse(el, { toggle: false });
+                bs.hide();
+            });
+            document.querySelectorAll('.report-row, .category-section, .unit-block, .division-header, .institution-card').forEach(el => {
+                el.style.display = "";
+            });
             updateToggleUI(false); 
-            rows.forEach(row => row.style.display = ""); 
             return;
         }
+
+        // Hide structural blocks initially during search
+        document.querySelectorAll('.institution-card, .unit-block, .category-section').forEach(el => {
+            el.style.display = "none";
+        });
 
         rows.forEach(row => {
             let itemName = row.querySelector('.item-name').textContent.toUpperCase();
@@ -622,16 +617,28 @@ document.addEventListener("DOMContentLoaded", function() {
             
             if (itemName.indexOf(filter) > -1 || serial.indexOf(filter) > -1) {
                 row.style.display = "";
-                expandParents(row);
+                
+                // Show matching row's immediate section and parent blocks
+                let catSection = row.closest('.category-section');
+                if (catSection) catSection.style.display = "";
+
+                let unitBlock = row.closest('.unit-block');
+                if (unitBlock) unitBlock.style.display = "";
+
+                let instCard = row.closest('.institution-card');
+                if (instCard) instCard.style.display = "";
+
+                expandMatchingParents(row);
             } else {
                 row.style.display = "none";
             }
         });
     });
 
-    function expandParents(el) {
+    // Recursively expand parent accordions for matched elements
+    function expandMatchingParents(el) {
         let parent = el.closest('.collapse');
-        while(parent) {
+        while (parent) {
             let bsCollapse = bootstrap.Collapse.getInstance(parent) || new bootstrap.Collapse(parent, { toggle: false });
             bsCollapse.show();
             parent = parent.parentElement.closest('.collapse');
@@ -639,6 +646,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 
+// Deep link highlight handler from stock details page
 window.addEventListener("load", function(){
     const params = new URLSearchParams(window.location.search);
     const stockId = params.get("stock_id");

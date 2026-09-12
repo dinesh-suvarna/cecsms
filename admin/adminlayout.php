@@ -273,11 +273,11 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
                     <span><i class="bi bi-plug-fill me-2"></i> Electrical Stock</span>
                 </a>
 
-                <?php if($role === ROLE_SUPERADMIN): ?>
+                <?php if ($role === ROLE_SUPERADMIN || $role === 'SuperAdmin'): ?>
                     <li class="nav-item list-unstyled">
-                        <a class="nav-link <?= ($page_title == 'Lifecycle Approvals') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">
+                        <a class="nav-link <?= ($page_title == 'Lifecycle Management & Audit Logs') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">
                             <span><i class="bi bi-arrow-down-left-square me-2"></i> Stock Transitions</span>
-                            <?php if ($pending_count > 0): ?>
+                            <?php if (!empty($pending_count) && $pending_count > 0): ?>
                                 <span class="badge rounded-pill bg-warning text-dark ms-auto extra-small"><?= $pending_count ?></span>
                             <?php endif; ?>
                         </a>

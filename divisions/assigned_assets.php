@@ -25,19 +25,21 @@ if (isset($_POST['update_asset_id'])) {
     exit;
 }
 
-/* ================= HANDLE ASSET ACTION ================= */
-if (isset($_POST['asset_action'])) {
-    $db_id    = (int)$_POST['asset_id']; //ID from division_assets
-    $action   = $_POST['asset_action'];
-    $user_id  = $_SESSION['user_id'] ?? null;
+/* ================= HANDLE SINGLE LIFECYCLE ACTION REQUEST ================= */
+if (isset($_POST['submit_lifecycle_request'])) {
+    $db_id        = (int)$_POST['asset_id']; // ID from division_assets
+    $user_id     = $_SESSION['user_id'] ?? null;
     $user_remarks = trim($_POST['remarks'] ?? '');
 
-    $status_map = [
-        "return"  => "return_requested", 
-        "repair"  => "repair_requested", 
-        "dispose" => "dispose_requested"
-    ];
-    $status = $status_map[$action] ?? 'assigned';
+    if (empty($user_remarks)) {
+        $_SESSION['swal_type'] = "error";
+        $_SESSION['swal_msg']  = "Please provide a reason or justification for this request.";
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
+    }
+
+    // Default status set to lifecycle request pending Super Admin review
+    $status = 'return_requested';
 
     // 1. FETCH THE PERMANENT STOCK_DETAIL_ID FIRST
     $stmt_fetch = $conn->prepare("SELECT stock_detail_id FROM division_assets WHERE id = ?");
@@ -49,23 +51,21 @@ if (isset($_POST['asset_action'])) {
     if ($asset_data) {
         $permanent_stock_id = $asset_data['stock_detail_id'];
 
-        // 2. UPDATE THE ASSET STATUS IN DIVISION_ASSETS
+        // 2. UPDATE THE ASSET STATUS IN DIVISION_ASSETS TO PENDING REVIEW
         $stmt = $conn->prepare("UPDATE division_assets SET status = ? WHERE id = ?");
         $stmt->bind_param("si", $status, $db_id);
         $stmt->execute();
 
-        // 3. INSERT INTO ASSET_LOGS USING THE PERMANENT ID
-        $log_notes = !empty($user_remarks) ? $user_remarks : "Lifecycle request: " . str_replace('_', ' ', $status);
-        
+        // 3. INSERT INTO ASSET_LOGS WITH THE DIVISION ADMIN'S REASON
         $log_stmt = $conn->prepare("INSERT INTO asset_logs (asset_id, action_type, performed_by, notes) VALUES (?, ?, ?, ?)");
-        $log_stmt->bind_param("isis", $permanent_stock_id, $status, $user_id, $log_notes);
+        $log_stmt->bind_param("isis", $permanent_stock_id, $status, $user_id, $user_remarks);
         $log_stmt->execute();
 
         $_SESSION['swal_type'] = "success";
-        $_SESSION['swal_msg'] = "Request submitted successfully.";
+        $_SESSION['swal_msg']  = "Lifecycle action request submitted to Super Admin for approval.";
     } else {
         $_SESSION['swal_type'] = "error";
-        $_SESSION['swal_msg'] = "Asset not found in registry.";
+        $_SESSION['swal_msg']  = "Asset not found in registry.";
     }
 
     header("Location: " . $_SERVER['PHP_SELF']);
@@ -73,7 +73,7 @@ if (isset($_POST['asset_action'])) {
 }
 
 /* ================= HELPERS ================= */
-function getAssetIcon($itemName, $category = '') {
+function getAssetIcon(string $itemName, $category = '') {
     $name = strtolower($itemName);
     $cat  = strtolower($category);
     
@@ -94,7 +94,7 @@ function getAssetIcon($itemName, $category = '') {
         case (strpos($name, 'router') !== false):
             return 'bi-router';
         case ($cat === 'networking'):
-            return 'bi-diagram-3'; // Fallback for general networking category
+            return 'bi-diagram-3';
 
         // Peripherals & Accessories
         case (strpos($name, 'printer') !== false):
@@ -187,7 +187,7 @@ ob_start();
 
 .asset-group-button {
     width: 100%;
-    background-color: #f0f4f8; /* Light blue-gray tint */
+    background-color: #f0f4f8;
     border: none;
     border-bottom: 1px solid #cbd5e1;
     padding: 0.75rem 1rem;
@@ -195,18 +195,9 @@ ob_start();
     transition: background-color 0.15s ease-in-out;
 }
 
-.asset-group-button:hover {
-    background-color: #e2e8f0;
-}
-
-.asset-group-button:focus {
-    outline: none;
-    box-shadow: none;
-}
-
-.asset-group-button.collapsed {
-    border-bottom: none;
-}
+.asset-group-button:hover { background-color: #e2e8f0; }
+.asset-group-button:focus { outline: none; box-shadow: none; }
+.asset-group-button.collapsed { border-bottom: none; }
 
 .asset-group-button::after {
     flex-shrink: 0;
@@ -220,15 +211,10 @@ ob_start();
     transition: transform 0.2s ease-in-out;
 }
 
-.asset-group-button:not(.collapsed)::after {
-    transform: rotate(-180deg);
-}
+.asset-group-button:not(.collapsed)::after { transform: rotate(-180deg); }
 
 /* Minimal Table & Normal Typography */
-.table-erp-minimal {
-    margin-bottom: 0;
-}
-
+.table-erp-minimal { margin-bottom: 0; }
 .table-erp-minimal th {
     background-color: #ffffff;
     color: #475569;
@@ -248,16 +234,9 @@ ob_start();
     font-style: normal !important;
 }
 
-.table-erp-minimal tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.table-erp-minimal tbody tr:hover {
-    background-color: #f1f5f9 !important; 
-}
-.hover-row:hover td {
-    background-color: #e2e8f0 !important; /* Soft light blue/gray hover background */
-}
+.table-erp-minimal tbody tr:last-child td { border-bottom: none; }
+.table-erp-minimal tbody tr:hover { background-color: #f1f5f9 !important; }
+.hover-row:hover td { background-color: #e2e8f0 !important; }
 
 .btn-erp-outline {
     font-weight: 600;
@@ -353,7 +332,7 @@ ob_start();
                                                     <th style="width: 70px;">Sl. No</th>
                                                     <th>Serial Number</th>
                                                     <th>Asset Tag / ID</th>
-                                                    <th class="text-end">Lifecycle Action</th>
+                                                    <th class="text-end">Asset Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -381,7 +360,7 @@ ob_start();
                                                                 '<?= addslashes($asset['serial_number'] ?: 'N/A') ?>',
                                                                 '<?= getAssetIcon($asset['item_name'], $asset['category'] ?? '') ?>'
                                                             )">
-                                                            <i class="bi bi-sliders me-1"></i> Manage
+                                                            <i class="bi bi-send me-1"></i> Service / Return
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -402,6 +381,17 @@ ob_start();
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<?php if(isset($_SESSION['swal_msg'])): ?>
+<script>
+    Swal.fire({
+        icon: '<?= $_SESSION['swal_type'] ?>',
+        title: '<?= $_SESSION['swal_type'] == "success" ? "Success" : "Error" ?>',
+        text: '<?= $_SESSION['swal_msg'] ?>',
+        timer: 3000, showConfirmButton: false, toast: true, position: 'top-end'
+    });
+</script>
+<?php unset($_SESSION['swal_type'], $_SESSION['swal_msg']); endif; ?>
+
 <script>
     function openEditIdModal(id, tag) {
         document.getElementById('edit_db_id').value = id;
@@ -423,45 +413,43 @@ ob_start();
         new bootstrap.Modal(document.getElementById('manageModal')).show();
     }
 
-    function prepareAction(type) {
+    function submitSingleRequest() {
         const assetId = document.getElementById('hidden_asset_id').value;
         const assetTag = document.getElementById('disp_asset_id').innerText;
-        const remarks = document.getElementById('action_remarks').value;
+        const remarks = document.getElementById('action_remarks').value.trim();
 
-        handleAssetAction(type, assetId, assetTag, remarks);
-    }
+        if (!remarks) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Remarks Required',
+                text: 'Please provide a reason or justification note before submitting.',
+                confirmButtonColor: '#123b63'
+            });
+            return;
+        }
 
-    function handleAssetAction(actionType, assetId, assetTag, remarks) {
         const manageModalEl = document.getElementById('manageModal');
         const manageModal = bootstrap.Modal.getInstance(manageModalEl);
         if (manageModal) { manageModal.hide(); }
 
-        const config = {
-            return:  { title: 'Return Asset?', color: '#f59e0b' },
-            repair:  { title: 'Request Repair?', color: '#0dcaf0' },
-            dispose: { title: 'Dispose Asset?', color: '#ef4444' }
-        };
-        
-        const selected = config[actionType];
-
         Swal.fire({
-            title: selected.title,
-            text: `Asset Tag: ${assetTag}. Proceed with this request?`,
-            icon: 'warning',
+            title: 'Submit Service/Return Request?',
+            text: `Are you sure you want to submit a request for Asset Tag ${assetTag}?`,
+            icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: selected.color,
+            confirmButtonColor: '#123b63',
             cancelButtonColor: '#64748b',
-            confirmButtonText: 'Yes, Submit'
+            confirmButtonText: 'Yes, Submit Request'
         }).then((result) => {
             if (result.isConfirmed) {
-                Swal.fire({ title: 'Processing...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                Swal.fire({ title: 'Submitting...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
                 
                 const form = document.createElement('form');
                 form.method = 'POST';
                 
                 const fields = {
                     'asset_id': assetId,
-                    'asset_action': actionType,
+                    'submit_lifecycle_request': '1',
                     'remarks': remarks
                 };
 
@@ -492,7 +480,7 @@ $modal_html = '
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-header border-bottom p-3">
-                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-gear-wide-connected me-2"></i>Asset Lifecycle Action</h6>
+                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-tools me-2"></i>Submit Asset Service / Return Request</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
@@ -519,35 +507,15 @@ $modal_html = '
                 </div>
 
                 <div class="form-group mb-3">
-                    <label for="action_remarks" class="form-label small fw-bold text-secondary">Action Remarks / Justification</label>
-                    <textarea class="form-control" placeholder="Provide reason or context for this action..." id="action_remarks" style="height: 80px; resize: none; font-size: 0.88rem;"></textarea>
+                    <label for="action_remarks" class="form-label small fw-bold text-secondary">Reason / Request Details <span class="text-danger">*</span></label>
+                    <textarea class="form-control" placeholder="Provide context (e.g., fault details, return request, or decommissioning request)..." id="action_remarks" style="height: 100px; resize: none; font-size: 0.88rem;" required></textarea>
                 </div>
 
                 <input type="hidden" id="hidden_asset_id">
                 
-                <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-outline-warning p-2.5 rounded-2 text-start text-dark fw-bold shadow-sm" 
-                            onclick="prepareAction(\'return\')">
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-arrow-left-right fs-4 me-3"></i>
-                            <div>Return Asset<br><small class="fw-normal opacity-75">Release back to central inventory</small></div>
-                        </div>
-                    </button>
-                    
-                    <button type="button" class="btn btn-outline-info p-2.5 rounded-2 text-start text-dark fw-bold shadow-sm" 
-                            onclick="prepareAction(\'repair\')">
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-tools fs-4 me-3"></i>
-                            <div>Request Repair<br><small class="fw-normal opacity-75">Submit ticket for technical maintenance</small></div>
-                        </div>
-                    </button>
-                    
-                    <button type="button" class="btn btn-outline-danger p-2.5 rounded-2 text-start text-dark fw-bold shadow-sm" 
-                            onclick="prepareAction(\'dispose\')">
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-trash3 fs-4 me-3"></i>
-                            <div>Decommission Asset<br><small class="fw-normal opacity-75">Flag for disposal or scrapping</small></div>
-                        </div>
+                <div class="d-grid">
+                    <button type="button" class="btn btn-primary p-2.5 rounded-2 fw-bold shadow-sm" style="background-color: var(--erp-navy, #173f63); border-color: var(--erp-navy, #173f63);" onclick="submitSingleRequest()">
+                        <i class="bi bi-send me-2"></i>Submit Request to Maintenance
                     </button>
                 </div>
             </div>

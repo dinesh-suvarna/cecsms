@@ -8,6 +8,71 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $page_title = "Assign Asset ID";
 $page_icon  = "bi-tag";
 
+/* ================= HELPER FUNCTIONS ================= */
+if (!function_exists('getCategoryIcon')) {
+    function getCategoryIcon(string $category): string {
+        $cat = strtolower(trim($category));
+        if (str_contains($cat, 'computer') || str_contains($cat, 'pc') || str_contains($cat, 'laptop')) {
+            return 'bi-pc-display';
+        } elseif (str_contains($cat, 'accessory') || str_contains($cat, 'peripherals')) {
+            return 'bi-keyboard';
+        } elseif (str_contains($cat, 'network') || str_contains($cat, 'router') || str_contains($cat, 'switch')) {
+            return 'bi-box-seam';
+        } elseif (str_contains($cat, 'component') || str_contains($cat, 'hardware')) {
+            return 'bi-cpu';
+        } elseif (str_contains($cat, 'furniture')) {
+            return 'bi-lamp';
+        } elseif (str_contains($cat, 'mobile') || str_contains($cat, 'phone')) {
+            return 'bi-phone';
+        }
+        return 'bi-folder';
+    }
+}
+
+if (!function_exists('getItemDetailIcon')) {
+    function getItemDetailIcon(?string $itemName, ?string $category = ''): string {
+        $name = strtolower(trim($itemName ?? ''));
+        $cleanName = str_replace([' ', '-', '_'], '', $name);
+
+        switch (true) {
+            case (str_contains($cleanName, 'accesspoint') || str_contains($cleanName, 'ipcom') || str_contains($name, 'wifi')):
+                return 'bi-wifi';
+            case (str_contains($name, 'rack') || str_contains($name, 'server')):
+                return 'bi-hdd-rack'; 
+            case (str_contains($name, 'switch') || str_contains($name, 'patch panel') || str_contains($name, 'hub')):
+                return 'bi-hdd-stack'; 
+            case (str_contains($name, 'router')):
+                return 'bi-router';
+            case (str_contains($name, 'computer') || str_contains($name, 'desktop')):
+                return 'bi-pc-display';
+            case (str_contains($name, 'laptop')):
+                return 'bi-laptop';
+            case (str_contains($name, 'monitor') || str_contains($name, 'display')):
+                return 'bi-display';
+            case (str_contains($name, 'printer')):
+                return 'bi-printer';
+            case (str_contains($name, 'keyboard')):
+                return 'bi-keyboard';
+            case (str_contains($name, 'mouse')):
+                return 'bi-mouse3';
+            case (str_contains($name, 'projector')):
+                return 'bi-projector'; 
+            case (str_contains($name, 'biometric') || str_contains($name, 'fingerprint')):
+                return 'bi-person-bounding-box';
+            case (str_contains($name, 'ups') || str_contains($name, 'battery')):
+                return 'bi-lightning-charge';
+            case (str_contains($name, 'table') || str_contains($name, 'desk')):
+                return 'bi-table';
+            case (str_contains($name, 'chair')):
+                return 'bi-person-workspace';
+            case (str_contains($name, 'camera') || str_contains($name, 'cctv')):
+                return 'bi-camera-video';
+            default:
+                return 'bi-box-seam';
+        }
+    }
+}
+
 /* ================= CURRENT USER INFO ================= */
 $role = $_SESSION['role'] ?? '';
 $division_id = $_SESSION['division_id'] ?? 0;
@@ -22,7 +87,6 @@ if ($role !== 'SuperAdmin' && isset($_POST['assign'])) {
     $opened_unit        = trim($_POST['opened_unit'] ?? '');
 
     if (!empty($division_asset_id)) {
-        // Save the currently opened unit to session so it stays expanded on reload
         if (!empty($opened_unit)) {
             $_SESSION['open_unit_code'] = $opened_unit;
         }
@@ -38,7 +102,7 @@ if ($role !== 'SuperAdmin' && isset($_POST['assign'])) {
             $insert->bind_param("iisii", $dispatch_detail_id, $stock_detail_id, $division_asset_id, $user_id, $unit_index);
             $insert->execute();
 
-            // 2. Get total original quantity vs total dispatched across ALL records
+            // 2. Check stock exhaustion
             $statusCheck = $conn->prepare("
                 SELECT 
                     sd.quantity AS total_stock,
@@ -50,7 +114,6 @@ if ($role !== 'SuperAdmin' && isset($_POST['assign'])) {
             $statusCheck->execute();
             $statusRes = $statusCheck->get_result()->fetch_assoc();
 
-            // 3. Update stock status based on exhaustion of physical stock
             if ($statusRes['total_dispatched'] >= $statusRes['total_stock']) {
                 $update = $conn->prepare("UPDATE stock_details SET status='dispatched' WHERE id=?");
             } else {
@@ -78,8 +141,9 @@ if ($role !== 'SuperAdmin' && isset($_POST['assign'])) {
 }
 
 /* ================= FETCH DISPATCHED ITEMS ================= */
-if ($role === 'SuperAdmin') {
-    $query = "
+$whereClause = ($role === 'SuperAdmin') ? "WHERE sd.status NOT IN ('disposed')" : "WHERE dm.division_id = ? AND sd.status NOT IN ('disposed')";
+
+$sql = "
     SELECT
         dd.id AS dispatch_detail_id,
         sd.id AS stock_detail_id,
@@ -89,46 +153,36 @@ if ($role === 'SuperAdmin') {
         dm.dispatch_date,
         im.item_name,
         im.stock_type,
-        dd.quantity,
+        (dd.quantity - IFNULL(dd.returned_quantity, 0)) AS effective_quantity,
+        dd.quantity AS original_quantity,
+        IFNULL(dd.returned_quantity, 0) AS returned_quantity,
         u.unit_name,
         u.unit_code,
-        IFNULL(da_assigned.assigned_count,0) AS assigned_count
-        FROM dispatch_details dd
-        JOIN dispatch_master dm ON dm.id = dd.dispatch_id
-        JOIN units u ON u.id = dm.unit_id
-        JOIN stock_details sd ON sd.id = dd.stock_detail_id
-        JOIN items_master im ON sd.stock_item_id = im.id
-        JOIN vendors v ON v.id = sd.vendor_id
-        LEFT JOIN (
-            SELECT dispatch_detail_id, COUNT(*) AS assigned_count FROM division_assets GROUP BY dispatch_detail_id
-        ) da_assigned ON da_assigned.dispatch_detail_id = dd.id
-        ORDER BY dm.dispatch_date DESC";
-    $result = $conn->query($query);
-} else {
-    $stmt = $conn->prepare("
+        IFNULL(da_assigned.assigned_indices, '') AS assigned_indices,
+        IFNULL(da_assigned.assigned_count, 0) AS assigned_count
+    FROM dispatch_details dd
+    JOIN dispatch_master dm ON dm.id = dd.dispatch_id
+    JOIN units u ON u.id = dm.unit_id
+    JOIN stock_details sd ON sd.id = dd.stock_detail_id
+    JOIN items_master im ON sd.stock_item_id = im.id
+    JOIN vendors v ON v.id = sd.vendor_id
+    LEFT JOIN (
         SELECT
-            dd.id AS dispatch_detail_id,
-            sd.id AS stock_detail_id,
-            sd.serial_number,
-            sd.bill_no,
-            v.vendor_name,
-            dm.dispatch_date,
-            im.item_name,
-            im.stock_type,
-            dd.quantity,
-            u.unit_name,
-            u.unit_code,
-            IFNULL(da_assigned.assigned_count,0) AS assigned_count
-        FROM dispatch_details dd
-        JOIN dispatch_master dm ON dm.id = dd.dispatch_id
-        JOIN units u ON u.id = dm.unit_id
-        JOIN stock_details sd ON sd.id = dd.stock_detail_id
-        JOIN items_master im ON sd.stock_item_id = im.id
-        JOIN vendors v ON v.id = sd.vendor_id
-        LEFT JOIN (
-            SELECT dispatch_detail_id, COUNT(*) AS assigned_count FROM division_assets GROUP BY dispatch_detail_id
-        ) da_assigned ON da_assigned.dispatch_detail_id = dd.id
-        WHERE dm.division_id=? ORDER BY dm.dispatch_date DESC");
+            dispatch_detail_id,
+            COUNT(*) AS assigned_count,
+            GROUP_CONCAT(unit_index) AS assigned_indices
+        FROM division_assets
+        GROUP BY dispatch_detail_id
+    ) da_assigned ON da_assigned.dispatch_detail_id = dd.id
+    $whereClause
+    HAVING (effective_quantity - assigned_count) > 0
+    ORDER BY dm.dispatch_date DESC
+";
+
+if ($role === 'SuperAdmin') {
+    $result = $conn->query($sql);
+} else {
+    $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $division_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -141,10 +195,14 @@ $total_rows_count = 0;
 while ($row = $result->fetch_assoc()) {
     $unit_code = $row['unit_code'];
     $item_name = $row['item_name'];
-    
+    $assigned_indices = array_filter(explode(',', $row['assigned_indices']));
+
     if ($row['stock_type'] === 'non_serial') {
-        for ($i = 1; $i <= $row['quantity']; $i++) {
-            if ($i > $row['assigned_count']) {
+        $effective_qty = (int)$row['effective_quantity'];
+        
+        for ($i = 1; $i <= $effective_qty; $i++) {
+            // Check if this specific unit index is already assigned
+            if (!in_array((string)$i, $assigned_indices, true)) {
                 $rowCopy = $row; 
                 $rowCopy['unit_index'] = $i;
                 $grouped[$unit_code][$item_name][] = $rowCopy;
@@ -152,7 +210,7 @@ while ($row = $result->fetch_assoc()) {
             }
         }
     } else {
-        if ((int)$row['assigned_count'] === 0) {
+        if (!in_array("0", $assigned_indices, true) && count($assigned_indices) === 0) {
             $row['unit_index'] = 0; 
             $grouped[$unit_code][$item_name][] = $row;
             $total_rows_count++;
@@ -160,35 +218,35 @@ while ($row = $result->fetch_assoc()) {
     }
 }
 
-// Sort main multi-dimensional array keys (unit_code) in ascending order
 ksort($grouped);
 
 ob_start();
 ?>
 
-<div class="container-fluid py-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+<div class="container-fluid p-0">
+    <!-- Header Block -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4 bg-white p-3 rounded-3 border">
         <div>
-            <h4 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
-                <span class="p-2 bg-primary-subtle text-primary rounded-3 d-inline-flex">
+            <h5 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
+                <span class="p-2 rounded-2 d-inline-flex" style="background-color: #edf3f8; color: #123b63;">
                     <i class="bi <?= $page_icon ?> fs-5"></i>
                 </span>
                 Assign Asset Identifiers
-            </h4>
+            </h5>
             <p class="text-muted small m-0 mt-1">Map localized asset numbers to dispatched inventory units organized by Unit Facility.</p>
         </div>
         <div class="search-container position-relative">
-            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y text-muted ms-3"></i>
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y text-muted ms-3 font-xs"></i>
             <input type="text" id="assetSearch" class="form-control form-control-custom ps-5" placeholder="Filter facility or items...">
         </div>
     </div>
 
     <?php if (empty($grouped)): ?>
-        <div class="card border-0 shadow-sm rounded-4 text-center py-5 text-muted">
+        <div class="card border-0 shadow-sm rounded-3 text-center py-5 text-muted bg-white">
             <div class="py-4">
-                <i class="bi bi-check2-circle text-success display-4 d-block mb-3"></i>
-                <span class="fw-semibold d-block text-dark mb-1">All clear!</span>
-                All available records are currently assigned.
+                <i class="bi bi-check2-circle text-success display-4 d-block mb-3 opacity-75"></i>
+                <span class="fw-bold d-block text-dark mb-1 fs-6">All Clear!</span>
+                <span class="small">All available records are currently assigned.</span>
             </div>
         </div>
     <?php else: ?>
@@ -213,16 +271,16 @@ ob_start();
                 $is_opened = ($unit_code === $open_unit_code);
                 ?>
                 
-                <div class="accordion-item border-0 shadow-sm rounded-4 overflow-hidden unit-accordion-group" data-search-term="<?= htmlspecialchars(strtolower($unit_code . ' ' . $first_item_in_unit['unit_name'])) ?>">
+                <div class="accordion-item border-0 shadow-sm rounded-3 overflow-hidden unit-accordion-group" data-search-term="<?= htmlspecialchars(strtolower($unit_code . ' ' . $first_item_in_unit['unit_name'])) ?>">
                     <h2 class="accordion-header" id="heading-unit-<?= $unitIndex ?>">
-                        <button class="accordion-button <?= $is_opened ? '' : 'collapsed' ?> bg-light px-4 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-unit-<?= $unitIndex ?>" aria-expanded="<?= $is_opened ? 'true' : 'false' ?>" aria-controls="collapse-unit-<?= $unitIndex ?>">
+                        <button class="accordion-button <?= $is_opened ? '' : 'collapsed' ?> bg-white px-4 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-unit-<?= $unitIndex ?>" aria-expanded="<?= $is_opened ? 'true' : 'false' ?>" aria-controls="collapse-unit-<?= $unitIndex ?>">
                             <div class="w-100 me-3">
                                 <div class="d-flex align-items-center gap-2 mb-1">
-                                    <i class="bi bi-building text-primary fs-5"></i>
-                                    <span class="fw-bold fs-5 text-dark"><?= htmlspecialchars($unit_code) ?></span>
-                                    <span class="badge bg-primary rounded-pill"><?= $total_unit_pending ?> Pending Allocation</span>
+                                    <i class="bi bi-building fs-5" style="color: #123b63;"></i>
+                                    <span class="fw-bold fs-6 text-dark"><?= htmlspecialchars($unit_code) ?></span>
+                                    <span class="badge rounded-pill fw-semibold" style="background-color: #123b63; font-size: 0.7rem;"><?= $total_unit_pending ?> Pending Allocation</span>
                                 </div>
-                                <div class="small text-muted fw-normal">
+                                <div class="extra-small text-muted fw-normal">
                                     <strong>Facility Name:</strong> <?= htmlspecialchars($first_item_in_unit['unit_name']) ?>
                                 </div>
                             </div>
@@ -230,32 +288,22 @@ ob_start();
                     </h2>
                     
                     <div id="collapse-unit-<?= $unitIndex ?>" class="accordion-collapse collapse <?= $is_opened ? 'show' : '' ?>" aria-labelledby="heading-unit-<?= $unitIndex ?>" data-bs-parent="#unitAccordion">
-                        <div class="accordion-body p-4 bg-white d-flex flex-column gap-4">
+                        <div class="accordion-body p-4 bg-white d-flex flex-column gap-4 border-top">
                             
                             <?php foreach ($items_by_name as $item_name => $items): 
                                 // Restart SL counter for every item block type
                                 $sl = 1; 
-
-                                $lowerItem = strtolower($item_name);
-                                if (str_contains($lowerItem, 'mouse')) { $itemIcon = 'bi-mouse3'; }
-                                elseif (str_contains($lowerItem, 'keyboard')) { $itemIcon = 'bi-keyboard'; }
-                                elseif (str_contains($lowerItem, 'computer') || str_contains($lowerItem, 'desktop') || str_contains($lowerItem, 'monitor')) { $itemIcon = 'bi-pc-display'; }
-                                elseif (str_contains($lowerItem, 'printer')) { $itemIcon = 'bi-printer'; }
-                                elseif (str_contains($lowerItem, 'scanner')) { $itemIcon = 'bi-qr-code-scan'; }
-                                elseif (str_contains($lowerItem, 'cctv') || str_contains($lowerItem, 'camera')) { $itemIcon = 'bi-camera-video'; }
-                                elseif (str_contains($lowerItem, 'ups') || str_contains($lowerItem, 'battery')) { $itemIcon = 'bi-lightning-charge'; }
-                                else { $itemIcon = 'bi-box'; }
-                                
                                 $first = $items[0];
+                                $itemIcon = getItemDetailIcon($item_name);
                                 ?>
                                 <div class="item-block border rounded-3 overflow-hidden">
-                                    <div class="bg-light-subtle px-3 py-2 border-bottom d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                                    <div class="bg-light px-3 py-2 border-bottom d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
                                         <div>
-                                            <i class="bi <?= $itemIcon ?> text-secondary me-1"></i>
-                                            <span class="fw-bold text-dark sub-item-title"><?= htmlspecialchars($item_name) ?></span>
-                                            <span class="badge bg-secondary-subtle text-secondary border ms-1 rounded-pill"><?= count($items) ?> items</span>
+                                            <i class="bi <?= $itemIcon ?> text-muted me-1"></i>
+                                            <span class="fw-bold text-dark sub-item-title small"><?= htmlspecialchars($item_name) ?></span>
+                                            <span class="badge bg-white text-secondary border ms-1 rounded-pill extra-small"><?= count($items) ?> items</span>
                                         </div>
-                                        <div class="font-xs text-muted">
+                                        <div class="extra-small text-muted">
                                             <strong>Dispatch Date:</strong> <span class="text-dark fw-medium"><?= !empty($first['dispatch_date']) ? date('d M Y', strtotime($first['dispatch_date'])) : '-' ?></span> | 
                                             <strong>Vendor:</strong> <?= htmlspecialchars($first['vendor_name']) ?> | 
                                             <strong>Bill:</strong> <?= htmlspecialchars($first['bill_no']) ?>
@@ -276,10 +324,10 @@ ob_start();
                                             <tbody>
                                                 <?php foreach ($items as $row): ?>
                                                 <tr class="asset-row">
-                                                    <td class="ps-3 text-secondary font-monospace sl-cell"><?= sprintf("%02d", $sl++) ?></td>
+                                                    <td class="ps-3 text-secondary font-monospace sl-cell extra-small"><?= sprintf("%02d", $sl++) ?></td>
                                                     <td>
                                                         <?php if($row['stock_type'] === 'non_serial'): ?>
-                                                            <span class="badge badge-custom bg-light text-dark border-dashed"><i class="bi bi-box-seam me-1 text-muted"></i>Bulk Unit (Idx: <?= $row['unit_index'] ?>)</span>
+                                                            <span class="badge bg-light text-dark border border-dashed extra-small"><i class="bi bi-box-seam me-1 text-muted"></i>Bulk Unit (Idx: <?= $row['unit_index'] ?>)</span>
                                                         <?php else: ?>
                                                             <span class="serial-badge text-uppercase">
                                                                 <?= htmlspecialchars(strtoupper($row['serial_number'] ?? '-')) ?>
@@ -291,26 +339,26 @@ ob_start();
                                                         <td class="asset-input-cell">
                                                             <form method="POST" class="m-0">
                                                                 <div class="input-group input-group-merge">
-                                                                    <span class="input-group-text bg-light fw-bold text-primary unit-code-badge font-xs" 
+                                                                    <span class="input-group-text bg-light fw-bold unit-code-badge extra-small" 
                                                                           data-bs-toggle="tooltip" 
                                                                           data-bs-placement="top" 
                                                                           title="<?= htmlspecialchars($row['unit_name']) ?>"
-                                                                          style="cursor: pointer;">
+                                                                          style="cursor: pointer; color: #123b63;">
                                                                         <?= htmlspecialchars($row['unit_code']) ?>
                                                                     </span>
 
-                                                                    <input type="text" name="division_asset_id" class="form-control asset-id-input text-uppercase fw-medium" placeholder="CEC/CSE/CSL01/2026-27/01" required autocomplete="off">
+                                                                    <input type="text" name="division_asset_id" class="form-control asset-id-input text-uppercase fw-medium extra-small" placeholder="CEC/CSE/CSL01/2026-27/01" required autocomplete="off">
 
                                                                     <input type="hidden" name="dispatch_detail_id" value="<?= $row['dispatch_detail_id'] ?>">
                                                                     <input type="hidden" name="stock_detail_id" value="<?= $row['stock_detail_id'] ?>">
                                                                     <input type="hidden" name="unit_index" value="<?= $row['unit_index'] ?>">
                                                                     <input type="hidden" name="opened_unit" value="<?= htmlspecialchars($unit_code) ?>">
 
-                                                                    <button type="submit" name="assign" class="btn btn-primary px-4 fw-semibold">Assign</button>
+                                                                    <button type="submit" name="assign" class="btn btn-navy px-3 fw-semibold extra-small">Assign</button>
                                                                 </div>
-                                                                <div class="form-text text-muted mt-1 ps-1 font-xs d-flex align-items-center gap-1">
-                                                                    <i class="bi bi-info-circle-fill text-primary-subtle"></i> 
-                                                                    Hover over the facility code (<span class="fw-semibold"><?= htmlspecialchars($row['unit_code']) ?></span>) to see the full facility name.
+                                                                <div class="form-text text-muted mt-1 ps-1 extra-small d-flex align-items-center gap-1">
+                                                                    <i class="bi bi-info-circle text-muted"></i> 
+                                                                    Hover over facility code (<span class="fw-semibold"><?= htmlspecialchars($row['unit_code']) ?></span>) to see full name.
                                                                 </div>
                                                             </form>
                                                         </td>
@@ -369,41 +417,118 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <style>
-    .form-control-custom { border-radius: 10px; border: 1px solid #e2e8f0; padding: 0.55rem 1rem; width: 280px; transition: all 0.2s ease; font-size: 0.875rem; background: #fff; }
-    .form-control-custom:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-    
-    .table-custom thead Th { background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 0.725rem; font-weight: 700; letter-spacing: 0.05em; padding: 0.75rem 0.75rem; }
-    .table-custom tbody tr.asset-row { border-bottom: 1px solid #f1f5f9; transition: background-color 0.15s ease; }
-    .table-custom tbody tr.asset-row:hover { background-color: #f8fafc; }
-    .table-custom tbody td { padding: 0.75rem 0.75rem; }
-    
-    .accordion-button:not(.collapsed) { background-color: #eff6ff !important; color: inherit !important; box-shadow: none !important; }
-    .accordion-button::after { background-size: 1.15rem; }
-    .accordion-item { border: 1px solid #e2e8f0 !important; }
-    .bg-light-subtle { background-color: #f8fafc; }
+    :root {
+        --primary-navy: #123b63;
+        --border-color: #d9e0e7;
+    }
 
-    .serial-badge { font-family: var(--bs-font-monospace); font-size: 0.825rem; font-weight: 700; color: #2563eb; background-color: #eff6ff; padding: 0.35rem 0.65rem; display: inline-block; border-radius: 6px; border: 1px solid #bfdbfe; }
-    .badge-custom { font-size: 0.75rem; padding: 0.35rem 0.6rem; border-radius: 6px; font-weight: 500; }
-    .border-dashed { border-style: dashed !important; }
+    .form-control-custom { 
+        border-radius: 6px; 
+        border: 1px solid var(--border-color); 
+        padding: 0.45rem 0.85rem; 
+        width: 280px; 
+        transition: all 0.2s ease; 
+        font-size: 0.85rem; 
+        background: #fff; 
+    }
+    .form-control-custom:focus { 
+        border-color: var(--primary-navy); 
+        box-shadow: 0 0 0 3px rgba(18, 59, 99, 0.1); 
+    }
     
-    .input-group-merge { border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 500px; }
-    .input-group-merge .form-control { border: 1px solid #cbd5e1; font-size: 0.875rem; }
-    .input-group-merge .input-group-text { border: 1px solid #cbd5e1; background: #f8fafc; color: #64748b; min-width: 65px; justify-content: center; }
-    .input-group-merge .form-control:focus { border-color: #3b82f6; z-index: 3; }
-    .input-group-merge .btn { border-top-right-radius: 8px !important; border-bottom-right-radius: 8px !important; font-size: 0.875rem; }
+    .btn-navy {
+        background-color: var(--primary-navy);
+        color: #ffffff;
+        border: none;
+        transition: background-color 0.15s ease-in-out;
+    }
+    .btn-navy:hover {
+        background-color: #0b2942;
+        color: #ffffff;
+    }
+
+    .table-custom thead th { 
+        background-color: #f8fafc; 
+        border-bottom: 1px solid var(--border-color); 
+        color: #64748b; 
+        font-size: 0.72rem; 
+        font-weight: 700; 
+        letter-spacing: 0.05em; 
+        padding: 0.65rem 0.75rem; 
+    }
+    .table-custom tbody tr.asset-row { 
+        border-bottom: 1px solid #edf2f7; 
+        transition: background-color 0.15s ease; 
+    }
+    .table-custom tbody tr.asset-row:hover { 
+        background-color: #f8fafc; 
+    }
+    .table-custom tbody td { 
+        padding: 0.65rem 0.75rem; 
+    }
+    
+    .accordion-button:not(.collapsed) { 
+        background-color: #edf3f8 !important; 
+        color: inherit !important; 
+        box-shadow: none !important; 
+    }
+    .accordion-button::after { 
+        background-size: 1rem; 
+    }
+    .accordion-item { 
+        border: 1px solid var(--border-color) !important; 
+    }
+
+    .serial-badge { 
+        font-family: var(--bs-font-monospace); 
+        font-size: 0.78rem; 
+        font-weight: 700; 
+        color: var(--primary-navy); 
+        background-color: #edf3f8; 
+        padding: 0.3rem 0.6rem; 
+        display: inline-block; 
+        border-radius: 4px; 
+        border: 1px solid #d0deea; 
+    }
+    
+    .border-dashed { 
+        border-style: dashed !important; 
+    }
+    
+    .input-group-merge { 
+        border-radius: 6px; 
+        overflow: hidden; 
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03); 
+        max-width: 480px; 
+    }
+    .input-group-merge .form-control { 
+        border: 1px solid var(--border-color); 
+    }
+    .input-group-merge .input-group-text { 
+        border: 1px solid var(--border-color); 
+        background: #f8fafc; 
+        min-width: 60px; 
+        justify-content: center; 
+    }
+    .input-group-merge .form-control:focus { 
+        border-color: var(--primary-navy); 
+        z-index: 3; 
+    }
+    .input-group-merge .btn { 
+        border-top-right-radius: 6px !important; 
+        border-bottom-right-radius: 6px !important; 
+    }
     
     .tracking-wider { letter-spacing: 0.04em; }
-    .font-xs { font-size: 0.75rem; }
+    .extra-small { font-size: 0.72rem; }
 
     .unit-code-badge {
         transition: all 0.2s ease-in-out !important;
-        border-right: 1px solid #cbd5e1 !important;
-        cursor: pointer;
+        border-right: 1px solid var(--border-color) !important;
     }
     .unit-code-badge:hover {
-        background-color: #eff6ff !important;
-        color: #2563eb !important;
-        border-color: #bfdbfe !important;
+        background-color: #edf3f8 !important;
+        color: var(--primary-navy) !important;
     }
 </style>
 

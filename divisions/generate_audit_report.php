@@ -161,11 +161,12 @@ $logs = $conn->query($query);
     <div class="report-card">
         <!-- Print Action Toolbar -->
         <div class="d-flex justify-content-between align-items-center mb-4 no-print">
-            <a href="asset_logs.php" class="btn btn-outline-secondary btn-sm">
+            <!-- Point directly to the shared divisions file for all roles -->
+            <a href="/cecsms/divisions/returned_assets.php#history-content" class="btn btn-outline-secondary btn-sm">
                 &larr; Back to Audit Logs
             </a>
             <button onclick="window.print()" class="btn btn-primary btn-sm px-3">
-                Print / Save PDF
+                <i class="bi bi-printer me-1"></i> Print / Save PDF
             </button>
         </div>
 

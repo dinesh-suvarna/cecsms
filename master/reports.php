@@ -5,14 +5,28 @@ include "../includes/session.php";
 date_default_timezone_set('Asia/Kolkata'); 
 
 $page_title = "Consolidated Inventory Report";
-if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
+
+// Determine user role and session division context
+$role = $_SESSION['role'] ?? '';
+$session_division_id = $_SESSION['division_id'] ?? null;
+
+$is_admin_view = ($role === 'SuperAdmin');
+
+// Access control: Allow Admins or users tied to a division
+if (!isset($_SESSION['role']) || (!$is_admin_view && empty($session_division_id))) {
     header("Location: ../index.php");
     exit();
 }
-
-// 1. Get Filters
-$f_inst = $_GET['inst'] ?? '';
-$f_dept = $_GET['dept'] ?? '';
+ 
+// 1. Get Filters based on role permissions
+if (!$is_admin_view) {
+    // Force division restriction for division-level users
+    $f_inst = '';
+    $f_dept = $session_division_id;
+} else {
+    $f_inst = $_GET['inst'] ?? '';
+    $f_dept = $_GET['dept'] ?? '';
+}
 $f_unit = $_GET['unit'] ?? '';
 
 // Handle category as an array from checkboxes
@@ -55,7 +69,7 @@ if ($f_unit) {
     }
 }
 
-$filter_display = !empty($filter_parts) ? implode(" | ", $filter_parts) : "All Institutions";
+$filter_display = !empty($filter_parts) ? implode(" | ", $filter_parts) : ($is_admin_view ? "All Institutions" : "Division Inventory");
 
 // 2. Fetch Consolidated Stock Counts Logic
 $union_queries = [];
@@ -144,7 +158,6 @@ ob_start();
         --transition-smooth: all 0.18s ease;
     }
 
-    /* Standard ERP Filter Card Design */
     .filter-card-modern {
         background: var(--card-bg);
         border: 1px solid var(--card-border);
@@ -193,7 +206,6 @@ ob_start();
         background-color: #fff;
     }
 
-    /* Clear Interactive Category Select/Deselect Checkbox Pills */
     .category-pills-container {
         display: flex;
         align-items: center;
@@ -223,7 +235,6 @@ ob_start();
         color: var(--brand-navy);
     }
 
-    /* Style when checkbox is checked */
     .category-pill:has(.custom-check-input:checked) {
         background-color: #edf2f7;
         border-color: var(--brand-primary);
@@ -239,7 +250,6 @@ ob_start();
         margin: 0;
     }
 
-    /* Buttons */
     .btn-navy {
         background-color: var(--brand-primary);
         color: var(--brand-white) !important;
@@ -273,7 +283,6 @@ ob_start();
         border-color: var(--card-border-hover);
     }
 
-    /* --- Report & Print Styles --- */
     .report-card { 
         border: none !important; 
         border-radius: 0; 
@@ -376,61 +385,76 @@ ob_start();
             <span class="badge bg-light text-dark fw-semibold px-2 py-1" style="font-size: 0.72rem; border-radius: 4px;"><?= $badge_text ?></span>
         </div>
         <div class="card-body p-3">
-            <form method="GET" id="filterForm" class="row g-3 align-items-end">
-                <div class="col-auto">
-                    <label class="form-label-custom"><i class="bi bi-building me-1"></i>Institution</label>
-                    <select name="inst" class="form-select form-select-custom auto-resize-select" onchange="this.form.submit()" title="Select Institution">
-                        <option value="">All Institutions</option>
-                        <?php 
-                        $insts = $conn->query("SELECT id, institution_name FROM institutions");
-                        while($i = $insts->fetch_assoc()) echo "<option value='{$i['id']}' ".($f_inst==$i['id']?'selected':'').">{$i['institution_name']}</option>";
-                        ?>
-                    </select>
+            <form method="GET" id="filterForm" class="p-3">
+                
+                <?php if ($is_admin_view): ?>
+                <!-- SuperAdmin Row 1: Institution & Division -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label-custom"><i class="bi bi-building me-1"></i>Institution</label>
+                        <select name="inst" class="form-select form-select-custom w-100" onchange="this.form.submit()" title="Select Institution">
+                            <option value="">All Institutions</option>
+                            <?php 
+                            $insts = $conn->query("SELECT id, institution_name FROM institutions");
+                            while($i = $insts->fetch_assoc()) echo "<option value='{$i['id']}' ".($f_inst==$i['id']?'selected':'').">{$i['institution_name']}</option>";
+                            ?>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom"><i class="bi bi-diagram-3 me-1"></i>Division / Dept</label>
+                        <select name="dept" class="form-select form-select-custom w-100" onchange="this.form.submit()" title="Select Division">
+                            <option value="">All Divisions</option>
+                            <?php 
+                            $d_where = $f_inst ? "WHERE institution_id = '$f_inst'" : "";
+                            $depts = $conn->query("SELECT id, division_name FROM divisions $d_where");
+                            while($d = $depts->fetch_assoc()) echo "<option value='{$d['id']}' ".($f_dept==$d['id']?'selected':'').">{$d['division_name']}</option>";
+                            ?>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-auto">
-                    <label class="form-label-custom"><i class="bi bi-diagram-3 me-1"></i>Division / Dept</label>
-                    <select name="dept" class="form-select form-select-custom auto-resize-select" onchange="this.form.submit()" title="Select Division">
-                        <option value="">All Divisions</option>
-                        <?php 
-                        $d_where = $f_inst ? "WHERE institution_id = '$f_inst'" : "";
-                        $depts = $conn->query("SELECT id, division_name FROM divisions $d_where");
-                        while($d = $depts->fetch_assoc()) echo "<option value='{$d['id']}' ".($f_dept==$d['id']?'selected':'').">{$d['division_name']}</option>";
-                        ?>
-                    </select>
-                </div>
-                <div class="col-auto">
-                    <label class="form-label-custom"><i class="bi bi-door-open me-1"></i>Unit / Lab</label>
-                    <select name="unit" class="form-select form-select-custom auto-resize-select" onchange="this.form.submit()" title="Select Unit">
-                        <option value="">All Units</option>
-                        <?php 
-                        $u_where = $f_dept ? "WHERE division_id = '$f_dept'" : "";
-                        $units = $conn->query("SELECT id, unit_name, unit_code FROM units $u_where");
-                        while($u = $units->fetch_assoc()) {
-                            $u_label = $u['unit_code'] ? $u['unit_code'] . " - " . $u['unit_name'] : $u['unit_name'];
-                            echo "<option value='{$u['id']}' ".($f_unit==$u['id']?'selected':'').">{$u_label}</option>";
-                        }
-                        ?>
-                    </select>
-                </div>
-                <div class="col-xl-4 col-md-6">
-                    <label class="form-label-custom"><i class="bi bi-tags me-1"></i>Categories (Select Multiple)</label>
-                    <div class="category-pills-container">
-                        <label class="category-pill">
-                            <input type="checkbox" name="cat[]" value="computer" class="custom-check-input" onchange="this.form.submit()" <?= (empty($f_cats) || in_array('computer', $f_cats)) ? 'checked' : '' ?>>
-                             IT / Comp
-                        </label>
-                        <label class="category-pill">
-                            <input type="checkbox" name="cat[]" value="furniture" class="custom-check-input" onchange="this.form.submit()" <?= (empty($f_cats) || in_array('furniture', $f_cats)) ? 'checked' : '' ?>>
-                             Furniture
-                        </label>
-                        <label class="category-pill"> 
-                            <input type="checkbox" name="cat[]" value="electrical" class="custom-check-input" onchange="this.form.submit()" <?= (empty($f_cats) || in_array('electrical', $f_cats)) ? 'checked' : '' ?>>
-                             Electrical
-                        </label>
+                <?php endif; ?>
+
+                <!-- Row for Unit & Categories (Flex layout prevents random dropping) -->
+                <div class="d-flex flex-wrap align-items-end gap-3">
+                    <div style="flex: 1 1 380px;">
+                        <label class="form-label-custom"><i class="bi bi-door-open me-1"></i>Unit / Lab</label>
+                        <select name="unit" class="form-select form-select-custom w-100" onchange="this.form.submit()" title="Select Unit">
+                            <option value="">All Units</option>
+                            <?php 
+                            if ($is_admin_view) {
+                                $u_where = $f_dept ? "WHERE division_id = '$f_dept'" : "";
+                            } else {
+                                $u_where = "WHERE division_id = '$session_division_id'";
+                            }
+                            $units = $conn->query("SELECT id, unit_name, unit_code FROM units $u_where");
+                            while($u = $units->fetch_assoc()) {
+                                $u_label = $u['unit_code'] ? $u['unit_code'] . " - " . $u['unit_name'] : $u['unit_name'];
+                                echo "<option value='{$u['id']}' ".($f_unit==$u['id']?'selected':'').">{$u_label}</option>";
+                            }
+                            ?>
+                        </select>
+                    </div>
+
+                    <div style="flex: 1 1 300px;">
+                        <label class="form-label-custom"><i class="bi bi-tags me-1"></i>Categories (Select Multiple)</label>
+                        <div class="category-pills-container">
+                            <label class="category-pill">
+                                <input type="checkbox" name="cat[]" value="computer" class="custom-check-input" onchange="this.form.submit()" <?= (empty($f_cats) || in_array('computer', $f_cats)) ? 'checked' : '' ?>>
+                                 IT / Comp
+                            </label>
+                            <label class="category-pill">
+                                <input type="checkbox" name="cat[]" value="furniture" class="custom-check-input" onchange="this.form.submit()" <?= (empty($f_cats) || in_array('furniture', $f_cats)) ? 'checked' : '' ?>>
+                                 Furniture
+                            </label>
+                            <label class="category-pill"> 
+                                <input type="checkbox" name="cat[]" value="electrical" class="custom-check-input" onchange="this.form.submit()" <?= (empty($f_cats) || in_array('electrical', $f_cats)) ? 'checked' : '' ?>>
+                                 Electrical
+                            </label>
+                        </div>
                     </div>
                 </div>
 
-                <div class="col-12 d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
                     <button type="submit" class="btn btn-navy">
                         <i class="bi bi-filter me-1"></i> Apply Filters
                     </button>
@@ -533,28 +557,23 @@ function autoResizeSelect(selectElement) {
 document.addEventListener('DOMContentLoaded', () => {
     const filterForm = document.getElementById('filterForm');
     
-    // Check if page was reloaded (Refreshed)
     const navEntries = performance.getEntriesByType('navigation');
     const isReload = navEntries.length > 0 && navEntries[0].type === 'reload';
 
     if (isReload && filterForm) {
-        // Reset all select elements to the first default option
         const dynamicDropdowns = filterForm.querySelectorAll('.auto-resize-select');
         dynamicDropdowns.forEach(select => {
             select.selectedIndex = 0;
             autoResizeSelect(select);
         });
         
-        // Reset category checkboxes
         const checkboxes = filterForm.querySelectorAll('.custom-check-input');
         checkboxes.forEach(cb => cb.checked = true);
         
-        // Strip the query parameters from URL without reloading
         if (window.history.replaceState) {
             window.history.replaceState(null, null, window.location.pathname);
         }
     } else {
-        // Standard load
         const dynamicDropdowns = document.querySelectorAll('.auto-resize-select');
         dynamicDropdowns.forEach(select => {
             autoResizeSelect(select);
@@ -563,7 +582,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Download PDF Action
 function downloadPDF() {
     const element = document.getElementById('printableReport');
     element.classList.add('pdf-export');
@@ -575,7 +593,6 @@ function downloadPDF() {
     }, 1000);
 }
 
-// Direct Print Action
 function triggerPrint() {
     const element = document.getElementById('printableReport');
     element.classList.remove('pdf-export');
@@ -585,5 +602,5 @@ function triggerPrint() {
 
 <?php 
 $content = ob_get_clean(); 
-include "../admin/adminlayout.php"; 
+    include "../admin/adminlayout.php"; 
 ?>

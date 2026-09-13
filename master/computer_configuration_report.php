@@ -6,14 +6,25 @@ include "../includes/session.php";
 date_default_timezone_set('Asia/Kolkata'); 
 
 $page_title = "Detailed Computer Configuration Report";
-if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
+
+// Determine user role and session division context
+$role = $_SESSION['role'] ?? '';
+$session_division_id = $_SESSION['division_id'] ?? null;
+$is_admin_view = ($role === 'SuperAdmin');
+
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin']) || (!$is_admin_view && empty($session_division_id))) {
     header("Location: ../index.php");
     exit();
 }
 
-// 1. Get Filters
-$f_inst = $_GET['inst'] ?? '';
-$f_dept = $_GET['dept'] ?? '';
+// 1. Get Filters based on role permissions
+if (!$is_admin_view) {
+    $f_inst = '';
+    $f_dept = $session_division_id;
+} else {
+    $f_inst = $_GET['inst'] ?? '';
+    $f_dept = $_GET['dept'] ?? '';
+}
 $f_unit = $_GET['unit'] ?? '';
 $f_search = trim($_GET['search'] ?? '');
 
@@ -29,7 +40,7 @@ if ($f_unit) {
         $filter_parts[] = htmlspecialchars(($row['unit_code'] ? $row['unit_code'] . " - " : "") . $row['unit_name']);
     }
 }
-$filter_display = !empty($filter_parts) ? implode(" | ", $filter_parts) : "All Institutions & Units";
+$filter_display = !empty($filter_parts) ? implode(" | ", $filter_parts) : ($is_admin_view ? "All Institutions & Units" : "Division Inventory");
 
 // 2. Querying Stock, Assets & Hardware Specifications based on Actual Schema
 $inst_cond = $f_inst ? " AND dm.institution_id = '$f_inst'" : "";
@@ -329,48 +340,62 @@ ob_start();
             <span class="badge bg-light text-dark fw-semibold px-2 py-1" style="font-size: 0.72rem; border-radius: 4px;">IT Inventory</span>
         </div>
         <div class="card-body p-3">
-            <form method="GET" id="filterForm" class="row g-3 align-items-end">
-                <div class="col-auto">
-                    <label class="form-label-custom"><i class="bi bi-building me-1"></i>Institution</label>
-                    <select name="inst" class="form-select form-select-custom auto-resize-select" onchange="this.form.submit()" title="Select Institution">
-                        <option value="">All Institutions</option>
-                        <?php 
-                        $insts = $conn->query("SELECT id, institution_name FROM institutions WHERE status='Active'");
-                        while($i = $insts->fetch_assoc()) echo "<option value='{$i['id']}' ".($f_inst==$i['id']?'selected':'').">{$i['institution_name']}</option>";
-                        ?>
-                    </select>
+            <form method="GET" id="filterForm" class="p-3">
+                <?php if ($is_admin_view): ?>
+                <!-- SuperAdmin Row 1: Institution & Division -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label-custom"><i class="bi bi-building me-1"></i>Institution</label>
+                        <select name="inst" class="form-select form-select-custom w-100" onchange="this.form.submit()" title="Select Institution">
+                            <option value="">All Institutions</option>
+                            <?php 
+                            $insts = $conn->query("SELECT id, institution_name FROM institutions WHERE status='Active'");
+                            while($i = $insts->fetch_assoc()) echo "<option value='{$i['id']}' ".($f_inst==$i['id']?'selected':'').">{$i['institution_name']}</option>";
+                            ?>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom"><i class="bi bi-diagram-3 me-1"></i>Division / Dept</label>
+                        <select name="dept" class="form-select form-select-custom w-100" onchange="this.form.submit()" title="Select Division">
+                            <option value="">All Divisions / Departments</option>
+                            <?php 
+                            $d_where = $f_inst ? "AND institution_id = '$f_inst'" : "";
+                            $depts = $conn->query("SELECT id, division_name FROM divisions WHERE status='Active' $d_where");
+                            while($d = $depts->fetch_assoc()) echo "<option value='{$d['id']}' ".($f_dept==$d['id']?'selected':'').">{$d['division_name']}</option>";
+                            ?>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-auto">
-                    <label class="form-label-custom"><i class="bi bi-diagram-3 me-1"></i>Division / Dept</label>
-                    <select name="dept" class="form-select form-select-custom auto-resize-select" onchange="this.form.submit()" title="Select Division">
-                        <option value="">All Divisions / Departments</option>
-                        <?php 
-                        $d_where = $f_inst ? "AND institution_id = '$f_inst'" : "";
-                        $depts = $conn->query("SELECT id, division_name FROM divisions WHERE status='Active' $d_where");
-                        while($d = $depts->fetch_assoc()) echo "<option value='{$d['id']}' ".($f_dept==$d['id']?'selected':'').">{$d['division_name']}</option>";
-                        ?>
-                    </select>
-                </div>
-                <div class="col-auto">
-                    <label class="form-label-custom"><i class="bi bi-door-open me-1"></i>Unit / Lab</label>
-                    <select name="unit" class="form-select form-select-custom auto-resize-select" onchange="this.form.submit()" title="Select Unit">
-                        <option value="">All Units / Labs</option>
-                        <?php 
-                        $u_where = $f_dept ? "AND division_id = '$f_dept'" : "";
-                        $units = $conn->query("SELECT id, unit_name, unit_code FROM units WHERE status='Active' $u_where");
-                        while($u = $units->fetch_assoc()) {
-                            $u_label = $u['unit_code'] ? $u['unit_code'] . " - " . $u['unit_name'] : $u['unit_name'];
-                            echo "<option value='{$u['id']}' ".($f_unit==$u['id']?'selected':'').">{$u_label}</option>";
-                        }
-                        ?>
-                    </select>
-                </div>
-                <div class="col-auto">
-                    <label class="form-label-custom"><i class="bi bi-search me-1"></i>Search Asset ID / Serial</label>
-                    <input type="text" name="search" class="form-control form-control-custom" placeholder="e.g. Asset ID, Serial, Model..." value="<?= htmlspecialchars($f_search) ?>">
+                <?php endif; ?>
+
+                <!-- Row for Unit & Search (Flex layout) -->
+                <div class="d-flex flex-wrap align-items-end gap-3">
+                    <div style="flex: 1 1 300px;">
+                        <label class="form-label-custom"><i class="bi bi-door-open me-1"></i>Unit / Lab</label>
+                        <select name="unit" class="form-select form-select-custom w-100" onchange="this.form.submit()" title="Select Unit">
+                            <option value="">All Units / Labs</option>
+                            <?php 
+                            if ($is_admin_view) {
+                                $u_where = $f_dept ? "AND division_id = '$f_dept'" : "";
+                            } else {
+                                $u_where = "AND division_id = '$session_division_id'";
+                            }
+                            $units = $conn->query("SELECT id, unit_name, unit_code FROM units WHERE status='Active' $u_where");
+                            while($u = $units->fetch_assoc()) {
+                                $u_label = $u['unit_code'] ? $u['unit_code'] . " - " . $u['unit_name'] : $u['unit_name'];
+                                echo "<option value='{$u['id']}' ".($f_unit==$u['id']?'selected':'').">{$u_label}</option>";
+                            }
+                            ?>
+                        </select>
+                    </div>
+
+                    <div style="flex: 1 1 300px;">
+                        <label class="form-label-custom"><i class="bi bi-search me-1"></i>Search Asset ID / Serial</label>
+                        <input type="text" name="search" class="form-control form-control-custom w-100" placeholder="e.g. Asset ID, Serial, Model..." value="<?= htmlspecialchars($f_search) ?>">
+                    </div>
                 </div>
 
-                <div class="col-12 d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
                     <button type="submit" class="btn btn-navy">
                         <i class="bi bi-filter me-1"></i> Apply Filters
                     </button>

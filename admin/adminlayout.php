@@ -249,9 +249,6 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
                         <a href="/cecsms/master/master_dashboard.php" class="nav-link <?= ($current_page=='master_dashboard.php')?'active':'' ?>">
                             <i class="bi bi-database-gear"></i> Master Data
                         </a>
-                        <a href="/cecsms/services/index.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'],'services') !== false)?'active':'' ?>">
-                            <i class="bi bi-tools"></i> Services
-                        </a>
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
@@ -272,30 +269,42 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
                    class="nav-link d-flex justify-content-between align-items-center <?= ($current_page == 'electricals_dashboard.php') ? 'active' : '' ?>">
                     <span><i class="bi bi-plug-fill me-2"></i> Electrical Stock</span>
                 </a>
-
-                <?php if ($role === ROLE_SUPERADMIN || $role === 'SuperAdmin'): ?>
-                    <li class="nav-item list-unstyled">
-                        <a class="nav-link <?= ($page_title == 'Lifecycle Management & Audit Logs') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">
-                            <span><i class="bi bi-arrow-down-left-square me-2"></i> Stock Transitions</span>
-                            <?php if (!empty($pending_count) && $pending_count > 0): ?>
-                                <span class="badge rounded-pill bg-warning text-dark ms-auto extra-small"><?= $pending_count ?></span>
-                            <?php endif; ?>
-                        </a>
-                    </li>
-
-                    <a href="/cecsms/master/reports.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'], 'reports.php') !== false) ? 'active' : '' ?>">
-                        <i class="bi bi-file-earmark-bar-graph"></i> Reports
-                    </a>
-                    <a href="/cecsms/master/computer_configuration_report.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'], 'computer_configuration_report') !== false) ? 'active' : '' ?>">
-                        <i class="bi bi-file-earmark-bar-graph"></i> Configuration Report
-                    </a>
-
-                    <a href="/cecsms/ewaste/index.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'],'ewaste') !== false)?'active':'' ?>">
-                        <i class="bi bi-recycle"></i> E-Waste
-                    </a>
-                <?php endif; ?>
             </div>
 
+            <?php if($role === ROLE_SUPERADMIN): ?>
+                <div class="nav-group-label">Service & Requests</div>
+                <div class="nav flex-column">    
+                    <a href="/cecsms/services/index.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'],'services') !== false)?'active':'' ?>">
+                        <i class="bi bi-tools"></i> Services
+                    </a>
+                    <a class="nav-link <?= ($page_title == 'Lifecycle Management & Audit Logs') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">
+                        <span><i class="bi bi-arrow-down-left-square me-2"></i> Stock Transitions</span>
+                        <?php if (!empty($pending_count) && $pending_count > 0): ?>
+                            <span class="badge rounded-pill bg-warning text-dark ms-auto extra-small"><?= $pending_count ?></span>
+                        <?php endif; ?>
+                    </a>
+                </div>   
+            <?php endif; ?>
+
+            <div class="nav-group-label">Reports</div>
+            <div class="nav flex-column">
+                <a href="/cecsms/master/reports.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'], 'reports.php') !== false) ? 'active' : '' ?>">
+                    <i class="bi bi-file-earmark-bar-graph"></i> Consolidated Reports
+                </a>
+                <a href="/cecsms/master/computer_configuration_report.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'], 'computer_configuration_report') !== false) ? 'active' : '' ?>">
+                    <i class="bi bi-file-earmark-bar-graph"></i> Computer Configuration Report
+                </a>
+            </div>
+            
+            <?php if(in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)): ?>
+                <div class="nav-group-label">E-Waste</div>
+                <div class="nav flex-column">
+                    <a href="/cecsms/ewaste/ewaste_dashboard.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'],'ewaste') !== false)?'active':'' ?>">
+                        <i class="bi bi-recycle"></i> E-Waste Management
+                    </a>
+                </div>
+            <?php endif; ?>
+            
             <?php if($role === ROLE_SUPERADMIN): ?>
                 <div class="nav-group-label">System Audit</div>
                 <div class="nav flex-column">

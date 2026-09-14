@@ -111,11 +111,9 @@ ob_start();
         --text-body: #4b5f72;
         --text-muted: #6b7c8c;
         --shadow-subtle: 0 1px 2px rgba(20, 45, 70, 0.06);
-        --shadow-hover: 0 4px 12px rgba(20, 45, 70, 0.10);
         --transition-smooth: all 0.18s ease;
     }
 
-    /* Standard ERP Filter Card Design */
     .filter-card-modern {
         background: var(--card-bg);
         border: 1px solid var(--card-border);
@@ -164,7 +162,6 @@ ob_start();
         background-color: #fff;
     }
 
-    /* ERP Action Buttons */
     .btn-navy {
         background-color: var(--brand-primary);
         color: var(--brand-white) !important;
@@ -198,7 +195,6 @@ ob_start();
         border-color: var(--card-border-hover);
     }
 
-    /* KPI Summary Card */
     .kpi-card {
         background: var(--card-bg);
         border: 1px solid var(--card-border);
@@ -208,41 +204,29 @@ ob_start();
         border-left: 4px solid var(--brand-primary);
     }
 
-    .report-card-container {
-        background: var(--card-bg);
-        border-radius: 6px;
-        box-shadow: var(--shadow-subtle);
-        border: 1px solid var(--card-border);
+    .report-card { 
+        border: none !important; 
+        border-radius: 0; 
+        background: #fff; 
+        box-shadow: none !important;
     }
-
-    .table-custom {
-        border-collapse: collapse !important;
-        width: 100%;
-        margin-bottom: 0;
+    
+    .table-clean { 
+        border-collapse: collapse !important; 
+        width: 100%; 
     }
-
-    .table-custom th, .table-custom td {
-        border: 1px solid #d9e0e7 !important;
+    
+    .table-clean th, .table-clean td { 
+        border: 1px solid #000000 !important; 
         padding: 8px 10px;
-        color: var(--text-primary);
+        color: #000000 !important;
     }
-
-    .table-custom thead {
-        display: table-header-group;
-    }
-
-    .table-custom tr {
-        page-break-inside: avoid;
-        break-inside: avoid;
-    }
-
-    .table-custom thead th {
-        background-color: #f1f5f9 !important;
-        color: var(--brand-navy) !important;
+    
+    .table-clean thead th { 
+        background-color: #ffffff !important; 
+        text-transform: uppercase; 
+        font-size: 0.82rem;
         font-weight: 700;
-        text-transform: uppercase;
-        font-size: 0.78rem;
-        letter-spacing: 0.04em;
     }
 
     .config-badge {
@@ -282,35 +266,38 @@ ob_start();
             margin: 0 !important;
             padding: 0 !important;
             width: 100% !important;
+            left: 0 !important;
+            position: relative !important;
             background: #fff !important;
         }
 
         .container-fluid { width: 100% !important; max-width: 100% !important; padding: 0 !important; }
-        .report-card-container { border: none !important; box-shadow: none !important; padding: 0 !important; }
+        .report-card { border: none !important; padding: 0 !important; }
 
-        .table-custom th, .table-custom td { 
-            border: 1px solid #000000 !important;
-            color: #000000 !important;
+        .table-clean tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
 
-        .table-custom thead {
+        .table-clean thead {
             display: table-header-group !important;
         }
 
-        .table-custom tr {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-        }
-
-        .table-custom thead th {
-            background-color: #fff !important;
+        /* Remove pills effect in print */
+        .config-badge {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
             color: #000 !important;
+            font-weight: normal !important;
         }
 
         .signature-block {
+            page-break-before: auto !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             margin-top: 50px !important;
+            padding-top: 0 !important;
             border: none !important;
         }
 
@@ -372,7 +359,7 @@ ob_start();
                 <div class="d-flex flex-wrap align-items-end gap-3">
                     <div style="flex: 1 1 300px;">
                         <label class="form-label-custom"><i class="bi bi-door-open me-1"></i>Unit / Lab</label>
-                        <select name="unit" class="form-select form-select-custom w-100" onchange="this.form.submit()" title="Select Unit">
+                        <select name="unit" class="form-select form-select-custom auto-resize-select" style="padding-right: 35px;" onchange="this.form.submit()" title="Select Unit">
                             <option value="">All Units / Labs</option>
                             <?php 
                             if ($is_admin_view) {
@@ -423,17 +410,17 @@ ob_start();
         </div>
     </div>
 
-    <!-- Report Body Container -->
-    <div class="report-card-container p-4 p-md-5" id="printableReport">
+    <!-- Printable & PDF Export Area -->
+    <div class="report-card p-4" id="printableReport">
         <div class="text-center mb-4">
             <img src="../admin/assets/header.PNG" alt="Header" style="width:100%; max-width:850px;" class="mb-3">
             
-            <h4 class="fw-bold text-uppercase mb-1" style="color: var(--brand-navy);">Computer Hardware Specification Report</h4>
+            <h4 class="fw-bold text-uppercase mb-1">Computer Hardware Specification Report</h4>
             <h6 class="text-dark fw-bold mb-1"><?= $filter_display ?></h6>
             <p class="text-muted small">Report Generated: <?= date('d-m-Y h:i A') ?></p>
         </div>
 
-        <table class="table table-custom align-middle">
+        <table class="table table-bordered table-clean align-middle">
             <thead>
                 <tr>
                     <th class="text-center" width="5%">Sl.No</th>
@@ -453,7 +440,7 @@ ob_start();
                     foreach($config_rows as $row): ?>
                     <tr>
                         <td class="text-center"><?= $sl++ ?></td>
-                        <td class="fw-bold" style="color: var(--brand-primary);">
+                        <td class="fw-bold">
                             <?= htmlspecialchars($row['item_name']) ?>
                             <div class="small text-muted fw-normal"><?= htmlspecialchars($row['model_name']) ?></div>
                         </td>
@@ -473,7 +460,7 @@ ob_start();
             </tbody>
         </table>
         
-        <!-- Signatures Box -->
+        <!-- Clean Signatures Area -->
         <div class="d-none d-print-block pdf-signature-area signature-block">
             <div class="d-flex justify-content-between">
                 <div class="text-center" style="width: 200px;">
@@ -497,6 +484,9 @@ ob_start();
 function autoResizeSelect(selectElement) {
     if (!selectElement) return;
 
+    selectElement.style.width = '100%';
+    const parentWidth = selectElement.parentElement.clientWidth;
+
     const tempSpan = document.createElement('span');
     tempSpan.style.visibility = 'hidden';
     tempSpan.style.position = 'absolute';
@@ -514,7 +504,8 @@ function autoResizeSelect(selectElement) {
     document.body.appendChild(tempSpan);
 
     const calculatedWidth = Math.ceil(tempSpan.getBoundingClientRect().width) + 50;
-    selectElement.style.width = `${calculatedWidth}px`;
+    const finalWidth = Math.max(parentWidth, calculatedWidth);
+    selectElement.style.width = `${finalWidth}px`;
 
     document.body.removeChild(tempSpan);
 }
@@ -522,23 +513,19 @@ function autoResizeSelect(selectElement) {
 document.addEventListener('DOMContentLoaded', () => {
     const filterForm = document.getElementById('filterForm');
     
-    // Check if page was refreshed
     const navEntries = performance.getEntriesByType('navigation');
     const isReload = navEntries.length > 0 && navEntries[0].type === 'reload';
 
     if (isReload && filterForm) {
-        // Reset select elements
         const dynamicDropdowns = filterForm.querySelectorAll('.auto-resize-select');
         dynamicDropdowns.forEach(select => {
             select.selectedIndex = 0;
             autoResizeSelect(select);
         });
         
-        // Clear search input on hard refresh
         const searchInput = filterForm.querySelector('input[name="search"]');
         if (searchInput) searchInput.value = '';
 
-        // Strip query parameters
         if (window.history.replaceState) {
             window.history.replaceState(null, null, window.location.pathname);
         }

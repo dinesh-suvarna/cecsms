@@ -5,9 +5,9 @@ include "../includes/session.php";
 
 /**
  * 1. MANDATORY SECURITY LOCKDOWN
- * Only SuperAdmin accounts are authorized to read or manipulate the E-Waste Ledger.
+ * Permit SuperAdmin and division-scoped Admin accounts to view the page.
  */
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'SuperAdmin') {
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
     $_SESSION['error_msg'] = "Access Denied: You do not have permissions to view the E-Waste registry.";
     header("Location: ../dashboard.php"); 
     exit;
@@ -16,8 +16,25 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'SuperAdmin') {
 $page_title = "E-Waste Management Panel";
 $page_icon  = "bi-trash3-fill";
 
+// Build division scope filter if the user is a division-scoped Admin
+$division_filter_sql = "";
+$division_id = null;
+
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'Admin' && !empty($_SESSION['division_id'])) {
+    $division_id = $_SESSION['division_id'];
+    $division_filter_sql = " WHERE (dm_active.division_id = ? OR dm_history.division_id = ?) ";
+}
+
 /* ================= HANDLE STATUS UPDATE ================= */
 if (isset($_POST['update_ewaste_status'])) {
+    // Restrict processing capabilities strictly to SuperAdmin
+    if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'SuperAdmin') {
+        $_SESSION['swal_type'] = "error";
+        $_SESSION['swal_msg'] = "Access Denied: Only SuperAdmins can process e-waste updates.";
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
+    }
+
     $ewaste_id  = (int)$_POST['update_ewaste_status']; 
     $new_status = $_POST['new_status'];
     
@@ -71,7 +88,7 @@ header("Location: " . $_SERVER['PHP_SELF']);
 exit;
 }
 
-/* ================= FETCH UNCOMMENTED & ADJUSTED DATA ================= */
+/* ================= FETCH SCOPED DATA ================= */
 $query = "
     SELECT 
         ew.ewaste_id, 
@@ -82,15 +99,47 @@ $query = "
         im.item_name, 
         sd.serial_number,
         mo.model_name,
-        CONCAT_WS(' | ', mo.processor, mo.ram, CONCAT(mo.storage_size, ' ', mo.storage_type)) as full_config,
-        NULL as partner_name 
+        COALESCE(
+            un_active.unit_name, 
+            un_history.unit_name, 
+            'Central Stock / Unassigned'
+        ) as source_unit,
+        COALESCE(
+            dm_active_div.division_name, 
+            dm_history_div.division_name, 
+            'Central Stock / Unassigned'
+        ) as source_division
     FROM ewaste_items ew
     JOIN stock_details sd ON sd.id = ew.stock_detail_id
     JOIN items_master im ON im.id = sd.stock_item_id
     LEFT JOIN item_models mo ON sd.model_id = mo.id
+    
+    -- Active Division Assets Link
+    LEFT JOIN division_assets da ON sd.id = da.stock_detail_id
+    LEFT JOIN dispatch_details dd_active ON da.dispatch_detail_id = dd_active.id
+    LEFT JOIN dispatch_master dm_active ON dd_active.dispatch_id = dm_active.id
+    LEFT JOIN divisions dm_active_div ON dm_active.division_id = dm_active_div.id
+    LEFT JOIN units un_active ON dm_active.unit_id = un_active.id
+
+    -- Historical Dispatch Link (Fallback if division_assets is cleared/changed)
+    LEFT JOIN dispatch_details dd_history ON sd.id = dd_history.stock_detail_id
+    LEFT JOIN dispatch_master dm_history ON dd_history.dispatch_id = dm_history.id
+    LEFT JOIN divisions dm_history_div ON dm_history.division_id = dm_history_div.id
+    LEFT JOIN units un_history ON dm_history.unit_id = un_history.id
+    
+    $division_filter_sql
+    GROUP BY ew.ewaste_id
     ORDER BY ew.logged_at DESC
 ";
-$result = $conn->query($query);
+
+if (!empty($division_filter_sql)) {
+    $stmt_fetch_all = $conn->prepare($query);
+    $stmt_fetch_all->bind_param("ii", $division_id, $division_id);
+    $stmt_fetch_all->execute();
+    $result = $stmt_fetch_all->get_result();
+} else {
+    $result = $conn->query($query);
+}
 
 // Start capturing the main content
 ob_start();
@@ -98,8 +147,8 @@ ob_start();
 
 <style>
     .ewaste-card {
-        border-radius: 14px;
-        border: 1px solid #eef2f6;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
         background: #fff;
     }
     .badge-pending { background-color: #fef3c7; color: #d97706; font-weight: 700; }
@@ -124,13 +173,67 @@ ob_start();
         font-size: 0.8rem;
         color: #64748b;
     }
+
+    /* ===== E-WASTE HEADER - MATCH REFERENCE UI ===== */
+    .ewaste-header {
+        padding: 0 0 14px 0;
+        margin-bottom: 22px;
+        border-bottom: 1px solid #e3e8ed;
+    }
+
+    .ewaste-header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .ewaste-header-icon {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f4f7f9;
+        border: 1px solid #dfe5ea;
+        border-radius: 5px;
+        color: #123b63;
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+
+    .ewaste-header-title {
+        color: #123b63;
+        font-size: 23px;
+        font-weight: 700;
+        line-height: 1.2;
+        margin: 0 0 3px 0;
+    }
+
+    .ewaste-header-subtitle {
+        color: #737d87;
+        font-size: 12px;
+        line-height: 1.4;
+        margin: 0;
+    }
 </style>
 
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="fw-bold mb-1"><i class="bi bi-trash3 me-2 text-danger"></i>E-Waste Management Ledger</h4>
-            <p class="text-muted small mb-0">Decommissioned items pending structural sorting, lifecycle updates, or collection dispatches.</p>
+<div class="container-fluid px-2 px-md-4 py-4">
+    <!-- HEADER -->
+    <div class="ewaste-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="ewaste-header-left">
+                <div class="ewaste-header-icon" style="color: #dc2626 !important;">
+                    <i class="bi bi-trash3-fill text-danger"></i>
+                </div>
+                <div>
+                    <h3 class="ewaste-header-title">
+                        E-Waste Management Ledger
+                    </h3>
+                    <p class="ewaste-header-subtitle">
+                        Decommissioned items pending structural sorting, lifecycle updates, or collection dispatches.
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -139,13 +242,14 @@ ob_start();
             <table class="table table-ewaste align-middle mb-0">
                 <thead>
                     <tr>
-                        <th class="ps-4">Logged Date</th>
-                        <th>Asset Tag / ID</th>
-                        <th>Item Details</th>
-                        <th>Hardware Configuration</th>
-                        <th>Disposal Reason</th>
-                        <th>Pipeline Status</th>
-                        <th class="text-end pe-4">Manage</th>
+                        <th class="ps-4" style="width: 16%;">Logged Date</th>
+                        <th style="width: 24%;">Asset Tag & Origin</th>
+                        <th style="width: 22%;">Item Details</th>
+                        <th style="width: 18%;">Disposal Reason</th>
+                        <th style="<?= (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin') ? 'width: 10%;' : 'width: 20%;'; ?>">Status</th>
+                        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin'): ?>
+                            <th class="text-end pe-4" style="width: 10%;">Manage</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -163,40 +267,39 @@ ob_start();
                                 <small class="text-muted" style="font-size: 0.7rem;"><?= date('h:i A', strtotime($row['logged_at'])) ?></small>
                             </td>
                             <td>
-                                <span class="badge bg-light text-primary border fw-bold px-2 py-1.5"><?= htmlspecialchars($row['division_asset_id']) ?></span>
-                                <small class="d-block text-muted mt-1" style="font-size: 0.72rem;">S/N: <b><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></b></small>
+                                <span class="badge bg-light text-primary border fw-bold px-2 py-1"><?= htmlspecialchars($row['division_asset_id']) ?></span>
+                                <small class="d-block text-secondary mt-1" style="font-size: 0.7rem;">
+                                    <i class="bi bi-building me-1"></i><?= htmlspecialchars($row['source_division']) ?> 
+                                    <span class="text-muted">(<?= htmlspecialchars($row['source_unit']) ?>)</span>
+                                </small>
                             </td>
                             <td>
                                 <span class="fw-bold text-dark d-block" style="font-size: 0.85rem;"><?= htmlspecialchars($row['item_name']) ?></span>
                                 <small class="text-muted"><?= htmlspecialchars($row['model_name'] ?: 'Standard Model') ?></small>
                             </td>
                             <td>
-                                <small class="text-secondary fw-medium"><?= htmlspecialchars($row['full_config'] ?: 'No Hardware Spec Profile') ?></small>
-                            </td>
-                            <td>
-                                <span class="reason-text" data-bs-toggle="tooltip" title="<?= htmlspecialchars($row['disposal_reason']) ?>">
+                                <div class="text-wrap text-break reason-text" style="max-width: 250px; font-size: 0.85rem;">
                                     <?= htmlspecialchars($row['disposal_reason']) ?>
-                                </span>
+                                </div>
                             </td>
                             <td>
-                                <span class="badge rounded-pill <?= $status_class ?> px-3 py-2 small" style="font-size: 0.7rem;">
+                                <span class="badge rounded-pill <?= $status_class ?> px-2.5 py-1.5" style="font-size: 0.68rem;">
                                     <?= $display_status ?>
                                 </span>
-                                <?php if(!empty($row['partner_name'])): ?>
-                                    <small class="d-block text-muted small mt-1" style="font-size:0.65rem;"><i class="bi bi-truck me-1"></i><?= htmlspecialchars($row['partner_name']) ?></small>
-                                <?php endif; ?>
                             </td>
-                            <td class="text-end pe-4">
-                                <button class="btn btn-sm btn-outline-dark fw-bold rounded-3 px-3" 
-                                        onclick="openUpdateStatusModal(<?= $row['ewaste_id'] ?>, '<?= $row['ewaste_status'] ?>', '<?= addslashes($row['division_asset_id']) ?>')">
-                                    <i class="bi bi-gear-fill me-1 text-secondary"></i> Process
-                                </button>
-                            </td>
+                            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin'): ?>
+                                <td class="text-end pe-4">
+                                    <button class="btn btn-sm btn-outline-dark fw-bold rounded-3 px-2.5 py-1" 
+                                            onclick="openUpdateStatusModal(<?= $row['ewaste_id'] ?>, '<?= $row['ewaste_status'] ?>', '<?= addslashes($row['division_asset_id']) ?>')">
+                                        <i class="bi bi-gear-fill me-1 text-secondary"></i> Process
+                                    </button>
+                                </td>
+                            <?php endif; ?>
                         </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
+                            <td colspan="<?= (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin') ? 6 : 5; ?>" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-2 d-block mb-2 text-opacity-20"></i>
                                 No items found in the recycling pipeline.
                             </td>
@@ -212,8 +315,9 @@ ob_start();
 // Save main content layout variable
 $content = ob_get_clean(); 
 
-// Start capturing the modal layout separately so layout.php can handle structural placement
+// Start capturing the modal layout separately so layout.php can handle structural placement (Only for SuperAdmin)
 ob_start();
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin'):
 ?>
 <div class="modal fade" id="updateEwasteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -245,6 +349,7 @@ ob_start();
     </div>
 </div>
 <?php 
+endif;
 // Pass modal content to layout injection hook variable
 $modal_html = ob_get_clean(); 
 

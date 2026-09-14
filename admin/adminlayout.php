@@ -289,10 +289,10 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
             <div class="nav-group-label">Reports</div>
             <div class="nav flex-column">
                 <a href="/cecsms/master/reports.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'], 'reports.php') !== false) ? 'active' : '' ?>">
-                    <i class="bi bi-file-earmark-bar-graph"></i> Consolidated Reports
+                    <i class="bi bi-file-earmark-bar-graph"></i> Stock Reports
                 </a>
                 <a href="/cecsms/master/computer_configuration_report.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'], 'computer_configuration_report') !== false) ? 'active' : '' ?>">
-                    <i class="bi bi-file-earmark-bar-graph"></i> Computer Configuration Report
+                    <i class="bi bi-pc-display"></i> Computer Configuration Report
                 </a>
             </div>
             

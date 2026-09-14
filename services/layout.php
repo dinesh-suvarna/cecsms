@@ -266,6 +266,12 @@ if (in_array($role, ['SuperAdmin', 'Admin'], true)) {
                 <a href="view_services.php" class="nav-link <?= ($current_page == 'view_services.php') ? 'active' : '' ?>">
                     <i class="bi bi-list-columns-reverse"></i> View Services
                 </a>
+                <a href="repair_handler.php" class="nav-link <?= ($current_page == 'repair_handler.php') ? 'active' : '' ?>">
+                    <i class="bi bi-list-columns-reverse"></i> Repair
+                </a>
+                <a href="repair_view.php" class="nav-link <?= ($current_page == 'repair_view.php') ? 'active' : '' ?>">
+                    <i class="bi bi-list-columns-reverse"></i> Repair View
+                </a>
             </div>
 
             <div class="nav-group-label">Reports & Analytics</div>

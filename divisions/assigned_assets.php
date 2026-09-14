@@ -524,14 +524,17 @@ $modal_html = '
 </div>
 
 <div class="modal fade" id="editIdModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-dialog modal-md modal-dialog-centered"> <!-- Changed modal-sm to modal-md -->
         <div class="modal-content border-0 shadow-lg rounded-3">
-            <div class="modal-header border-bottom p-3"><h6 class="fw-bold mb-0">Update Asset Tag</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header border-bottom p-3">
+                <h6 class="fw-bold mb-0">Update Asset Tag</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <form method="POST">
-                <div class="modal-body p-3">
+                <div class="modal-body p-4"> <!-- Increased padding slightly for better spacing -->
                     <input type="hidden" name="db_id" id="edit_db_id">
                     <label class="form-label small fw-semibold text-secondary">Asset Tag / ID</label>
-                    <input type="text" name="new_asset_tag" id="edit_asset_tag" class="form-control fw-bold" required>
+                    <input type="text" name="new_asset_tag" id="edit_asset_tag" class="form-control fw-bold form-control-lg fs-6" required> <!-- Added form-control-lg or custom styling if needed -->
                 </div>
                 <div class="modal-footer border-0 p-3 pt-0">
                     <button type="submit" name="update_asset_id" class="btn btn-primary w-100 fw-bold" style="background-color: var(--erp-navy, #173f63); border-color: var(--erp-navy, #173f63);">Save Tag</button>

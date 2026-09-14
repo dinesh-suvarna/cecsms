@@ -104,21 +104,28 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
                 $status_title = 'Return Approved';
                 $status_text  = "Asset $asset_tag has been returned back to available inventory.";
 
-            } elseif ($action === 'repair_requested') {
-                $log_notes = $ref_prefix . "Repair authorized by Admin. Asset $asset_tag moved to maintenance.";
-                $log_stmt  = $conn->prepare("
-                    INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
-                    VALUES (?, ?, ?, 'repair_approved', ?, ?)
-                ");
-                $log_stmt->bind_param("isiss", $stock_id, $asset_tag, $unit_name, $admin_id, $log_notes);
-                $log_stmt->execute();
+            // In process_request.php under: elseif ($action === 'repair_requested')
 
-                $conn->query("UPDATE stock_details SET status = 'maintenance' WHERE id = $stock_id");
-                $conn->query("UPDATE division_assets SET status = 'under_repair' WHERE id = $id");
+} elseif ($action === 'repair_requested') {
+    $log_notes = $ref_prefix . "Repair authorized by Admin. Asset $asset_tag redirected to repair module.";
+    $log_stmt  = $conn->prepare("
+        INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
+        VALUES (?, ?, ?, 'repair_approved', ?, ?)
+    ");
+    $log_stmt->bind_param("isiss", $stock_id, $asset_tag, $unit_name, $admin_id, $log_notes);
+    $log_stmt->execute();
 
-                $status_icon  = 'warning';
-                $status_title = 'Repair Authorized';
-                $status_text  = "Asset $asset_tag is now marked as under repair.";
+    // Update stock & division asset status
+    $conn->query("UPDATE stock_details SET status = 'maintenance' WHERE id = $stock_id");
+    $conn->query("UPDATE division_assets SET status = 'under_repair' WHERE id = $id");
+
+    // Commit transaction before redirecting to the repair intake form
+    $conn->commit();
+
+    // Redirect directly to the repair handling page
+    header("Location: /cecsms/services/repair_handler.php?asset_id=$id");
+    exit;
+
 
             } elseif ($action === 'dispose_requested') {
                 $remark_stmt = $conn->prepare("SELECT notes FROM asset_logs WHERE asset_id = ? AND action_type = 'dispose_requested' ORDER BY id DESC LIMIT 1");

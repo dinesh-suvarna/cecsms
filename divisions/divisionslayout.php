@@ -491,5 +491,6 @@ $notif_count = $notifications ? $notifications->num_rows : 0;
         unset($_SESSION['swal_type']);
     endif; 
     ?>
+<script src="/cecsms/includes/heartbeat.js"></script>
 </body>
 </html>

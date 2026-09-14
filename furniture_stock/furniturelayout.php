@@ -413,5 +413,6 @@ if (isset($conn)) {
         }
     });
 </script>
+<script src="/cecsms/includes/heartbeat.js"></script>
 </body>
 </html>

@@ -14,6 +14,23 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
+if (isset($_SESSION["login_log_id"]) && isset($conn)) {
+
+    $login_log_id = intval($_SESSION["login_log_id"]);
+
+    $stmt = $conn->prepare("
+        UPDATE login_logs
+        SET logout_time = NOW()
+        WHERE id = ?
+    ");
+
+    if ($stmt) {
+        $stmt->bind_param("i", $login_log_id);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
 // Fetch pending transitions count for consistency across layout notifications
 $pending_count = 0;
 $notif_res = null;
@@ -468,5 +485,6 @@ if (in_array($role, ['SuperAdmin', 'Admin'], true)) {
             if (event.persisted) { window.location.reload(); }
         };
     </script>
+<script src="/cecsms/includes/heartbeat.js"></script>
 </body>
 </html>

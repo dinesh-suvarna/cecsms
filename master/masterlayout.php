@@ -406,5 +406,6 @@ $pending_count = (int)($count_data['total'] ?? 0);
             }
         });
     </script>
+<script src="/cecsms/includes/heartbeat.js"></script>
 </body>
 </html>

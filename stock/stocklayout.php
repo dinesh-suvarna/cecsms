@@ -445,6 +445,7 @@ if ($count_res) {
             if (event.persisted) { window.location.reload(); }
         };
     </script>
+    <script src="/cecsms/includes/heartbeat.js"></script>
     <?php include "../includes/notify.php"; ?>
 </body>
 </html>

@@ -350,5 +350,6 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
             if (event.persisted) { window.location.reload(); }
         };
     </script>
+<script src="/cecsms/includes/heartbeat.js"></script>    
 </body>
 </html>

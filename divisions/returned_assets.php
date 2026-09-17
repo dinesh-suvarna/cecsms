@@ -11,7 +11,7 @@ $division_id = $_SESSION['division_id'] ?? 0;
 
 /* ================= HELPERS & ICONS ================= */
 if (!function_exists('getAssetIcon')) {
-    function getAssetIcon($itemName) {
+    function getAssetIcon(string $itemName) {
         $name = strtolower($itemName ?? '');
         switch (true) {
             case (str_contains($name, 'computer') || str_contains($name, 'desktop')):
@@ -67,7 +67,7 @@ $pending_query = "SELECT
             ORDER BY log_sub.created_at DESC 
             LIMIT 1
         )
-        WHERE da.status = 'return_requested' ";
+        WHERE da.status = 'service_requested' ";
 
 if ($role !== 'SuperAdmin') {
     $pending_query .= " AND dm.division_id = " . intval($division_id);
@@ -358,6 +358,7 @@ ob_start();
                                     }
                                     
                                     switch ($status) {
+                                        case 'service_requested':
                                         case 'return_requested':
                                             $status_label = "SERVICE REQUESTED";
                                             $badge_class  = "bg-warning-subtle text-warning-emphasis border-warning-subtle";
@@ -485,7 +486,7 @@ function processItem(id, assetTag, itemName, serial, notes, iconClass, unitName,
                 
                 <button type="button" class="swal-action-btn" onclick="executeAction('${id}', 'return_requested')">
                     <div class="fw-bold text-success"><i class="bi bi-box-arrow-in-left me-1"></i> 1. Return to Stock</div>
-                    <div class="text-muted extra-small">Restore item back into active unassigned stock.</div>
+                    <div class="text-muted extra-small">Approve return and restore item back into active unassigned stock.</div>
                 </button>
 
                 <button type="button" class="swal-action-btn" onclick="executeAction('${id}', 'repair_requested')">

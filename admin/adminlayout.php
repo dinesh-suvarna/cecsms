@@ -14,10 +14,38 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
+// Fetch repair module counts and compute total aggregate for Services
+$nav_repair_queue_count = 0;
+$nav_in_progress_count = 0;
+$nav_completed_count = 0;
+$services_badge_count = 0;
+
+if (isset($conn) && in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
+    // 1. Queue count (under_repair)
+    $res_q = $conn->query("SELECT COUNT(*) AS total FROM division_assets WHERE status = 'under_repair'");
+    if ($res_q && $row = $res_q->fetch_assoc()) {
+        $nav_repair_queue_count = intval($row['total']);
+    }
+
+    // 2. In Progress tickets count
+    $res_ip = $conn->query("SELECT COUNT(*) AS total FROM repairs WHERE status = 'in_progress'");
+    if ($res_ip && $row = $res_ip->fetch_assoc()) {
+        $nav_in_progress_count = intval($row['total']);
+    }
+
+    // 3. Completed / Pending return count
+    $res_comp = $conn->query("SELECT COUNT(*) AS total FROM repairs WHERE status = 'completed'");
+    if ($res_comp && $row = $res_comp->fetch_assoc()) {
+        $nav_completed_count = intval($row['total']);
+    }
+
+    // Combine them into a single definitive badge count for the Services menu
+    $services_badge_count = $nav_repair_queue_count + $nav_in_progress_count + $nav_completed_count;
+}
 // Fetch total pending stock transition requests once for sidebar badges and top header
 $pending_count = 0;
 if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
-    $count_query = "SELECT COUNT(*) as total FROM division_assets WHERE status IN ('return_requested', 'repair_requested', 'dispose_requested')";
+    $count_query = "SELECT COUNT(*) as total FROM division_assets WHERE status IN ('service_requested','return_requested', 'repair_requested', 'dispose_requested')";
     $count_res = $conn->query($count_query);
     if ($count_res) {
         $count_data = $count_res->fetch_assoc();
@@ -274,9 +302,14 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
             <?php if($role === ROLE_SUPERADMIN): ?>
                 <div class="nav-group-label">Service & Requests</div>
                 <div class="nav flex-column">    
-                    <a href="/cecsms/services/index.php" class="nav-link <?= (strpos($_SERVER['PHP_SELF'],'services') !== false)?'active':'' ?>">
-                        <i class="bi bi-tools"></i> Services
-                    </a>
+                    <a href="/cecsms/services/index.php" class="nav-link d-flex justify-content-between align-items-center <?= (strpos($_SERVER['PHP_SELF'],'services') !== false)?'active':'' ?>">
+    <span class="d-flex align-items-center gap-2">
+        <i class="bi bi-tools"></i> Services
+    </span>
+    <?php if ($services_badge_count > 0): ?>
+        <span class="badge rounded-pill bg-warning text-dark extra-small" style="font-size: 10px;"><?= $services_badge_count ?></span>
+    <?php endif; ?>
+</a>
                     <a class="nav-link <?= ($page_title == 'Lifecycle Management & Audit Logs') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">
                         <span><i class="bi bi-arrow-down-left-square me-2"></i> Stock Transitions</span>
                         <?php if (!empty($pending_count) && $pending_count > 0): ?>

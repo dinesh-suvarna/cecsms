@@ -1,21 +1,20 @@
 <?php
-require_once __DIR__ . "/../admin/auth.php";
+// repair_view.php
 require_once __DIR__ . "/../config/db.php";
+include "../admin/auth.php";
+include "../includes/session.php";
 
-$role = $_SESSION["role"] ?? 'User';
-if (!in_array($role, ['SuperAdmin', 'Admin'], true)) {
+if (!in_array($_SESSION['role'] ?? '', ['SuperAdmin', 'Admin'], true)) {
     $_SESSION['error_msg'] = "Access Denied.";
-    header("Location: index.php");
+    header("Location: ../admin/dashboard.php");
     exit;
 }
 
-$page_title = "Repair Handler & Tracking";
-
-// Handle form actions (Mark Completed / Return to Origin)
+// --- HANDLE ACTIONS (MARK COMPLETED / RETURN TO ORIGIN) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $repair_id = intval($_POST['repair_id'] ?? 0);
-    $action = $_POST['action'];
-    $admin_id = $_SESSION['user_id'] ?? 1;
+    $action    = $_POST['action'];
+    $admin_id  = $_SESSION['user_id'] ?? 1;
 
     if ($repair_id > 0) {
         $conn->begin_transaction();
@@ -26,44 +25,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $repair = $stmt->get_result()->fetch_assoc();
 
             if ($repair) {
-                $stock_detail_id = $repair['stock_detail_id'];
-                $asset_tag = $repair['division_asset_id'];
+                $stock_detail_id    = $repair['stock_detail_id'];
+                $asset_tag          = $repair['division_asset_id'];
+                $origin_division_id = $repair['origin_division_id'];
 
                 if ($action === 'complete') {
                     $final_cost       = floatval($_POST['final_cost'] ?? 0);
                     $resolution_notes = trim($_POST['resolution_notes'] ?? 'Repair completed successfully.');
 
-                    // Update repair record with final cost and completion status
-                    $up_rep = $conn->prepare("UPDATE repairs SET status = 'completed', repair_cost = ?, issue_description = CONCAT(issue_description, ' | Resolution: ', ?) WHERE id = ?");
+                    // 1. Update repair record to completed
+                    $up_rep = $conn->prepare("
+                        UPDATE repairs 
+                        SET status = 'completed', repair_cost = ?, resolution_notes = ?, completed_at = NOW() 
+                        WHERE id = ?
+                    ");
                     $up_rep->bind_param("dsi", $final_cost, $resolution_notes, $repair_id);
                     $up_rep->execute();
 
-                    // Log action into asset history / remarks
-                    $log_notes = "Repair Completed. Work Done: " . $resolution_notes . " | Final Cost: $" . number_format($final_cost, 2);
-                    $log_stmt  = $conn->prepare("INSERT INTO asset_logs (asset_id, asset_tag, action_type, performed_by, notes) VALUES (?, ?, 'repair_completed', ?, ?)");
-                    $log_stmt->bind_param("isis", $stock_detail_id, $asset_tag, $admin_id, $log_notes);
-                    $log_stmt->execute();
+                    $_SESSION['success_msg'] = "Repair resolution logged successfully. Asset is now ready to be returned to its origin.";
 
-                    $_SESSION['success_msg'] = "Repair marked as completed with logs updated.";
                 } elseif ($action === 'return_origin') {
-                    // Update repair status
+                    // 1. Update repair status to returned
                     $up_rep = $conn->prepare("UPDATE repairs SET status = 'returned' WHERE id = ?");
                     $up_rep->bind_param("i", $repair_id);
                     $up_rep->execute();
 
-                    // Restore division asset status back to assigned
+                    // 2. Restore asset status back to assigned/active pool
                     $up_da = $conn->prepare("UPDATE division_assets SET status = 'assigned' WHERE division_asset_id = ? AND stock_detail_id = ?");
                     $up_da->bind_param("si", $asset_tag, $stock_detail_id);
                     $up_da->execute();
 
-                    // Restore stock details status back to active
-                    $up_sd = $conn->prepare("UPDATE stock_details SET status = 'active' WHERE id = ?");
+                    $up_sd = $conn->prepare("UPDATE stock_details SET status = 'assigned' WHERE id = ?");
                     $up_sd->bind_param("i", $stock_detail_id);
                     $up_sd->execute();
 
-                    // Log action
-                    $log_stmt = $conn->prepare("INSERT INTO asset_logs (asset_id, asset_tag, action_type, performed_by, notes) VALUES (?, ?, 'repair_returned_to_origin', ?, 'Asset returned to originating division/unit after repair')");
-                    $log_stmt->bind_param("isi", $stock_detail_id, $asset_tag, $admin_id);
+                    // 3. Fetch original transaction reference for audit trail consistency
+                    $trx_stmt = $conn->prepare("SELECT notes FROM asset_logs WHERE asset_id = ? AND asset_tag = ? ORDER BY created_at ASC LIMIT 1");
+                    $trx_stmt->bind_param("is", $stock_detail_id, $asset_tag);
+                    $trx_stmt->execute();
+                    $trx_res = $trx_stmt->get_result()->fetch_assoc();
+                    
+                    $existing_ref = "";
+                    if ($trx_res && preg_match('/(TRX-\d+|\[.*?#\d+\])/', $trx_res['notes'], $matches)) {
+                        $existing_ref = $matches[1] . " ";
+                    }
+
+                    // 4. Insert final concluding audit log entry
+                    $log_notes = $existing_ref . "Asset returned to originating division/unit after repair";
+                    $log_stmt = $conn->prepare("INSERT INTO asset_logs (asset_id, asset_tag, action_type, performed_by, notes) VALUES (?, ?, 'repair_returned_to_origin', ?, ?)");
+                    $log_stmt->bind_param("isis", $stock_detail_id, $asset_tag, $admin_id, $log_notes);
                     $log_stmt->execute();
 
                     $_SESSION['success_msg'] = "Asset successfully returned to its originating division and unit.";
@@ -79,14 +89,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     exit;
 }
 
-// Fetch all repairs with related item, division, and unit data
+// Fetch active and completed repairs ordered by division name
 $query = "
     SELECT 
         r.*, 
         sd.serial_number, 
         im.item_name, 
-        d.division_name, 
+        COALESCE(d.division_name, 'General / Unassigned Division') AS division_name, 
         un.unit_name,
+        un.unit_code,
         u.username as technician_name
     FROM repairs r
     JOIN stock_details sd ON r.stock_detail_id = sd.id
@@ -94,14 +105,66 @@ $query = "
     LEFT JOIN divisions d ON r.origin_division_id = d.id
     LEFT JOIN units un ON r.origin_unit_id = un.id
     LEFT JOIN users u ON r.performed_by = u.id
-    ORDER BY r.created_at DESC
+    WHERE r.status IN ('in_progress', 'completed')
+    ORDER BY division_name ASC, r.created_at DESC
 ";
 $repairs_res = $conn->query($query);
 
+// Separate results into In Progress vs Completed groups
+$in_progress_grouped = [];
+$completed_grouped = [];
+$count_in_progress = 0;
+$count_completed = 0;
+
+if ($repairs_res && $repairs_res->num_rows > 0) {
+    while ($row = $repairs_res->fetch_assoc()) {
+        if ($row['status'] === 'in_progress') {
+            $in_progress_grouped[$row['division_name']][] = $row;
+            $count_in_progress++;
+        } elseif ($row['status'] === 'completed') {
+            $completed_grouped[$row['division_name']][] = $row;
+            $count_completed++;
+        }
+    }
+}
+
+$page_title = "Repair Management & Resolution";
+$page_icon  = "bi-tools";
 ob_start();
 ?>
 
-<div class="container-fluid py-2">
+<style>
+    /* Custom styling for solid navy active accordion headers */
+    .accordion-button.collapsed {
+        background-color: #ffffff;
+        color: #123b63;
+    }
+    .accordion-button:not(.collapsed) {
+        background-color: #123b63 !important;
+        color: #ffffff !important;
+    }
+    .accordion-button:not(.collapsed)::after {
+        filter: brightness(0) invert(1);
+    }
+    /* Custom light shade background for table headers */
+    .table-custom-header th {
+        background-color: #f1f5f9 !important;
+        color: #123b63 !important;
+        font-weight: 700;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    /* Custom styling for tabs */
+    .nav-pills .nav-link.active {
+        background-color: #123b63 !important;
+        color: #ffffff !important;
+    }
+    .nav-pills .nav-link {
+        color: #123b63;
+        font-weight: 600;
+    }
+</style>
+
+<div class="container-fluid py-3">
     <?php if (isset($_SESSION['success_msg'])): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <?= htmlspecialchars($_SESSION['success_msg']); unset($_SESSION['success_msg']); ?>
@@ -110,178 +173,314 @@ ob_start();
     <?php endif; ?>
     <?php if (isset($_SESSION['error_msg'])): ?>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
             <?= htmlspecialchars($_SESSION['error_msg']); unset($_SESSION['error_msg']); ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
 
-    <!-- Styled Section Header -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div class="d-flex align-items-center gap-3">
-            <div class="d-flex align-items-center justify-content-center rounded-3 bg-light border text-primary" style="width: 42px; height: 42px; color: #123b63 !important;">
-                <i class="bi bi-tools fs-5"></i>
-            </div>
-            <div>
-                <h4 class="fw-bold mb-1" style="color: #123b63; font-size: 1.25rem;">Repair Tracking & Management</h4>
-                <p class="text-muted small mb-0">Monitor internal and external repairs, track vendor assignments, and return fixed assets to origin.</p>
-            </div>
-        </div>
-        <div>
-            <a href="add_service.php" class="btn btn-primary btn-sm fw-semibold px-3 py-2" style="background-color: #123b63; border-color: #123b63;">
-                <i class="bi bi-plus-lg me-1"></i> Log New Repair
-            </a>
+    <!-- Header & Navigation Tabs -->
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
+        <div class="card-header bg-white py-3 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+            <h5 class="fw-bold mb-0" style="color: #123b63;">
+                <i class="bi bi-tools me-2" style="color: #123b63;"></i>Repair Tickets Dashboard
+            </h5>
+            
+            <!-- Tabs Navigation -->
+            <ul class="nav nav-pills gap-2" id="repairTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active rounded-pill px-4 py-2" id="inprogress-tab" data-bs-toggle="pill" data-bs-target="#inprogress-pane" type="button" role="tab" aria-controls="inprogress-pane" aria-selected="true">
+                        <i class="bi bi-hourglass-split me-1"></i> In Progress 
+                        <span class="badge bg-white text-dark ms-2 border"><?= $count_in_progress ?></span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-pill px-4 py-2 border bg-light text-dark" id="completed-tab" data-bs-toggle="pill" data-bs-target="#completed-pane" type="button" role="tab" aria-controls="completed-pane" aria-selected="false">
+                        <i class="bi bi-check2-all me-1 text-success"></i> Completed / Pending Return 
+                        <span class="badge bg-success text-white ms-2"><?= $count_completed ?></span>
+                    </button>
+                </li>
+            </ul>
         </div>
     </div>
-    <hr class="text-muted opacity-25 mb-4">
 
-    <div class="card shadow-sm border-0 rounded-4">
-        <div class="card-body p-4">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light text-uppercase extra-small fw-bold">
-                        <tr>
-                            <th>Asset Tag / Item</th>
-                            <th>Origin Location</th>
-                            <th>Type & Vendor</th>
-                            <th>Issue Description</th>
-                            <th>Cost</th>
-                            <th>Status</th>
-                            <th class="text-end">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php 
-                        $modals_html = '';
-                        if ($repairs_res && $repairs_res->num_rows > 0): 
-                            while($row = $repairs_res->fetch_assoc()): 
-                        ?>
-                                <tr>
-                                    <td>
-                                        <div class="fw-bold text-dark"><?= htmlspecialchars($row['division_asset_id']) ?></div>
-                                        <div class="text-muted extra-small"><?= htmlspecialchars($row['item_name']) ?> (S/N: <?= htmlspecialchars($row['serial_number'] ?? 'N/A') ?>)</div>
-                                    </td>
-                                    <td>
-                                        <div class="fw-medium text-dark"><?= htmlspecialchars($row['division_name'] ?? 'N/A') ?></div>
-                                        <div class="text-muted extra-small"><?= htmlspecialchars($row['unit_name'] ?? 'N/A') ?></div>
-                                    </td>
-                                    <td>
-                                        <?php 
-                                            $badge_bg = 'bg-secondary-subtle text-secondary';
-                                            $type_label = ucfirst(str_replace('_', ' ', $row['repair_type']));
-                                            if ($row['repair_type'] === 'internal') $badge_bg = 'bg-info-subtle text-info';
-                                            elseif ($row['repair_type'] === 'external_warranty') $badge_bg = 'bg-warning-subtle text-warning';
-                                            elseif ($row['repair_type'] === 'external_paid') $badge_bg = 'bg-danger-subtle text-danger';
-                                        ?>
-                                        <span class="badge <?= $badge_bg ?> mb-1"><?= $type_label ?></span>
-                                        <?php if (!empty($row['vendor_name'])): ?>
-                                            <div class="text-muted extra-small"><i class="bi bi-building me-1"></i><?= htmlspecialchars($row['vendor_name']) ?></div>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <span class="text-truncate d-inline-block" style="max-width: 200px;" title="<?= htmlspecialchars($row['issue_description']) ?>">
-                                            <?= htmlspecialchars($row['issue_description']) ?>
-                                        </span>
-                                    </td>
-                                    <td class="fw-semibold text-dark">
-                                        $<?= number_format($row['repair_cost'], 2) ?>
-                                    </td>
-                                    <td>
-                                        <?php 
-                                            $status = $row['status'];
-                                            $status_badge = 'bg-secondary-subtle text-secondary';
-                                            if ($status === 'in_progress') $status_badge = 'bg-warning-subtle text-warning';
-                                            elseif ($status === 'completed') $status_badge = 'bg-success-subtle text-success';
-                                            elseif ($status === 'returned') $status_badge = 'bg-emerald-soft';
-                                        ?>
-                                        <span class="badge <?= $status_badge ?> text-uppercase" style="font-size: 10px;">
-                                            <?= str_replace('_', ' ', $status) ?>
-                                        </span>
-                                    </td>
-                                    <td class="text-end">
-                                        <div class="dropdown">
-                                            <button class="btn btn-sm btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                                Actions
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-                                                <?php if ($status === 'in_progress'): ?>
-                                                    <li>
-                                                        <button type="button" class="dropdown-item text-success fw-semibold extra-small py-2" data-bs-toggle="modal" data-bs-target="#completeModal<?= $row['id'] ?>">
-                                                            <i class="bi bi-check-circle me-2"></i> Mark as Completed
-                                                        </button>
-                                                    </li>
-                                                <?php endif; ?>
-                                                <?php if ($status === 'completed'): ?>
-                                                    <li>
-                                                        <form method="POST" class="d-inline">
-                                                            <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
-                                                            <input type="hidden" name="action" value="return_origin">
-                                                            <button type="submit" class="dropdown-item text-primary fw-semibold extra-small py-2">
-                                                                <i class="bi bi-arrow-return-left me-2"></i> Return to Origin
+    <!-- Tab Contents -->
+    <div class="tab-content" id="repairTabsContent">
+        
+        <!-- TAB 1: IN PROGRESS REPAIRS -->
+        <div class="tab-pane fade show active" id="inprogress-pane" role="tabpanel" aria-labelledby="inprogress-tab" tabindex="0">
+            <?php 
+            $modals_html = '';
+            if (!empty($in_progress_grouped)): 
+            ?>
+                <div class="accordion shadow-sm rounded-4 overflow-hidden" id="inProgressAccordion">
+                    <?php 
+                    $index = 0;
+                    foreach ($in_progress_grouped as $division_name => $items): 
+                        $collapse_id = "collapseIPDiv" . $index;
+                        $heading_id = "headingIPDiv" . $index;
+                    ?>
+                        <div class="accordion-item border-0 border-bottom">
+                            <h2 class="accordion-header" id="<?= $heading_id ?>">
+                                <button class="accordion-button collapsed fw-bold py-3" 
+                                        type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#<?= $collapse_id ?>" 
+                                        aria-expanded="false" 
+                                        aria-controls="<?= $collapse_id ?>">
+                                    <span><i class="bi bi-building me-2"></i> <?= htmlspecialchars($division_name) ?></span>
+                                    <span class="badge ms-3 bg-white text-dark fw-bold border" style="font-size: 11px;">
+                                        <?= count($items) ?> <?= count($items) === 1 ? 'Ticket' : 'Tickets' ?>
+                                    </span>
+                                </button>
+                            </h2>
+                            <div id="<?= $collapse_id ?>" 
+                                 class="accordion-collapse collapse" 
+                                 aria-labelledby="<?= $heading_id ?>" 
+                                 data-bs-parent="#inProgressAccordion">
+                                <div class="accordion-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-custom-header text-uppercase fs-7">
+                                                <tr>
+                                                    <th class="ps-4" style="width: 25%;">Item &amp; Asset Tag</th>
+                                                    <th style="width: 18%;">Origin Location</th>
+                                                    <th style="width: 15%;">Type &amp; Vendor</th>
+                                                    <th style="width: 20%;">Issue Description</th>
+                                                    <th style="width: 10%;">Cost</th>
+                                                    <th style="width: 10%;">Status</th>
+                                                    <th class="text-end pe-4" style="width: 12%;">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($items as $row): ?>
+                                                    <tr>
+                                                        <td class="ps-4 py-3">
+                                                            <div class="fw-bold text-dark mb-1"><?= htmlspecialchars($row['item_name']) ?></div>
+                                                            <div class="text-muted small text-break fw-semibold" style="font-size: 0.8rem;"><?= htmlspecialchars($row['division_asset_id']) ?></div>
+                                                            <div class="text-secondary" style="font-size: 0.75rem;">S/N: <?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="mb-1">
+                                                                <span class="badge text-white fw-bold px-2 py-1" style="background-color: #123b63; font-size: 10.5px;">
+                                                                    <?= htmlspecialchars(strtoupper($row['unit_code'] ?? 'N/A')) ?>
+                                                                </span>
+                                                            </div>
+                                                            <div class="text-dark small lh-sm">
+                                                                <?= htmlspecialchars($row['unit_name'] ?? 'General Unit') ?>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <?php 
+                                                                $badge_bg = 'bg-secondary-subtle text-secondary';
+                                                                $type_label = ucfirst(str_replace('_', ' ', $row['repair_type']));
+                                                                if ($row['repair_type'] === 'internal') $badge_bg = 'bg-info-subtle text-info';
+                                                                elseif ($row['repair_type'] === 'external_warranty') $badge_bg = 'bg-warning-subtle text-warning';
+                                                                elseif ($row['repair_type'] === 'external_paid') $badge_bg = 'bg-danger-subtle text-danger';
+                                                            ?>
+                                                            <span class="badge <?= $badge_bg ?> mb-1"><?= $type_label ?></span>
+                                                            <div class="small fw-medium text-secondary"><?= htmlspecialchars($row['vendor_name'] ?: 'Internal Tech') ?></div>
+                                                        </td>
+                                                        <td class="small text-muted" style="max-width: 200px;">
+                                                            <div><?= htmlspecialchars($row['issue_description']) ?></div>
+                                                        </td>
+                                                        <td class="fw-semibold text-dark">
+                                                            ₹<?= number_format($row['repair_cost'], 2) ?>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-warning-subtle text-warning text-uppercase fw-bold" style="font-size: 10px;">
+                                                                In Progress
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-end pe-4">
+                                                            <button type="button" class="btn btn-sm btn-success fw-bold text-nowrap py-1 px-3" style="font-size: 11px;" data-bs-toggle="modal" data-bs-target="#completeModal<?= $row['id'] ?>">
+                                                                <i class="bi bi-check-circle me-1"></i> Resolve &amp; Close
                                                             </button>
-                                                        </form>
-                                                    </li>
-                                                <?php endif; ?>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
+                                                        </td>
+                                                    </tr>
 
-                                <?php if ($status === 'in_progress'): 
-                                    // Capture modal HTML outside the table to prevent backdrop/fade issues
-                                    ob_start();
-                                ?>
-                                <div class="modal fade text-start" id="completeModal<?= $row['id'] ?>" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content border-0 shadow rounded-4">
-                                            <form method="POST">
-                                                <div class="modal-header border-bottom-0 pb-0">
-                                                    <h5 class="fw-bold text-dark fs-6">Complete Repair: <?= htmlspecialchars($row['division_asset_id']) ?></h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
-                                                    <input type="hidden" name="action" value="complete">
+                                                    <?php 
+                                                        ob_start();
+                                                    ?>
+                                                    <div class="modal fade" id="completeModal<?= $row['id'] ?>" tabindex="-1" aria-hidden="true">
+                                                        <div class="modal-dialog modal-dialog-centered">
+                                                            <div class="modal-content border-0 shadow rounded-4">
+                                                                <form method="POST">
+                                                                    <div class="modal-header border-0 pb-0">
+                                                                        <h5 class="fw-bold text-dark">Log Repair Resolution</h5>
+                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                    </div>
+                                                                    <div class="modal-body text-start">
+                                                                        <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
+                                                                        <input type="hidden" name="action" value="complete">
 
-                                                    <div class="mb-3">
-                                                        <label class="form-label fw-bold small">Work Done / Resolution Notes (e.g., Motherboard replaced)</label>
-                                                        <textarea name="resolution_notes" class="form-control" rows="3" placeholder="Describe what was repaired or replaced..." required></textarea>
+                                                                        <div class="mb-3 p-3 bg-light rounded-3">
+                                                                            <div class="small text-muted">Asset Tag: <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong></div>
+                                                                            <div class="small text-muted">Item: <strong><?= htmlspecialchars($row['item_name']) ?></strong></div>
+                                                                        </div>
+
+                                                                        <div class="mb-3">
+                                                                            <label class="form-label fw-bold small">Actions Taken / Resolution Notes <span class="text-danger">*</span></label>
+                                                                            <textarea name="resolution_notes" class="form-control" rows="3" placeholder="e.g., Replaced hard drive and reloaded OS. Tested OK." required></textarea>
+                                                                        </div>
+
+                                                                        <div class="mb-3">
+                                                                            <label class="form-label fw-bold small">Final Cost (₹)</label>
+                                                                            <input type="number" step="0.01" name="final_cost" class="form-control" value="<?= htmlspecialchars($row['repair_cost']) ?>">
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="modal-footer border-0 pt-0">
+                                                                        <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
+                                                                        <button type="submit" class="btn btn-success fw-bold px-4">Complete &amp; Close Ticket</button>
+                                                                    </div>
+                                                                </form>
+                                                            </div>
+                                                        </div>
                                                     </div>
-
-                                                    <div class="mb-3">
-                                                        <label class="form-label fw-bold small">Final Repair Cost ($)</label>
-                                                        <input type="number" step="0.01" name="final_cost" class="form-control" value="<?= htmlspecialchars($row['repair_cost']) ?>" required>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer border-top-0 pt-0">
-                                                    <button type="button" class="btn btn-light btn-sm border px-3" data-bs-dismiss="modal">Cancel</button>
-                                                    <button type="submit" class="btn btn-success btn-sm px-3 fw-bold">Save & Mark Completed</button>
-                                                </div>
-                                            </form>
-                                        </div>
+                                                    <?php 
+                                                        $modals_html .= ob_get_clean();
+                                                    ?>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
-                                <?php 
-                                    $modals_html .= ob_get_clean();
-                                    endif; 
-                                endwhile; 
-                            else: 
-                            ?>
-                            <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">
-                                    <i class="bi bi-tools fs-1 opacity-25 d-block mb-2"></i>
-                                    No repair records found.
-                                </td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+                            </div>
+                        </div>
+                    <?php 
+                        $index++;
+                    endforeach; 
+                    ?>
+                </div>
+            <?php else: ?>
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-body text-center py-5 text-muted">
+                        <i class="bi bi-clipboard-check display-6 d-block mb-2" style="color: #123b63;"></i>
+                        No active in-progress repairs found.
+                    </div>
+                </div>
+            <?php endif; ?>
         </div>
+
+        <!-- TAB 2: COMPLETED / PENDING RETURN -->
+        <div class="tab-pane fade" id="completed-pane" role="tabpanel" aria-labelledby="completed-tab" tabindex="0">
+            <?php if (!empty($completed_grouped)): ?>
+                <div class="accordion shadow-sm rounded-4 overflow-hidden" id="completedAccordion">
+                    <?php 
+                    $index_c = 0;
+                    foreach ($completed_grouped as $division_name => $items): 
+                        $collapse_id_c = "collapseCompDiv" . $index_c;
+                        $heading_id_c = "headingCompDiv" . $index_c;
+                    ?>
+                        <div class="accordion-item border-0 border-bottom">
+                            <h2 class="accordion-header" id="<?= $heading_id_c ?>">
+                                <button class="accordion-button collapsed fw-bold py-3" 
+                                        type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#<?= $collapse_id_c ?>" 
+                                        aria-expanded="false" 
+                                        aria-controls="<?= $collapse_id_c ?>">
+                                    <span><i class="bi bi-building me-2"></i> <?= htmlspecialchars($division_name) ?></span>
+                                    <span class="badge ms-3 bg-white text-dark fw-bold border" style="font-size: 11px;">
+                                        <?= count($items) ?> <?= count($items) === 1 ? 'Ticket' : 'Tickets' ?>
+                                    </span>
+                                </button>
+                            </h2>
+                            <div id="<?= $collapse_id_c ?>" 
+                                 class="accordion-collapse collapse" 
+                                 aria-labelledby="<?= $heading_id_c ?>" 
+                                 data-bs-parent="#completedAccordion">
+                                <div class="accordion-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-custom-header text-uppercase fs-7">
+                                                <tr>
+                                                    <th class="ps-4" style="width: 25%;">Item &amp; Asset Tag</th>
+                                                    <th style="width: 18%;">Origin Location</th>
+                                                    <th style="width: 15%;">Type &amp; Vendor</th>
+                                                    <th style="width: 20%;">Resolution Notes</th>
+                                                    <th style="width: 10%;">Cost</th>
+                                                    <th style="width: 10%;">Status</th>
+                                                    <th class="text-end pe-4" style="width: 12%;">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($items as $row): ?>
+                                                    <tr>
+                                                        <td class="ps-4 py-3">
+                                                            <div class="fw-bold text-dark mb-1"><?= htmlspecialchars($row['item_name']) ?></div>
+                                                            <div class="text-muted small text-break fw-semibold" style="font-size: 0.8rem;"><?= htmlspecialchars($row['division_asset_id']) ?></div>
+                                                            <div class="text-secondary" style="font-size: 0.75rem;">S/N: <?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="mb-1">
+                                                                <span class="badge text-white fw-bold px-2 py-1" style="background-color: #123b63; font-size: 10.5px;">
+                                                                    <?= htmlspecialchars(strtoupper($row['unit_code'] ?? 'N/A')) ?>
+                                                                </span>
+                                                            </div>
+                                                            <div class="text-dark small lh-sm">
+                                                                <?= htmlspecialchars($row['unit_name'] ?? 'General Unit') ?>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <?php 
+                                                                $badge_bg = 'bg-secondary-subtle text-secondary';
+                                                                $type_label = ucfirst(str_replace('_', ' ', $row['repair_type']));
+                                                                if ($row['repair_type'] === 'internal') $badge_bg = 'bg-info-subtle text-info';
+                                                                elseif ($row['repair_type'] === 'external_warranty') $badge_bg = 'bg-warning-subtle text-warning';
+                                                                elseif ($row['repair_type'] === 'external_paid') $badge_bg = 'bg-danger-subtle text-danger';
+                                                            ?>
+                                                            <span class="badge <?= $badge_bg ?> mb-1"><?= $type_label ?></span>
+                                                            <div class="small fw-medium text-secondary"><?= htmlspecialchars($row['vendor_name'] ?: 'Internal Tech') ?></div>
+                                                        </td>
+                                                        <td class="small text-muted" style="max-width: 200px;">
+                                                            <div class="text-success"><?= htmlspecialchars($row['resolution_notes']) ?></div>
+                                                        </td>
+                                                        <td class="fw-semibold text-dark">
+                                                            ₹<?= number_format($row['repair_cost'], 2) ?>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-success-subtle text-success text-uppercase fw-bold" style="font-size: 10px;">
+                                                                Completed
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-end pe-4">
+                                                            <form method="POST" class="d-inline">
+                                                                <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
+                                                                <input type="hidden" name="action" value="return_origin">
+                                                                <button type="submit" class="btn btn-sm fw-bold text-nowrap text-white py-1 px-3" style="background-color: #123b63; border-color: #123b63; font-size: 11px;">
+                                                                    <i class="bi bi-arrow-return-left me-1"></i> Return to Origin
+                                                                </button>
+                                                            </form>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php 
+                        $index_c++;
+                    endforeach; 
+                    ?>
+                </div>
+            <?php else: ?>
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-body text-center py-5 text-muted">
+                        <i class="bi bi-check-circle display-6 d-block mb-2 text-success"></i>
+                        No completed repairs waiting to be returned.
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+
     </div>
 </div>
 
 <?php
-$extra_html = $modals_html ?? '';
 $content = ob_get_clean();
+$extra_html = $modals_html ?? '';
 include "layout.php";
 ?>

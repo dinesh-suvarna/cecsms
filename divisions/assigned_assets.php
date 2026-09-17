@@ -39,7 +39,7 @@ if (isset($_POST['submit_lifecycle_request'])) {
     }
 
     // Default status set to lifecycle request pending Super Admin review
-    $status = 'return_requested';
+    $status = 'service_requested';
 
     // 1. FETCH THE PERMANENT STOCK_DETAIL_ID FIRST
     $stmt_fetch = $conn->prepare("SELECT stock_detail_id FROM division_assets WHERE id = ?");

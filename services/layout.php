@@ -30,11 +30,35 @@ if (isset($_SESSION["login_log_id"]) && isset($conn)) {
         $stmt->close();
     }
 }
+// Fetch counts for sidebar badges
+$nav_repair_queue_count = 0; // For Repair Queue page (under_repair status)
+$nav_in_progress_count = 0;  // For Repair View - In Progress
+$nav_completed_count = 0;    // For Repair View - Completed / Pending Return
+
+if (isset($conn)) {
+    // 1. Count items waiting in the Repair Queue (division_assets status = 'under_repair')
+    $res_q = $conn->query("SELECT COUNT(*) AS total FROM division_assets WHERE status = 'under_repair'");
+    if ($res_q && $row = $res_q->fetch_assoc()) {
+        $nav_repair_queue_count = intval($row['total']);
+    }
+
+    // 2. Count In Progress tickets in Repair View
+    $res1 = $conn->query("SELECT COUNT(*) AS total FROM repairs WHERE status = 'in_progress'");
+    if ($res1 && $row = $res1->fetch_assoc()) {
+        $nav_in_progress_count = intval($row['total']);
+    }
+
+    // 3. Count Completed tickets waiting to be returned
+    $res2 = $conn->query("SELECT COUNT(*) AS total FROM repairs WHERE status = 'completed'");
+    if ($res2 && $row = $res2->fetch_assoc()) {
+        $nav_completed_count = intval($row['total']);
+    }
+}
 
 // Fetch pending transitions count for consistency across layout notifications
 $pending_count = 0;
 $notif_res = null;
-if (in_array($role, ['SuperAdmin', 'Admin'], true)) {
+if (isset($conn) && in_array($role, ['SuperAdmin', 'Admin'], true)) {
     $notif_query = "SELECT da.status, d.division_name, im.item_name, al.created_at
                     FROM division_assets da 
                     JOIN stock_details sd ON da.stock_detail_id = sd.id
@@ -143,6 +167,11 @@ if (in_array($role, ['SuperAdmin', 'Admin'], true)) {
             background: var(--primary-accent);
             color: #ffffff !important;
             font-weight: 600;
+        }
+
+        #sidebar .nav-link.active .badge {
+            background-color: #ffffff !important;
+            color: var(--primary-accent) !important;
         }
 
         #sidebar .nav-link i {
@@ -266,11 +295,23 @@ if (in_array($role, ['SuperAdmin', 'Admin'], true)) {
                 <a href="view_services.php" class="nav-link <?= ($current_page == 'view_services.php') ? 'active' : '' ?>">
                     <i class="bi bi-list-columns-reverse"></i> View Services
                 </a>
-                <a href="repair_handler.php" class="nav-link <?= ($current_page == 'repair_handler.php') ? 'active' : '' ?>">
-                    <i class="bi bi-list-columns-reverse"></i> Repair
+                <!-- Repair Queue Link -->
+                <a href="repair_queue.php" class="nav-link d-flex justify-content-between align-items-center <?= ($current_page == 'repair_queue.php') ? 'active' : '' ?>">
+                    <span class="d-flex align-items-center gap-2"><i class="bi bi-tools"></i> Repair Requests</span>
+                    <?php if (($nav_repair_queue_count ?? 0) > 0): ?>
+                        <span class="badge bg-danger rounded-pill px-2 py-1" style="font-size: 10px;"><?= $nav_repair_queue_count ?></span>
+                    <?php endif; ?>
                 </a>
-                <a href="repair_view.php" class="nav-link <?= ($current_page == 'repair_view.php') ? 'active' : '' ?>">
-                    <i class="bi bi-list-columns-reverse"></i> Repair View
+
+                <!-- Repair View Link -->
+                <a href="repair_view.php" class="nav-link d-flex justify-content-between align-items-center <?= ($current_page == 'repair_view.php') ? 'active' : '' ?>">
+                    <span class="d-flex align-items-center gap-2"><i class="bi bi-gear-wide-connected"></i> Repair Dashboard</span>
+                    <?php if ((($nav_in_progress_count ?? 0) + ($nav_completed_count ?? 0)) > 0): ?>
+                        <span class="badge bg-warning text-dark rounded-pill px-2 py-1" style="font-size: 10px;"><?= ($nav_in_progress_count + $nav_completed_count) ?></span>
+                    <?php endif; ?>
+                </a>
+                <a href="repair_logs.php" class="nav-link <?= ($current_page == 'repair_logs.php') ? 'active' : '' ?>">
+                    <i class="bi bi-list-columns-reverse"></i> Repair Logs
                 </a>
             </div>
 
@@ -308,7 +349,7 @@ if (in_array($role, ['SuperAdmin', 'Admin'], true)) {
                             </h5>   
                         </div>
                         <span class="text-muted extra-small d-none d-md-inline" style="font-size: 0.72rem; letter-spacing: 0.02em;">
-                                Maintenance and Vendor Management Portal
+                            Monitor internal and external repairs, track vendor assignments, and return fixed assets to origin.
                         </span>
                     </div>
                 </div>

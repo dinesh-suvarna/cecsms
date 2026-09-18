@@ -7,6 +7,8 @@ if (!isset($page_title)) {
     $page_title = "Admin Panel";
 }
 
+date_default_timezone_set('Asia/Kolkata'); 
+
 $current_page = basename($_SERVER['PHP_SELF']);
 
 /* Prevent caching */
@@ -44,13 +46,33 @@ if (isset($conn) && in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
 }
 // Fetch total pending stock transition requests once for sidebar badges and top header
 $pending_count = 0;
-if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
+$notif_res = null;
+
+if (in_array($role, [ROLE_SUPERADMIN], true)) {
+    // 1. Get the total count for badges
     $count_query = "SELECT COUNT(*) as total FROM division_assets WHERE status IN ('service_requested','return_requested', 'repair_requested', 'dispose_requested')";
-    $count_res = $conn->query($count_query);
-    if ($count_res) {
-        $count_data = $count_res->fetch_assoc();
+    $count_res_total = $conn->query($count_query);
+    if ($count_res_total) {
+        $count_data = $count_res_total->fetch_assoc();
         $pending_count = (int)($count_data['total'] ?? 0);
     }
+
+    // 2. Fetch the actual records
+    $notif_query = "SELECT da.*, 
+                           d.division_name, 
+                           im.item_name, 
+                           sd.serial_number,
+                           da.updated_at
+                    FROM division_assets da
+                    JOIN dispatch_details dd ON da.dispatch_detail_id = dd.id
+                    JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+                    JOIN divisions d ON dm.division_id = d.id
+                    JOIN stock_details sd ON da.stock_detail_id = sd.id
+                    JOIN items_master im ON sd.stock_item_id = im.id
+                    WHERE da.status IN ('service_requested', 'return_requested', 'repair_requested', 'dispose_requested')
+                    ORDER BY da.updated_at DESC LIMIT 10";
+    
+    $notif_res = $conn->query($notif_query);
 }
 ?>
 <!DOCTYPE html>
@@ -404,6 +426,7 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
 
             <div class="d-flex align-items-center gap-3">
                 <!-- Notifications Dropdown -->
+                <?php if ($role === ROLE_SUPERADMIN): ?>
                 <div class="dropdown me-1">
                     <button class="btn btn-light position-relative border shadow-sm rounded-circle p-0 d-flex align-items-center justify-content-center" 
                             style="width: 36px; height: 36px;" data-bs-toggle="dropdown">
@@ -436,7 +459,7 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
                                         <div class="w-100">
                                             <div class="d-flex justify-content-between">
                                                 <p class="mb-0 extra-small fw-bold text-dark"><?= htmlspecialchars($n['division_name']) ?></p>
-                                                <span class="text-muted" style="font-size: 9px;"><?= date('H:i', strtotime($n['created_at'] ?? 'now')) ?></span>
+                                                <span class="text-muted" style="font-size: 9px;"><?= date('H:i', strtotime($n['updated_at'])) ?? 'now' ?></span>
                                             </div>
                                             <p class="mb-1 text-muted extra-small">
                                                 <strong><?= $type ?>:</strong> <?= htmlspecialchars($n['item_name']) ?>
@@ -456,6 +479,7 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
                         </a>
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <!-- Date Badge -->
                 <div class="d-none d-sm-flex align-items-center gap-2 text-muted extra-small pe-2">
@@ -485,7 +509,7 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
                     </ul>
                 </div>
             </div>
-        </header>
+        git session_status</header>
 
         <div class="animate-fade-in">
             <div class="container-fluid p-0">
@@ -522,5 +546,38 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
         };
     </script>
     <script src="/cecsms/includes/heartbeat.js"></script>
+    <script>
+$(document).ready(function() {
+    function fetchNotifications() {
+        $.ajax({
+            url: '/cecsms/admin/get_notifications.php', // Adjust path if needed based on file location
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                // Update Badge Counts
+                if (response.count > 0) {
+                    // Top header badge
+                    let badge = $('.top-navbar .dropdown .badge');
+                    if (badge.length) {
+                        badge.text(response.count);
+                    } else {
+                        $('.top-navbar .dropdown button').append(`<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="font-size: 9px;">${response.count}</span>`);
+                    }
+                    // Dropdown header indicator
+                    $('.dropdown-menu .bg-success-subtle').text(response.count + ' Pending');
+                } else {
+                    $('.top-navbar .dropdown .badge').remove();$('.dropdown-menu .bg-success-subtle').text('0 Pending');
+                }
+
+                // Update Dropdown List Content
+                $('.dropdown-menu .overflow-y-auto').html(response.html);
+            }
+        });
+    }
+
+    // Poll every 10 seconds (10000 milliseconds)
+    setInterval(fetchNotifications, 10000);
+});
+</script>
 </body>
 </html>

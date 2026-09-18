@@ -14,15 +14,32 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-// Fetch pending transitions count for consistency across layout notifications
+// Fetch pending transitions count and records for notifications
 $pending_count = 0;
-if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
-    $count_query = "SELECT COUNT(*) as total FROM division_assets WHERE status IN ('return_requested', 'repair_requested', 'dispose_requested')";
+$notif_res = null;
+
+if (in_array($role, [ROLE_SUPERADMIN], true)) {
+    $count_query = "SELECT COUNT(*) as total FROM division_assets WHERE status IN ('service_requested', 'return_requested', 'repair_requested', 'dispose_requested')";
     $count_res = $conn->query($count_query);
     if ($count_res) {
         $count_data = $count_res->fetch_assoc();
         $pending_count = (int)($count_data['total'] ?? 0);
     }
+
+    $notif_query = "SELECT da.*, 
+                           d.division_name, 
+                           im.item_name, 
+                           sd.serial_number,
+                           da.updated_at
+                    FROM division_assets da
+                    JOIN dispatch_details dd ON da.dispatch_detail_id = dd.id
+                    JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+                    JOIN divisions d ON dm.division_id = d.id
+                    JOIN stock_details sd ON da.stock_detail_id = sd.id
+                    JOIN items_master im ON sd.stock_item_id = im.id
+                    WHERE da.status IN ('service_requested', 'return_requested', 'repair_requested', 'dispose_requested')
+                    ORDER BY da.updated_at DESC LIMIT 10";
+    $notif_res = $conn->query($notif_query);
 }
 ?>
 <!DOCTYPE html>
@@ -292,6 +309,9 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
                     <i class="bi bi-calendar3"></i>
                     <?= date('D, M j, Y') ?>
                 </div>
+
+                <!-- CALL THE REUSABLE NOTIFICATION WIDGET FILE -->
+                <?php include __DIR__ . '/../includes/notification_widget.php'; ?>
 
                 <div class="dropdown">
                     <div class="user-profile shadow-sm" data-bs-toggle="dropdown">

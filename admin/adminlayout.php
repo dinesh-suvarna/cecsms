@@ -509,7 +509,7 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
                     </ul>
                 </div>
             </div>
-        git session_status</header>
+        </header>
 
         <div class="animate-fade-in">
             <div class="container-fluid p-0">
@@ -546,38 +546,43 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
         };
     </script>
     <script src="/cecsms/includes/heartbeat.js"></script>
+    
     <script>
-$(document).ready(function() {
-    function fetchNotifications() {
-        $.ajax({
-            url: '/cecsms/admin/get_notifications.php', // Adjust path if needed based on file location
-            method: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                // Update Badge Counts
-                if (response.count > 0) {
-                    // Top header badge
-                    let badge = $('.top-navbar .dropdown .badge');
-                    if (badge.length) {
-                        badge.text(response.count);
-                    } else {
-                        $('.top-navbar .dropdown button').append(`<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="font-size: 9px;">${response.count}</span>`);
+        $(document).ready(function() {
+            function fetchNotifications() {
+                $.ajax({
+                    url: '/cecsms/admin/get_notifications.php',
+                    method: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        let widget = $('#notificationWidget');
+                        
+                        // Handle Admin role display vs Superadmin count display
+                        if (response.role === 'Admin') {
+                            widget.find('button .badge').remove();
+                            widget.find('.dropdown-menu .bg-emerald-soft').text('Admin');
+                        } else if (response.count > 0) {
+                            let badge = widget.find('button .badge');
+                            if (badge.length) {
+                                badge.text(response.count);
+                            } else {
+                                widget.find('button').append(`<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="font-size: 9px;">${response.count}</span>`);
+                            }
+                            widget.find('.dropdown-menu .bg-emerald-soft').text(response.count + ' Pending');
+                        } else {
+                            widget.find('button .badge').remove();
+                            widget.find('.dropdown-menu .bg-emerald-soft').text('0 Pending');
+                        }
+                        
+                        widget.find('.overflow-y-auto').html(response.html);
                     }
-                    // Dropdown header indicator
-                    $('.dropdown-menu .bg-success-subtle').text(response.count + ' Pending');
-                } else {
-                    $('.top-navbar .dropdown .badge').remove();$('.dropdown-menu .bg-success-subtle').text('0 Pending');
-                }
-
-                // Update Dropdown List Content
-                $('.dropdown-menu .overflow-y-auto').html(response.html);
+                });
             }
+            fetchNotifications();
+            // Poll every 5 seconds to keep states synchronized
+            setInterval(fetchNotifications, 5000);
         });
-    }
-
-    // Poll every 10 seconds (10000 milliseconds)
-    setInterval(fetchNotifications, 10000);
-});
+    </script>
 </script>
 </body>
 </html>

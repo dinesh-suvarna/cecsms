@@ -361,59 +361,8 @@ if (isset($conn) && in_array($role, ['SuperAdmin', 'Admin'], true)) {
                     <?= date('D, M j, Y') ?>
                 </div>
 
-                <div class="dropdown me-1">
-                    <button class="btn btn-light position-relative border shadow-sm rounded-circle p-0 d-flex align-items-center justify-content-center" 
-                            style="width: 34px; height: 34px;" data-bs-toggle="dropdown">
-                        <i class="bi bi-bell text-muted fs-6"></i>
-                        
-                        <span id="notification-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light <?= ($pending_count > 0) ? '' : 'd-none' ?>" style="font-size: 9px;">
-                            <?= $pending_count ?>
-                        </span>
-                    </button>
-
-                    <div class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 p-0 rounded-3 overflow-hidden animate-fade-in" style="width: 320px;">
-                        <div class="p-3 border-bottom bg-light">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0 fw-bold small">Stock Transitions</h6>
-                                <span id="notification-count-text" class="badge bg-emerald-soft extra-small"><?= $pending_count ?> Pending</span>
-                            </div>
-                        </div>
-
-                        <div id="notification-list" class="max-vh-50 overflow-y-auto" style="max-height: 350px;">
-                            <?php if ($notif_res && $notif_res->num_rows > 0): ?>
-                                <?php while($n = $notif_res->fetch_assoc()): 
-                                    $type = strtoupper(str_replace('_requested', '', $n['status']));
-                                    $icon = ($type == 'REPAIR') ? 'bi-tools text-info' : (($type == 'RETURN') ? 'bi-arrow-left-circle text-warning' : 'bi-trash text-danger');
-                                    $bg = ($type == 'REPAIR') ? 'bg-info-subtle' : (($type == 'RETURN') ? 'bg-warning-subtle' : 'bg-danger-subtle');
-                                ?>
-                                    <a href="/cecsms/divisions/returned_assets.php" class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start whitespace-normal">
-                                        <div class="<?= $bg ?> rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; flex-shrink: 0;">
-                                            <i class="bi <?= $icon ?> fs-6"></i>
-                                        </div>
-                                        <div class="w-100">
-                                            <div class="d-flex justify-content-between">
-                                                <p class="mb-0 small fw-bold text-dark"><?= htmlspecialchars($n['division_name']) ?></p>
-                                                <span class="text-muted" style="font-size: 9px;"><?= date('H:i', strtotime($n['created_at'])) ?></span>
-                                            </div>
-                                            <p class="mb-1 text-muted" style="font-size: 0.78rem;">
-                                                <strong><?= $type ?>:</strong> <?= htmlspecialchars($n['item_name']) ?>
-                                            </p>
-                                        </div>
-                                    </a>
-                                <?php endwhile; ?>
-                            <?php else: ?>
-                                <div class="p-4 text-center">
-                                    <i class="bi bi-check2-circle fs-1 text-muted opacity-25"></i>
-                                    <p class="text-muted small mt-2 mb-0">All caught up!</p>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-
-                        <a href="/cecsms/divisions/returned_assets.php" class="dropdown-item text-center p-2 small fw-bold text-primary bg-light border-top">
-                            View All Approvals
-                        </a>
-                    </div>
-                </div>
+                <!-- REUSABLE NOTIFICATION WIDGET -->
+                <?php include __DIR__ . '/../includes/notification_widget.php'; ?>
 
                 <div class="dropdown">
                     <div class="user-profile shadow-sm" data-bs-toggle="dropdown">

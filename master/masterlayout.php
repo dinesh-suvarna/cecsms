@@ -1,14 +1,38 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../admin/auth.php";
 
+$role = $_SESSION["role"] ?? 'User'; 
 if (!isset($page_title)) $page_title = "Master Dashboard";
 $current_page = basename($_SERVER['PHP_SELF']);
 
-// Fetch pending transitions count for consistency
-$count_query = "SELECT COUNT(*) as total FROM division_assets WHERE status IN ('return_requested', 'repair_requested', 'dispose_requested')";
-$count_res = $conn->query($count_query);
-$count_data = $count_res ? $count_res->fetch_assoc() : [];
-$pending_count = (int)($count_data['total'] ?? 0);
+// Fetch pending transitions count and records for notifications
+$pending_count = 0;
+$notif_res = null;
+
+if (in_array($role, [ROLE_SUPERADMIN], true)) {
+    $count_query = "SELECT COUNT(*) as total FROM division_assets WHERE status IN ('service_requested', 'return_requested', 'repair_requested', 'dispose_requested')";
+    $count_res = $conn->query($count_query);
+    if ($count_res) {
+        $count_data = $count_res->fetch_assoc();
+        $pending_count = (int)($count_data['total'] ?? 0);
+    }
+
+    $notif_query = "SELECT da.*, 
+                           d.division_name, 
+                           im.item_name, 
+                           sd.serial_number,
+                           da.updated_at
+                    FROM division_assets da
+                    JOIN dispatch_details dd ON da.dispatch_detail_id = dd.id
+                    JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+                    JOIN divisions d ON dm.division_id = d.id
+                    JOIN stock_details sd ON da.stock_detail_id = sd.id
+                    JOIN items_master im ON sd.stock_item_id = im.id
+                    WHERE da.status IN ('service_requested', 'return_requested', 'repair_requested', 'dispose_requested')
+                    ORDER BY da.updated_at DESC LIMIT 10";
+    $notif_res = $conn->query($notif_query);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -265,91 +289,13 @@ $pending_count = (int)($count_data['total'] ?? 0);
             </div>
 
             <div class="d-flex align-items-center gap-3">
-                <!-- Notifications Dropdown -->
-                <div class="dropdown me-1">
-                    <?php 
-                    $notif_query = "SELECT 
-                                        da.status, 
-                                        d.division_name, 
-                                        im.item_name,
-                                        al.notes,
-                                        al.created_at
-                                    FROM division_assets da 
-                                    JOIN stock_details sd ON da.stock_detail_id = sd.id
-                                    JOIN items_master im ON sd.stock_item_id = im.id
-                                    JOIN dispatch_details dd ON da.dispatch_detail_id = dd.id
-                                    JOIN dispatch_master dm ON dd.dispatch_id = dm.id
-                                    JOIN divisions d ON dm.division_id = d.id
-                                    LEFT JOIN asset_logs al ON sd.id = al.asset_id 
-                                        AND al.action_type = da.status
-                                    WHERE da.status IN ('return_requested', 'repair_requested', 'dispose_requested')
-                                    GROUP BY da.id 
-                                    ORDER BY al.created_at DESC LIMIT 5";
-                                    
-                    $notif_res = $conn->query($notif_query);
-                    ?>
-                    
-                    <button class="btn btn-light position-relative border shadow-sm rounded-circle p-0 d-flex align-items-center justify-content-center" 
-                            style="width: 36px; height: 36px;" data-bs-toggle="dropdown">
-                        <i class="bi bi-bell text-muted fs-6"></i>
-                        <?php if ($pending_count > 0): ?>
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="font-size: 9px;">
-                                <?= $pending_count ?>
-                            </span>
-                        <?php endif; ?>
-                    </button>
-
-                    <div class="dropdown-menu dropdown-menu-end shadow-lg border mt-2 p-0 rounded-3 overflow-hidden" style="width: 320px;">
-                        <div class="p-3 border-bottom bg-light">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0 fw-bold extra-small text-uppercase">Stock Transitions</h6>
-                                <span class="badge bg-success-subtle text-success extra-small"><?= $pending_count ?> Pending</span>
-                            </div>
-                        </div>
-                        <div class="overflow-y-auto" style="max-height: 320px;">
-                            <?php if ($pending_count > 0 && isset($notif_res) && $notif_res->num_rows > 0): ?>
-                                <?php while($n = $notif_res->fetch_assoc()): 
-                                    $type = strtoupper(str_replace('_requested', '', $n['status']));
-                                    $icon = ($type == 'REPAIR') ? 'bi-tools text-info' : (($type == 'RETURN') ? 'bi-arrow-left-circle text-warning' : 'bi-trash text-danger');
-                                    $bg = ($type == 'REPAIR') ? 'bg-info-subtle' : (($type == 'RETURN') ? 'bg-warning-subtle' : 'bg-danger-subtle');
-                                ?>
-                                    <a href="/cecsms/divisions/returned_assets.php" class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start whitespace-normal">
-                                        <div class="<?= $bg ?> rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; flex-shrink: 0;">
-                                            <i class="bi <?= $icon ?>"></i>
-                                        </div>
-                                        <div class="w-100">
-                                            <div class="d-flex justify-content-between">
-                                                <p class="mb-0 extra-small fw-bold text-dark"><?= htmlspecialchars($n['division_name']) ?></p>
-                                                <span class="text-muted" style="font-size: 9px;"><?= date('H:i', strtotime($n['created_at'] ?? 'now')) ?></span>
-                                            </div>
-                                            <p class="mb-1 text-muted extra-small">
-                                                <strong><?= $type ?>:</strong> <?= htmlspecialchars($n['item_name']) ?>
-                                            </p>
-                                            <?php if(!empty($n['notes'])): ?>
-                                                <div class="bg-light p-1 px-2 rounded extra-small text-muted fst-italic border-start border-2">
-                                                    "<?= htmlspecialchars($n['notes']) ?>"
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </a>
-                                <?php endwhile; ?>
-                            <?php else: ?>
-                                <div class="p-4 text-center">
-                                    <i class="bi bi-check2-circle fs-3 text-muted opacity-50"></i>
-                                    <p class="text-muted extra-small mt-2 mb-0">No pending stock transitions.</p>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                        <a href="/cecsms/divisions/returned_assets.php" class="dropdown-item text-center p-2 extra-small fw-bold text-primary bg-light border-top">
-                            View Transition Panel
-                        </a>
-                    </div>
-                </div>
-
                 <div class="d-none d-sm-flex align-items-center gap-2 text-muted extra-small border-end pe-3">
                     <i class="bi bi-calendar3"></i>
                     <?= date('D, M j, Y') ?>
                 </div>
+
+                <!-- REUSABLE NOTIFICATION WIDGET -->
+                <?php include __DIR__ . '/../includes/notification_widget.php'; ?>
 
                 <div class="dropdown">
                     <div class="user-profile shadow-sm" data-bs-toggle="dropdown">

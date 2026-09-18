@@ -90,6 +90,7 @@ $(document).ready(function() {
             }
         });
     }
+    fetchNotifications();
     // Poll every 5 seconds to keep counts synchronized
     setInterval(fetchNotifications, 5000);
 });

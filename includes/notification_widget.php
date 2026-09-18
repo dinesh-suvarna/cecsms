@@ -74,7 +74,12 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 let widget = $('#notificationWidget');
-                if (response.count > 0) {
+                
+                // Handle Admin role display vs Superadmin count display
+                if (response.role === 'Admin') {
+                    widget.find('button .badge').remove();
+                    widget.find('.dropdown-menu .bg-emerald-soft').text('Admin');
+                } else if (response.count > 0) {
                     let badge = widget.find('button .badge');
                     if (badge.length) {
                         badge.text(response.count);
@@ -86,12 +91,13 @@ $(document).ready(function() {
                     widget.find('button .badge').remove();
                     widget.find('.dropdown-menu .bg-emerald-soft').text('0 Pending');
                 }
+                
                 widget.find('.overflow-y-auto').html(response.html);
             }
         });
     }
     fetchNotifications();
-    // Poll every 5 seconds to keep counts synchronized
+    // Poll every 5 seconds to keep states synchronized
     setInterval(fetchNotifications, 5000);
 });
 </script>

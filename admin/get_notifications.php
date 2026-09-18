@@ -5,8 +5,11 @@ require_once __DIR__ . "/../config/db.php";
 $role = $_SESSION["role"] ?? 'User';
 $pending_count = 0;
 $html = '';
+$response_role = '';
 
-if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
+if ($role === ROLE_SUPERADMIN) {
+    $response_role = 'Superadmin';
+    
     // Get count
     $count_res = $conn->query("SELECT COUNT(*) as total FROM division_assets WHERE status IN ('service_requested','return_requested', 'repair_requested', 'dispose_requested')");
     if ($count_res) {
@@ -53,6 +56,20 @@ if (in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)) {
                     <p class="text-muted extra-small mt-2 mb-0">No pending stock transitions.</p>
                  </div>';
     }
+} elseif ($role === ROLE_ADMIN) {
+    $response_role = 'Admin';
+    $html = '<div class="p-4 text-center">
+                <p class="text-muted extra-small mb-0">Role: Admin</p>
+             </div>';
+} else {
+    $response_role = 'User';
+    $html = '<div class="p-4 text-center">
+                <p class="text-muted extra-small mb-0">No notifications available.</p>
+             </div>';
 }
 
-echo json_encode(['count' => $pending_count, 'html' => $html]);
+echo json_encode([
+    'count' => $pending_count, 
+    'html' => $html, 
+    'role' => $response_role
+]);

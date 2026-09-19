@@ -440,11 +440,11 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
 
                     <div class="dropdown-menu dropdown-menu-end shadow-lg border mt-2 p-0 rounded-3 overflow-hidden" style="width: 320px;">
                         <div class="p-3 border-bottom bg-light">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0 fw-bold extra-small text-uppercase">Stock Transitions</h6>
-                                <span class="badge bg-success-subtle text-success extra-small"><?= $pending_count ?> Pending</span>
-                            </div>
-                        </div>
+    <div class="d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold extra-small text-uppercase">Stock Transitions</h6>
+        <span class="badge bg-success-subtle text-success extra-small" id="dropdownPendingBadge"><?= $pending_count ?> Pending</span>
+    </div>
+</div>
                         <div class="overflow-y-auto" style="max-height: 320px;">
                             <?php if ($pending_count > 0 && isset($notif_res) && $notif_res->num_rows > 0): ?>
                                 <?php while($n = $notif_res->fetch_assoc()): 
@@ -549,39 +549,37 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
     
     <script>
         $(document).ready(function() {
-            function fetchNotifications() {
-                $.ajax({
-                    url: '/cecsms/admin/get_notifications.php',
-                    method: 'GET',
-                    dataType: 'json',
-                    success: function(response) {
-                        let widget = $('#notificationWidget');
-                        
-                        // Handle Admin role display vs Superadmin count display
-                        if (response.role === 'Admin') {
-                            widget.find('button .badge').remove();
-                            widget.find('.dropdown-menu .bg-emerald-soft').text('Admin');
-                        } else if (response.count > 0) {
-                            let badge = widget.find('button .badge');
-                            if (badge.length) {
-                                badge.text(response.count);
-                            } else {
-                                widget.find('button').append(`<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="font-size: 9px;">${response.count}</span>`);
-                            }
-                            widget.find('.dropdown-menu .bg-emerald-soft').text(response.count + ' Pending');
-                        } else {
-                            widget.find('button .badge').remove();
-                            widget.find('.dropdown-menu .bg-emerald-soft').text('0 Pending');
-                        }
-                        
-                        widget.find('.overflow-y-auto').html(response.html);
+    function fetchNotifications() {
+        $.ajax({
+            url: '/cecsms/admin/get_notifications.php',
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                let widget = $('#notificationWidget');
+                
+                if (response.role === 'Admin') {
+                    widget.find('button .badge').remove();
+                    $('#dropdownPendingBadge').text('Admin');
+                } else if (response.count > 0) {
+                    let badge = widget.find('button .badge');
+                    if (badge.length) {
+                        badge.text(response.count);
+                    } else {
+                        widget.find('button').append(`<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="font-size: 9px;">${response.count}</span>`);
                     }
-                });
+                    $('#dropdownPendingBadge').text(response.count + ' Pending');
+                } else {
+                    widget.find('button .badge').remove();
+                    $('#dropdownPendingBadge').text('0 Pending');
+                }
+                
+                widget.find('.overflow-y-auto').html(response.html);
             }
-            fetchNotifications();
-            // Poll every 5 seconds to keep states synchronized
-            setInterval(fetchNotifications, 5000);
         });
+    }
+    fetchNotifications();
+    setInterval(fetchNotifications, 5000);
+});
     </script>
 </script>
 </body>

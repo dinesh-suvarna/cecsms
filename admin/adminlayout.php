@@ -427,7 +427,7 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
             <div class="d-flex align-items-center gap-3">
                 <!-- Notifications Dropdown -->
                 <?php if ($role === ROLE_SUPERADMIN): ?>
-                <div class="dropdown me-1">
+                <div class="dropdown me-1" id="notificationWidget">
                     <button class="btn btn-light position-relative border shadow-sm rounded-circle p-0 d-flex align-items-center justify-content-center" 
                             style="width: 36px; height: 36px;" data-bs-toggle="dropdown">
                         <i class="bi bi-bell text-muted fs-6"></i>

@@ -10,7 +10,7 @@ if (!in_array($_SESSION['role'] ?? '', ['SuperAdmin', 'Admin'], true)) {
     exit;
 }
 
-// --- HANDLE ACTIONS (MARK COMPLETED / RETURN TO ORIGIN) ---
+// --- HANDLE ACTIONS (MARK COMPLETED / RETURN TO ORIGIN / RETURN TO MAIN STOCK) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $repair_id = intval($_POST['repair_id'] ?? 0);
     $action    = $_POST['action'];
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $up_rep->bind_param("dsi", $final_cost, $resolution_notes, $repair_id);
                     $up_rep->execute();
 
-                    $_SESSION['success_msg'] = "Repair resolution logged successfully. Asset is now ready to be returned to its origin.";
+                    $_SESSION['success_msg'] = "Repair resolution logged successfully. Asset is now ready to be returned.";
 
                 } elseif ($action === 'return_origin') {
                     // 1. Update repair status to returned
@@ -77,6 +77,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $log_stmt->execute();
 
                     $_SESSION['success_msg'] = "Asset successfully returned to its originating division and unit.";
+
+                } elseif ($action === 'return_main_stock') {
+                    // 1. Update repair status to returned
+                    $up_rep = $conn->prepare("UPDATE repairs SET status = 'returned' WHERE id = ?");
+                    $up_rep->bind_param("i", $repair_id);
+                    $up_rep->execute();
+
+                    // 2. Clear assignment from division_assets (mark as returned to stock / inactive for that division tag)
+                    $up_da = $conn->prepare("UPDATE division_assets SET status = 'returned_to_stock' WHERE division_asset_id = ? AND stock_detail_id = ?");
+                    $up_da->bind_param("si", $asset_tag, $stock_detail_id);
+                    $up_da->execute();
+
+                    // 3. Return stock_details back to available main inventory pool
+                    $up_sd = $conn->prepare("UPDATE stock_details SET status = 'available' WHERE id = ?");
+                    $up_sd->bind_param("i", $stock_detail_id);
+                    $up_sd->execute();
+
+                    // 4. Insert audit log entry for returning to main stock
+                    $log_notes = "Asset returned to main stock pool after repair (replacement already provided to division)";
+                    $log_stmt = $conn->prepare("INSERT INTO asset_logs (asset_id, asset_tag, action_type, performed_by, notes) VALUES (?, ?, 'repair_returned_to_main_stock', ?, ?)");
+                    $log_stmt->bind_param("isis", $stock_detail_id, $asset_tag, $admin_id, $log_notes);
+                    $log_stmt->execute();
+
+                    $_SESSION['success_msg'] = "Asset successfully returned to Main Stock inventory.";
                 }
             }
             $conn->commit();
@@ -395,13 +419,13 @@ ob_start();
                                         <table class="table table-hover align-middle mb-0">
                                             <thead class="table-custom-header text-uppercase fs-7">
                                                 <tr>
-                                                    <th class="ps-4" style="width: 25%;">Item &amp; Asset Tag</th>
-                                                    <th style="width: 18%;">Origin Location</th>
-                                                    <th style="width: 15%;">Type &amp; Vendor</th>
-                                                    <th style="width: 20%;">Resolution Notes</th>
-                                                    <th style="width: 10%;">Cost</th>
-                                                    <th style="width: 10%;">Status</th>
-                                                    <th class="text-end pe-4" style="width: 12%;">Actions</th>
+                                                    <th class="ps-4" style="width: 22%;">Item &amp; Asset Tag</th>
+                                                    <th style="width: 15%;">Origin Location</th>
+                                                    <th style="width: 13%;">Type &amp; Vendor</th>
+                                                    <th style="width: 18%;">Resolution Notes</th>
+                                                    <th style="width: 9%;">Cost</th>
+                                                    <th style="width: 9%;">Status</th>
+                                                    <th class="text-end pe-4" style="width: 14%;">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -433,7 +457,7 @@ ob_start();
                                                             <span class="badge <?= $badge_bg ?> mb-1"><?= $type_label ?></span>
                                                             <div class="small fw-medium text-secondary"><?= htmlspecialchars($row['vendor_name'] ?: 'Internal Tech') ?></div>
                                                         </td>
-                                                        <td class="small text-muted" style="max-width: 200px;">
+                                                        <td class="small text-muted" style="max-width: 180px;">
                                                             <div class="text-success"><?= htmlspecialchars($row['resolution_notes']) ?></div>
                                                         </td>
                                                         <td class="fw-semibold text-dark">
@@ -445,13 +469,25 @@ ob_start();
                                                             </span>
                                                         </td>
                                                         <td class="text-end pe-4">
-                                                            <form method="POST" class="d-inline">
-                                                                <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
-                                                                <input type="hidden" name="action" value="return_origin">
-                                                                <button type="submit" class="btn btn-sm fw-bold text-nowrap text-white py-1 px-3" style="background-color: #123b63; border-color: #123b63; font-size: 11px;">
-                                                                    <i class="bi bi-arrow-return-left me-1"></i> Return to Origin
-                                                                </button>
-                                                            </form>
+                                                            <div class="d-flex flex-column gap-1 align-items-end">
+                                                                <!-- Return to Origin Button -->
+                                                                <form method="POST" class="d-inline">
+                                                                    <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
+                                                                    <input type="hidden" name="action" value="return_origin">
+                                                                    <button type="submit" class="btn btn-sm fw-bold text-nowrap text-white py-1 px-2 w-100" style="background-color: #123b63; border-color: #123b63; font-size: 10.5px;">
+                                                                        <i class="bi bi-arrow-return-left me-1"></i> Return to Origin
+                                                                    </button>
+                                                                </form>
+
+                                                                <!-- Return to Main Stock Button -->
+                                                                <form method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to return this asset to Main Stock? (Use this if a replacement PC was already given to the division).');">
+                                                                    <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
+                                                                    <input type="hidden" name="action" value="return_main_stock">
+                                                                    <button type="submit" class="btn btn-sm fw-bold text-nowrap btn-outline-secondary py-1 px-2 w-100" style="font-size: 10.5px;">
+                                                                        <i class="bi bi-box-seam me-1"></i> Return to Main Stock
+                                                                    </button>
+                                                                </form>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 <?php endforeach; ?>

@@ -44,7 +44,6 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
         $stock_id   = $asset['stock_detail_id'];
         $asset_tag  = $asset['asset_tag'] ?? null;
         
-        // Ensure unit_name is a non-zero human-readable string
         $unit_name  = (!empty($asset['fetched_unit_name']) && $asset['fetched_unit_name'] !== '0') 
                       ? $asset['fetched_unit_name'] 
                       : 'Main Stock / Division';
@@ -56,7 +55,6 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
 
         try {
             // STEP 1: Fetch the original pending request log ID to link transaction tags
-            // Find this in process_request.php:
             $ref_stmt = $conn->prepare("
                 SELECT id FROM asset_logs 
                 WHERE asset_id = ? AND action_type IN ('return_requested', 'service_requested', 'dispose_requested', 'repair_requested') 
@@ -105,29 +103,28 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
                 $status_title = 'Return Approved';
                 $status_text  = "Asset $asset_tag has been returned back to available inventory.";
 
-            // In process_request.php under: elseif ($action === 'repair_requested')
 
-} elseif ($action === 'repair_requested') {
-    $log_notes = $ref_prefix . "Repair authorized by Admin. Asset $asset_tag moved to repair queue.";
-    $log_stmt  = $conn->prepare("
-        INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
-        VALUES (?, ?, ?, 'repair_approved', ?, ?)
-    ");
-    $log_stmt->bind_param("isiss", $stock_id, $asset_tag, $unit_name, $admin_id, $log_notes);
-    $log_stmt->execute();
+        } elseif ($action === 'repair_requested') {
+            $log_notes = $ref_prefix . "Repair authorized by Admin. Asset $asset_tag moved to repair queue.";
+            $log_stmt  = $conn->prepare("
+                INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
+                VALUES (?, ?, ?, 'repair_approved', ?, ?)
+            ");
+            $log_stmt->bind_param("isiss", $stock_id, $asset_tag, $unit_name, $admin_id, $log_notes);
+            $log_stmt->execute();
 
-    // Update stock & division asset status so it appears in repair_queue.php
-    $conn->query("UPDATE stock_details SET status = 'maintenance' WHERE id = $stock_id");
-    $conn->query("UPDATE division_assets SET status = 'under_repair' WHERE id = $id");
+            // Update stock & division asset status 
+            $conn->query("UPDATE stock_details SET status = 'maintenance' WHERE id = $stock_id");
+            $conn->query("UPDATE division_assets SET status = 'under_repair' WHERE id = $id");
 
-    // Commit transaction
-    $conn->commit();
+            // Commit transaction
+            $conn->commit();
 
-    // Set success status and redirect back to returned assets (or straight to the queue)
-    $status_icon  = 'success';
-    $status_title = 'Sent to Repair Queue';
-    $status_text  = "Asset $asset_tag has been successfully authorized and added to the repair queue.";
-    $redirect     = "returned_assets.php"; // or change to "repair_queue.php" if you prefer
+            // Set success status and redirect back to returned assets (or straight to the queue)
+            $status_icon  = 'success';
+            $status_title = 'Sent to Repair Queue';
+            $status_text  = "Asset $asset_tag has been successfully authorized and added to the repair queue.";
+            $redirect     = "returned_assets.php"; // 
 
 
 

@@ -297,7 +297,6 @@ ob_start();
         </div>
 
         <!-- ================= TAB 2: PROCESSED AUDIT LOGS TRAIL (ACCORDION VIEW) ================= -->
-        <!-- ================= TAB 2: PROCESSED AUDIT LOGS TRAIL (ACCORDION VIEW) ================= -->
         <div class="tab-pane fade" id="history-content" role="tabpanel">
             
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -339,13 +338,8 @@ ob_start();
                 $logs_res->data_seek(0);
                 while($row = $logs_res->fetch_assoc()) {
                     $matched_ref_id = "";
-                    
-                    // Look up the absolute first log entry for this physical asset ID
-                    if (!empty($row['asset_id'])) {
-                        $first_log_q = $conn->query("SELECT id FROM asset_logs WHERE asset_id = " . intval($row['asset_id']) . " ORDER BY created_at ASC, id ASC LIMIT 1");
-                        if ($first_log_q && $first_row = $first_log_q->fetch_assoc()) {
-                            $matched_ref_id = "TRX-" . str_pad($first_row['id'], 5, '0', STR_PAD_LEFT);
-                        }
+                    if (!empty($row['notes']) && preg_match('/\[REF:#(\d+)\]\s*/', $row['notes'], $matches)) {
+                        $matched_ref_id = "TRX-" . str_pad($matches[1], 5, '0', STR_PAD_LEFT);
                     }
 
                     $ref_id = !empty($matched_ref_id) ? $matched_ref_id : ("TRX-" . str_pad($row['log_id'], 5, '0', STR_PAD_LEFT));
@@ -373,7 +367,7 @@ ob_start();
                         $total_events = count($transactions);
                         $primary_item = htmlspecialchars($latest_trx['item_name']);
                         
-                        // Format the latest action type nicely for the header badge
+                        // Format the latest action type 
                         $raw_action = $latest_trx['action_type'];
                         switch ($raw_action) {
                             case 'service_requested': case 'return_requested': $latest_action_label = "Service Requested"; break;

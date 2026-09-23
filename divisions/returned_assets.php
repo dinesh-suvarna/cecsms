@@ -3,7 +3,7 @@ require_once __DIR__ . "/../config/db.php";
 include "../admin/auth.php";
 include "../includes/session.php";
 
-$page_title = "Lifecycle Management & Audit Logs";
+$page_title = "Lifecycle Management & Requests";
 $page_icon  = "bi-shield-check";
 
 $role        = $_SESSION['role'] ?? '';
@@ -75,56 +75,6 @@ if ($role !== 'SuperAdmin') {
 $pending_query .= " ORDER BY da.assigned_at DESC";
 $pending_res = $conn->query($pending_query);
 
-/* ================= 2. FETCH AUDIT LOGS (TAB 2) ================= */
-$logs_query = "
-    SELECT 
-        al.id as log_id,
-        al.asset_id,
-        al.created_at, 
-        al.action_type, 
-        al.notes,
-        im.item_name, 
-        sd.serial_number,
-        COALESCE(
-            al.asset_tag, 
-            da.division_asset_id, 
-            (
-                SELECT al_sub.asset_tag 
-                FROM asset_logs al_sub 
-                WHERE al_sub.asset_id = al.asset_id AND al_sub.asset_tag IS NOT NULL 
-                ORDER BY al_sub.id DESC LIMIT 1
-            ),
-            'STOCK'
-        ) AS display_tag,
-        NULLIF(al.unit_name, '0') AS snapshot_unit,
-        un_active.unit_name AS active_unit,
-        un_history.unit_name AS history_unit,
-        u.username AS staff_name,
-        u.role AS user_role
-    FROM asset_logs al
-    JOIN stock_details sd ON al.asset_id = sd.id
-    JOIN items_master im ON sd.stock_item_id = im.id
-    LEFT JOIN users u ON al.performed_by = u.id
-    LEFT JOIN division_assets da ON sd.id = da.stock_detail_id
-    LEFT JOIN dispatch_details dd_active ON da.dispatch_detail_id = dd_active.id
-    LEFT JOIN dispatch_master dm_active ON dd_active.dispatch_id = dm_active.id
-    LEFT JOIN units un_active ON dm_active.unit_id = un_active.id
-    LEFT JOIN dispatch_details dd_history ON sd.id = dd_history.stock_detail_id
-    LEFT JOIN dispatch_master dm_history ON dd_history.dispatch_id = dm_history.id
-    LEFT JOIN units un_history ON dm_history.unit_id = un_history.id
-    WHERE 1=1
-";
-
-if ($role !== 'SuperAdmin') { 
-    $logs_query .= " AND (dm_active.division_id = $division_id OR dm_history.division_id = $division_id OR al.performed_by = {$_SESSION['user_id']})"; 
-}
-
-$logs_query .= " GROUP BY al.id ORDER BY al.created_at DESC";
-$logs_res = $conn->query($logs_query);
-
-// Retrieve available units for report dropdown
-$units_query = "SELECT id, unit_name FROM units WHERE division_id = $division_id ORDER BY unit_name ASC";
-$units_res   = $conn->query($units_query);
 
 ob_start();
 ?>
@@ -199,38 +149,25 @@ ob_start();
 </style>
 
 <div class="container-fluid py-4">
-    <!-- Header -->
+    <!-- Header with Link to Audit Trail Page -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold text-dark mb-1">Lifecycle Management & Audit Logs</h4>
-            <p class="text-muted small mb-0">Review pending department transitions and track full asset transaction history.</p>
+            <h4 class="fw-bold text-dark mb-1">Lifecycle Management & Requests</h4>
+            <p class="text-muted small mb-0">Review and action pending department transitions.</p>
         </div>
-        <div class="bg-white px-3 py-2 rounded-3 shadow-sm border border-emerald-100">
-            <span class="text-emerald-600 fw-bold small">
-                <i class="bi bi-shield-check me-2"></i> <?= $pending_res->num_rows ?> Pending Requests
-            </span>
+        <div class="d-flex align-items-center gap-3">
+            <a href="audit_logs.php" class="btn btn-navy btn-sm shadow-sm px-3 py-2 fw-semibold d-flex align-items-center gap-2">
+                <i class="bi bi-journal-text"></i> View Historical Audit Trail
+            </a>
+            <div class="bg-white px-3 py-2 rounded-3 shadow-sm border border-emerald-100">
+                <span class="text-emerald-600 fw-bold small">
+                    <i class="bi bi-shield-check me-2"></i> <?= $pending_res->num_rows ?> Pending Requests
+                </span>
+            </div>
         </div>
     </div>
 
-    <!-- Navigation Tabs -->
-    <ul class="nav nav-pills mb-3 gap-2" id="lifecycleTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active fw-bold border shadow-sm px-4" id="pending-tab" data-bs-toggle="pill" data-bs-target="#pending-content" type="button" role="tab">
-                <i class="bi bi-hourglass-split me-2"></i>Pending Requests (<?= $pending_res->num_rows ?>)
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link fw-bold border shadow-sm px-4" id="history-tab" data-bs-toggle="pill" data-bs-target="#history-content" type="button" role="tab">
-                <i class="bi bi-journal-text me-2"></i>Audit Logs Trail
-            </button>
-        </li>
-    </ul>
-
-    <!-- Tab Content Container -->
-    <div class="tab-content" id="lifecycleTabsContent">
-        
-        <!-- ================= TAB 1: PENDING REQUESTS QUEUE ================= -->
-        <div class="tab-pane fade show active" id="pending-content" role="tabpanel">
+    <!-- PENDING REQUESTS QUEUE -->
             <div class="card card-custom shadow-sm">
                 <div class="table-responsive">
                     <table class="table align-middle mb-0 lifecycle-table">
@@ -295,287 +232,6 @@ ob_start();
                 </div>
             </div>
         </div>
-
-        <!-- ================= TAB 2: PROCESSED AUDIT LOGS TRAIL (ACCORDION VIEW) ================= -->
-        <div class="tab-pane fade" id="history-content" role="tabpanel">
-            
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <h6 class="fw-bold text-secondary mb-0">Historical Audit Records</h6>
-                    <p class="text-muted small mb-0">Grouped by Transaction ID. Click a transaction to expand its full lifecycle event history.</p>
-                </div>
-                <div class="dropdown">
-                    <button class="btn btn-navy btn-sm dropdown-toggle shadow-sm d-flex align-items-center gap-2" type="button" id="reportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-file-earmark-arrow-down-fill"></i> Generate Report
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="reportDropdown">
-                        <li><h6 class="dropdown-header text-uppercase extra-small">Export Options</h6></li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2" href="generate_audit_report.php?type=full">
-                                <i class="bi bi-building text-primary"></i> Full Division Report
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><h6 class="dropdown-header text-uppercase extra-small">Unit-Wise Report</h6></li>
-                        <?php if ($units_res && $units_res->num_rows > 0): ?>
-                            <?php while($u = $units_res->fetch_assoc()): ?>
-                                <li>
-                                    <a class="dropdown-item d-flex align-items-center gap-2" href="generate_audit_report.php?type=unit&unit_id=<?= $u['id'] ?>">
-                                        <i class="bi bi-geo-alt text-secondary"></i> <?= htmlspecialchars($u['unit_name']) ?>
-                                    </a>
-                                </li>
-                            <?php endwhile; ?>
-                        <?php else: ?>
-                            <li><span class="dropdown-item text-muted small">No units assigned</span></li>
-                        <?php endif; ?>
-                    </ul>
-                </div>
-            </div>
-
-        <?php 
-            $grouped_logs = [];
-            if ($logs_res && $logs_res->num_rows > 0) {
-                $logs_res->data_seek(0);
-                $raw_rows = [];
-                while($row = $logs_res->fetch_assoc()) {
-                    $raw_rows[] = $row;
-                }
-
-                // Sort chronologically (oldest first) to track lifecycle flow per asset
-                usort($raw_rows, function($a, $b) {
-                    return strtotime($a['created_at']) - strtotime($b['created_at']) ?: ($a['log_id'] - $b['log_id']);
-                });
-
-                // Track active transaction session per asset_id
-                $asset_active_session = [];
-                $sessions = [];
-                $session_counter = 0;
-
-                foreach ($raw_rows as $row) {
-                    $asset_id = $row['asset_id'];
-                    $action = $row['action_type'];
-                    $log_id = $row['log_id'];
-
-                    $is_start_action = in_array($action, ['service_requested', 'return_requested']);
-                    $is_end_action = in_array($action, [
-                        'return_approved', 
-                        'completed', 
-                        'repair_returned_to_main_stock', 
-                        'repair_returned_to_origin'
-                    ]);
-
-                    if ($is_start_action || !isset($asset_active_session[$asset_id])) {
-                        $session_counter++;
-                        $asset_active_session[$asset_id] = 'SESSION_' . $log_id . '_' . $session_counter;
-                    }
-
-                    $current_session_key = $asset_active_session[$asset_id];
-
-                    if (!isset($sessions[$current_session_key])) {
-                        $sessions[$current_session_key] = [
-                            'min_time' => $row['created_at'],
-                            'rows' => []
-                        ];
-                    }
-                    $sessions[$current_session_key]['rows'][] = $row;
-
-                    if ($is_end_action) {
-                        unset($asset_active_session[$asset_id]);
-                    }
-                }
-
-                // Sort sessions by their earliest timestamp (oldest first) so they get continuous sequential numbers 1, 2, 3...
-                uasort($sessions, function($a, $b) {
-                    return strtotime($a['min_time']) - strtotime($b['min_time']);
-                });
-
-                // Assign clean sequential numbers free of database ID gaps
-                $seq = 0;
-                foreach ($sessions as $s_key => $s_data) {
-                    $seq++;
-                    $formatted_num = ($seq < 100) ? str_pad($seq, 2, '0', STR_PAD_LEFT) : $seq;
-                    $trx_id = "CECSID" . $formatted_num;
-
-                    foreach ($s_data['rows'] as $row) {
-                        $grouped_logs[$trx_id][] = $row;
-                    }
-                }
-
-                // Sort transaction groups so the newest transactions appear at the top in the accordion
-                uksort($grouped_logs, function($a, $b) {
-                    preg_match('/\d+/', $a, $numA);
-                    preg_match('/\d+/', $b, $numB);
-                    return intval($numB[0] ?? 0) - intval($numA[0] ?? 0);
-                });
-            }
-            ?>
-
-            <?php if (!empty($grouped_logs)): ?>
-                <div class="accordion shadow-sm" id="auditAccordion">
-                    <?php $index = 0; foreach ($grouped_logs as $trx_id => $transactions): 
-                        $index++;
-                        
-                        // Sort events inside this specific transaction group chronologically or reverse-chronologically as needed
-                        usort($transactions, function($x, $y) {
-                            return strtotime($y['created_at']) - strtotime($x['created_at']);
-                        });
-
-                        $latest_trx = $transactions[0]; 
-                        $total_events = count($transactions);
-                        $primary_item = htmlspecialchars($latest_trx['item_name']);
-                        
-                        // Format the latest action type 
-                        $raw_action = $latest_trx['action_type'];
-                        switch ($raw_action) {
-                            case 'service_requested': case 'return_requested': $latest_action_label = "Service Requested"; break;
-                            case 'repair_requested': case 'repair_approved': $latest_action_label = "Sent to Repair"; break;
-                            case 'dispose_requested': case 'disposal_approved': $latest_action_label = "Decommissioned"; break;
-                            case 'return_approved': case 'completed': $latest_action_label = "Returned to Stock"; break;
-                            case 'repair_returned_to_origin': $latest_action_label = "Repair Returned to Origin"; break;
-                            case 'repair_returned_to_main_stock': $latest_action_label = "Repair Returned to Stock"; break;
-                            case 'request_rejected': case 'return_rejected': $latest_action_label = "Request Rejected"; break;
-                            default: $latest_action_label = !empty($raw_action) ? ucwords(str_replace('_', ' ', $raw_action)) : "Activity Logged"; break;
-                        }
-                        $latest_date_formatted = date('j M Y', strtotime($latest_trx['created_at']));
-                    ?>
-                        <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-                            <h2 class="accordion-header" id="heading_<?= $index ?>">
-                        <button class="accordion-button collapsed bg-white py-3 px-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_<?= $index ?>" aria-expanded="false" aria-controls="collapse_<?= $index ?>">
-                            <div class="d-flex align-items-center gap-3 w-100 pe-3">
-                                <div class="badge bg-light text-dark border px-3 py-2 fw-bold font-monospace">
-                                    <?= $trx_id ?>
-                                </div>
-                                <div>
-                                    <h6 class="mb-0 fw-bold text-dark"><?= $primary_item ?></h6>
-                                    <span class="text-muted" style="font-size: 0.75rem;">
-                                        <?= strtoupper($latest_action_label) ?> &bull; <?= date('d M, Y h:i A', strtotime($latest_trx['created_at'])) ?>
-                                    </span>
-                                </div>
-                            </div>
-                        </button>
-                    </h2>
-                            <div id="collapse_<?= $index ?>" class="accordion-collapse collapse" aria-labelledby="heading_<?= $index ?>" data-bs-parent="#auditAccordion">
-                                <div class="accordion-body bg-light p-3">
-                                    <div class="table-responsive bg-white rounded-3 border shadow-sm">
-                                        <table class="table audit-table align-middle mb-0">
-                                            <colgroup>
-                                                <col style="width: 18%;">
-                                                <col style="width: 22%;">
-                                                <col style="width: 18%;">
-                                                <col style="width: 14%;">
-                                                <col style="width: 14%;">
-                                                <col style="width: 14%;">
-                                            </colgroup>
-                                            <thead>
-                                                <tr>
-                                                    <th class="ps-4">Timestamp</th>
-                                                    <th>Asset Details</th>
-                                                    <th>Unit / Laboratory</th>
-                                                    <th class="text-center">Lifecycle Event</th>
-                                                    <th class="text-center">Executed By</th>
-                                                    <th>Remarks</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php foreach ($transactions as $row): 
-                                                    $status = $row['action_type'];
-                                                    $notes = $row['notes'] ?? '';
-                                                    $icon_class = getAssetIcon($row['item_name']);
-                                                    $final_unit = $row['snapshot_unit'] ?? $row['active_unit'] ?? $row['history_unit'] ?? 'Main Stock / Returned';
-                                                    
-                                                    $clean_notes = preg_replace('/\[REF:#\d+\]\s*/', '', $notes);
-
-                                                    switch ($status) {
-                                                        case 'service_requested':
-                                                        case 'return_requested':
-                                                            $status_label = "SERVICE REQUESTED";
-                                                            $badge_class = "bg-warning-subtle text-warning-emphasis border-warning-subtle";
-                                                            break;
-                                                        case 'repair_requested':
-                                                        case 'repair_approved':
-                                                            $status_label = "SENT TO REPAIR";
-                                                            $badge_class = "bg-info-subtle text-info-emphasis border-info-subtle";
-                                                            break;
-                                                        case 'dispose_requested':
-                                                        case 'disposal_approved':
-                                                            $status_label = "DECOMMISSIONED";
-                                                            $badge_class = "bg-danger-subtle text-danger border-danger-subtle";
-                                                            break;
-                                                        case 'return_approved':
-                                                        case 'completed':
-                                                            $status_label = "RETURNED TO STOCK";
-                                                            $badge_class = "bg-success-subtle text-success-emphasis border-success-subtle";
-                                                            break;
-                                                        case 'repair_returned_to_origin':
-                                                            $status_label = "REPAIR RETURNED<br>TO ORIGIN";
-                                                            $badge_class = "bg-success-subtle text-success-emphasis border-success-subtle";
-                                                            break;
-                                                        case 'repair_returned_to_main_stock':
-                                                            $status_label = "REPAIR RETURNED<br>TO MAIN STOCK";
-                                                            $badge_class = "bg-primary-subtle text-primary-emphasis border-primary-subtle";
-                                                            break;
-                                                        case 'request_rejected':
-                                                        case 'return_rejected':
-                                                            $status_label = "REQUEST REJECTED";
-                                                            $badge_class = "bg-danger-subtle text-danger border-danger-subtle";
-                                                            break;
-                                                        default:
-                                                            $status_label = !empty($status) ? strtoupper(str_replace('_', '<br>', $status)) : "N/A";
-                                                            $badge_class = "bg-secondary-subtle text-secondary-emphasis border-secondary-subtle";
-                                                            break;
-                                                    }
-                                                ?>
-                                                <tr>
-                                                    <td class="ps-4">
-                                                        <div class="fw-medium text-dark"><?= date('d M, Y', strtotime($row['created_at'])) ?></div>
-                                                        <div class="text-muted small"><?= date('h:i A', strtotime($row['created_at'])) ?></div>
-                                                    </td>
-                                                    <td>
-                                                        <div class="d-flex align-items-center">
-                                                            <div class="icon-box me-2 flex-shrink-0">
-                                                                <i class="bi <?= $icon_class ?> fs-5 text-secondary"></i>
-                                                            </div>
-                                                            <div class="text-break">
-                                                                <div class="fw-semibold text-dark"><?= htmlspecialchars($row['item_name']) ?></div>
-                                                                <div class="fw-semibold text-primary small">SN: <?= htmlspecialchars($row['serial_number'] ?? 'N/A') ?></div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <div class="fw-medium text-dark text-break"><?= htmlspecialchars($final_unit) ?></div>
-                                                        <div class="small text-muted text-break">ID: <?= htmlspecialchars($row['display_tag']) ?></div>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <span class="badge border <?= $badge_class ?> text-uppercase px-2 py-1 lh-sm d-inline-block" style="font-size: 0.62rem; font-weight: 700;">
-                                                            <?= $status_label ?>
-                                                        </span>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <div class="d-inline-flex align-items-center text-secondary text-break">
-                                                            <i class="bi bi-person me-1 flex-shrink-0"></i>
-                                                            <span class="fw-medium text-dark"><?= htmlspecialchars($row['staff_name'] ?: 'System') ?></span>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <span class="text-muted small text-break d-block" style="line-height: 1.35;"><?= htmlspecialchars($clean_notes ?: 'No notes recorded.') ?></span>
-                                                    </td>
-                                                </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php else: ?>
-                <div class="card card-custom shadow-sm p-4 text-center text-muted">
-                    No audit logs found.
-                </div>
-            <?php endif; ?>
-        </div>
-
     </div>
 </div>
 
@@ -668,21 +324,9 @@ function submitRejection(id) {
     window.location.href = `process_request.php?id=${id}&action=deny&reason=${encodeURIComponent(reason)}`;
 }
 </script>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    if (window.location.hash === '#history-content') {
-        const historyTabBtn = document.querySelector('#history-tab');
-        if (historyTabBtn) {
-            const tab = new bootstrap.Tab(historyTabBtn);
-            tab.show();
-        }
-    }
-});
-</script>
 
 <?php
 $content = ob_get_clean();
-// Check if user is SuperAdmin to load adminlayout, otherwise load divisionslayout
 if (($role ?? '') === ROLE_SUPERADMIN || ($role ?? '') === 'SuperAdmin') {
     include __DIR__ . "/../admin/adminlayout.php";
 } else {

@@ -336,19 +336,76 @@ ob_start();
             $grouped_logs = [];
             if ($logs_res && $logs_res->num_rows > 0) {
                 $logs_res->data_seek(0);
+                $raw_rows = [];
                 while($row = $logs_res->fetch_assoc()) {
-                    $matched_ref_id = "";
-                    if (!empty($row['notes']) && preg_match('/\[REF:#(\d+)\]\s*/', $row['notes'], $matches)) {
-                        $matched_ref_id = "TRX-" . str_pad($matches[1], 5, '0', STR_PAD_LEFT);
+                    $raw_rows[] = $row;
+                }
+
+                // Sort chronologically (oldest first) to track lifecycle flow per asset
+                usort($raw_rows, function($a, $b) {
+                    return strtotime($a['created_at']) - strtotime($b['created_at']) ?: ($a['log_id'] - $b['log_id']);
+                });
+
+                // Track active transaction session per asset_id
+                $asset_active_session = [];
+                $sessions = [];
+                $session_counter = 0;
+
+                foreach ($raw_rows as $row) {
+                    $asset_id = $row['asset_id'];
+                    $action = $row['action_type'];
+                    $log_id = $row['log_id'];
+
+                    $is_start_action = in_array($action, ['service_requested', 'return_requested']);
+                    $is_end_action = in_array($action, [
+                        'return_approved', 
+                        'completed', 
+                        'repair_returned_to_main_stock', 
+                        'repair_returned_to_origin'
+                    ]);
+
+                    if ($is_start_action || !isset($asset_active_session[$asset_id])) {
+                        $session_counter++;
+                        $asset_active_session[$asset_id] = 'SESSION_' . $log_id . '_' . $session_counter;
                     }
 
-                    $ref_id = !empty($matched_ref_id) ? $matched_ref_id : ("TRX-" . str_pad($row['log_id'], 5, '0', STR_PAD_LEFT));
-                    
-                    $grouped_logs[$ref_id][] = $row;
+                    $current_session_key = $asset_active_session[$asset_id];
+
+                    if (!isset($sessions[$current_session_key])) {
+                        $sessions[$current_session_key] = [
+                            'min_time' => $row['created_at'],
+                            'rows' => []
+                        ];
+                    }
+                    $sessions[$current_session_key]['rows'][] = $row;
+
+                    if ($is_end_action) {
+                        unset($asset_active_session[$asset_id]);
+                    }
                 }
-                
+
+                // Sort sessions by their earliest timestamp (oldest first) so they get continuous sequential numbers 1, 2, 3...
+                uasort($sessions, function($a, $b) {
+                    return strtotime($a['min_time']) - strtotime($b['min_time']);
+                });
+
+                // Assign clean sequential numbers free of database ID gaps
+                $seq = 0;
+                foreach ($sessions as $s_key => $s_data) {
+                    $seq++;
+                    $formatted_num = ($seq < 100) ? str_pad($seq, 2, '0', STR_PAD_LEFT) : $seq;
+                    $trx_id = "CECSID" . $formatted_num;
+
+                    foreach ($s_data['rows'] as $row) {
+                        $grouped_logs[$trx_id][] = $row;
+                    }
+                }
+
+                // Sort transaction groups so the newest transactions appear at the top in the accordion
                 uksort($grouped_logs, function($a, $b) {
-                    return strcmp($b, $a);
+                    preg_match('/\d+/', $a, $numA);
+                    preg_match('/\d+/', $b, $numB);
+                    return intval($numB[0] ?? 0) - intval($numA[0] ?? 0);
                 });
             }
             ?>

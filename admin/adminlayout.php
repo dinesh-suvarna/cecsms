@@ -325,18 +325,23 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
                 <div class="nav-group-label">Service & Requests</div>
                 <div class="nav flex-column">    
                     <a href="/cecsms/services/index.php" class="nav-link d-flex justify-content-between align-items-center <?= (strpos($_SERVER['PHP_SELF'],'services') !== false)?'active':'' ?>">
-    <span class="d-flex align-items-center gap-2">
-        <i class="bi bi-tools"></i> Services
-    </span>
-    <?php if ($services_badge_count > 0): ?>
-        <span class="badge rounded-pill bg-warning text-dark extra-small" style="font-size: 10px;"><?= $services_badge_count ?></span>
-    <?php endif; ?>
-</a>
-                    <a class="nav-link <?= ($page_title == 'Lifecycle Management & Audit Logs') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">
+                        <span class="d-flex align-items-center gap-2">
+                            <i class="bi bi-tools"></i> Services
+                        </span>
+                        <?php if ($services_badge_count > 0): ?>
+                            <span class="badge rounded-pill bg-warning text-dark extra-small" style="font-size: 10px;"><?= $services_badge_count ?></span>
+                        <?php endif; ?>
+                    </a>
+                    <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'returned_assets.php') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">
                         <span><i class="bi bi-arrow-down-left-square me-2"></i> Stock Transitions</span>
                         <?php if (!empty($pending_count) && $pending_count > 0): ?>
                             <span class="badge rounded-pill bg-warning text-dark ms-auto extra-small"><?= $pending_count ?></span>
                         <?php endif; ?>
+                    </a>
+                    <a href="/cecsms/divisions/audit_logs.php" class="nav-link d-flex justify-content-between align-items-center <?= (strpos($_SERVER['PHP_SELF'],'audit_logs.php') !== false)?'active':'' ?>">
+                        <span class="d-flex align-items-center gap-2">
+                            <i class="bi bi-journal-text me-2"></i> Asset Audit Logs
+                        </span>
                     </a>
                 </div>   
             <?php endif; ?>

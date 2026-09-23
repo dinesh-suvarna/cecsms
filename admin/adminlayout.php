@@ -333,14 +333,14 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
                         <?php endif; ?>
                     </a>
                     <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'returned_assets.php') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">
-                        <span><i class="bi bi-arrow-down-left-square me-2"></i> Stock Transitions</span>
+                        <span><i class="bi bi-arrow-down-left-square me-2"></i> Service Requests</span>
                         <?php if (!empty($pending_count) && $pending_count > 0): ?>
                             <span class="badge rounded-pill bg-warning text-dark ms-auto extra-small"><?= $pending_count ?></span>
                         <?php endif; ?>
                     </a>
                     <a href="/cecsms/divisions/audit_logs.php" class="nav-link d-flex justify-content-between align-items-center <?= (strpos($_SERVER['PHP_SELF'],'audit_logs.php') !== false)?'active':'' ?>">
                         <span class="d-flex align-items-center gap-2">
-                            <i class="bi bi-journal-text me-2"></i> Asset Audit Logs
+                            <i class="bi bi-journal-text me-2"></i> Service Status
                         </span>
                     </a>
                 </div>   

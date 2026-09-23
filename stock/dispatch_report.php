@@ -14,6 +14,108 @@ if($user_role !== 'SuperAdmin'){
     exit;
 }
 
+/* ---------- HELPER: DYNAMIC CATEGORY & ITEM ICONS ---------- */
+if (!function_exists('getCategoryIcon')) {
+    function getCategoryIcon(string $category): string {
+        $cat = strtolower(trim($category));
+        if (str_contains($cat, 'computer') || str_contains($cat, 'pc') || str_contains($cat, 'laptop')) {
+            return 'bi-pc-display';
+        } elseif (str_contains($cat, 'accessory') || str_contains($cat, 'peripherals')) {
+            return 'bi-keyboard';
+        } elseif (str_contains($cat, 'network') || str_contains($cat, 'router') || str_contains($cat, 'switch')) {
+            return 'bi-box-seam';
+        } elseif (str_contains($cat, 'component') || str_contains($cat, 'hardware')) {
+            return 'bi-cpu';
+        } elseif (str_contains($cat, 'furniture')) {
+            return 'bi-lamp';
+        } elseif (str_contains($cat, 'mobile') || str_contains($cat, 'phone')) {
+            return 'bi-phone';
+        }
+        return 'bi-folder';
+    }
+}
+
+if (!function_exists('getItemDetailIcon')) {
+    function getItemDetailIcon(?string $itemName, ?string $category = ''): string {
+        $name = strtolower(trim($itemName ?? ''));
+        $cat  = strtolower(trim($category ?? ''));
+
+        // Remove spaces, hyphens, underscores to match variations like "ip com", "access point", etc.
+        $cleanName = str_replace([' ', '-', '_'], '', $name);
+
+        switch (true) {
+            // 1. HIGH-PRIORITY SPECIFIC ITEM MATCHES
+            case (
+                str_contains($cleanName, 'accesspoint') || 
+                str_contains($cleanName, 'ipcom') || 
+                str_contains($name, 'wifi')
+            ):
+                return 'bi-wifi';
+
+            case (str_contains($name, 'rack') || str_contains($name, 'server')):
+                return 'bi-hdd-rack'; 
+
+            case (str_contains($name, 'switch') || str_contains($name, 'patch panel') || str_contains($name, 'hub')):
+                return 'bi-hdd-stack'; 
+
+            case (str_contains($name, 'router')):
+                return 'bi-router';
+
+            case (str_contains($name, 'computer') || str_contains($name, 'desktop')):
+                return 'bi-pc-display';
+
+            case (str_contains($name, 'laptop')):
+                return 'bi-laptop';
+
+            case (str_contains($name, 'monitor') || str_contains($name, 'display')):
+                return 'bi-display';
+
+            case (str_contains($name, 'printer')):
+                return 'bi-printer';
+
+            case (str_contains($name, 'keyboard')):
+                return 'bi-keyboard';
+
+            case (str_contains($name, 'mouse')):
+                return 'bi-mouse3';
+
+            case (str_contains($name, 'projector')):
+                return 'bi-projector'; 
+
+            case (str_contains($name, 'biometric') || str_contains($name, 'fingerprint')):
+                return 'bi-person-bounding-box';
+
+            case (str_contains($name, 'ups') || str_contains($name, 'battery')):
+                return 'bi-lightning-charge';
+
+            case (str_contains($name, 'table') || str_contains($name, 'desk')):
+                return 'bi-table';
+
+            case (str_contains($name, 'chair')):
+                return 'bi-person-workspace';
+
+            case (str_contains($name, 'camera') || str_contains($name, 'cctv')):
+                return 'bi-camera-video';
+
+            // 2. CATEGORY FALLBACKS 
+            case (str_contains($cat, 'computer')):
+                return 'bi-pc-display';
+
+            case (str_contains($cat, 'network')):
+                return 'bi-box-seam';
+
+            case (str_contains($cat, 'biometric')):
+                return 'bi-person-bounding-box';
+
+            case (str_contains($cat, 'mobile') || str_contains($name, 'phone')):
+                return 'bi-phone';
+
+            default:
+                return 'bi-box-seam';
+        }
+    }
+}
+
 /* Filters */
 $from_date = $_GET['from_date'] ?? '';
 $to_date   = $_GET['to_date'] ?? '';
@@ -450,41 +552,8 @@ while($row = $result->fetch_assoc()){
                                                 $model_md5 = md5($institution . $division . $unit . $modelName);
                                                 
                                                 $firstRow   = reset($modelData['rows']);
-                                                $lowerCat   = strtolower($firstRow['category'] ?? '');
-                                                $lowerItem  = strtolower($firstRow['item_name'] ?? '');
 
-                                                if (str_contains($lowerCat, 'mouse') || str_contains($lowerItem, 'mouse')) { 
-                                                    $itemIcon = 'bi-mouse3'; 
-                                                } elseif (str_contains($lowerCat, 'keyboard') || str_contains($lowerItem, 'keyboard')) { 
-                                                    $itemIcon = 'bi-keyboard'; 
-                                                } elseif (
-                                                    str_contains($lowerCat, 'computer') || 
-                                                    str_contains($lowerCat, 'desktop') || 
-                                                    str_contains($lowerItem, 'computer') || 
-                                                    str_contains($lowerItem, 'desktop')
-                                                ) { 
-                                                    $itemIcon = 'bi-pc-display'; 
-                                                } elseif (str_contains($lowerCat, 'monitor') || str_contains($lowerItem, 'monitor')) { 
-                                                    $itemIcon = 'bi-display'; 
-                                                } elseif (str_contains($lowerCat, 'printer') || str_contains($lowerItem, 'printer')) { 
-                                                    $itemIcon = 'bi-printer'; 
-                                                } elseif (str_contains($lowerCat, 'scanner') || str_contains($lowerItem, 'scanner')) { 
-                                                    $itemIcon = 'bi-qr-code-scan'; 
-                                                } elseif (
-                                                    str_contains($lowerCat, 'cctv') || str_contains($lowerCat, 'camera') || 
-                                                    str_contains($lowerItem, 'cctv') || str_contains($lowerItem, 'camera')
-                                                ) { 
-                                                    $itemIcon = 'bi-camera-video'; 
-                                                } elseif (
-                                                    str_contains($lowerCat, 'ups') || str_contains($lowerCat, 'battery') || str_contains($lowerCat, 'power') || 
-                                                    str_contains($lowerItem, 'ups') || str_contains($lowerItem, 'battery') || str_contains($lowerItem, 'power')
-                                                ) { 
-                                                    $itemIcon = 'bi-lightning-charge'; 
-                                                } elseif (str_contains($lowerCat, 'rack') || str_contains($lowerItem, 'rack')) { 
-                                                    $itemIcon = 'bi-hdd-rack'; 
-                                                } else { 
-                                                    $itemIcon = 'bi-box'; 
-                                                }
+                                                $itemIcon   = getItemDetailIcon($firstRow['item_name'] ?? '', $firstRow['category'] ?? '');
                                             ?>
                                                 <!-- LEVEL 4: MODEL / CATEGORY COLLAPSIBLE SECTION (DEFAULT COLLAPSED) -->
                                                 <div class="category-section bg-white">
@@ -492,7 +561,7 @@ while($row = $result->fetch_assoc()){
                                                          data-bs-toggle="collapse" data-bs-target="#table_<?= $model_md5 ?>" style="cursor: pointer;" aria-expanded="false">
                                                         <span class="tracking-wider d-flex align-items-center">
                                                             <i class="bi bi-chevron-right me-2 toggle-icon"></i>
-                                                            <i class="bi <?= $itemIcon ?> me-2" style="color: var(--brand-primary);"></i><?= htmlspecialchars($modelName) ?>
+                                                            <i class="bi <?= $itemIcon ?> me-2" style="color: var(--brand-primary);"></i><?= htmlspecialchars($firstRow['item_name']) ?>
                                                         </span>
                                                         <span class="badge bg-secondary text-white rounded-pill" style="font-size:0.7rem;"><?= $modelData['total_qty'] ?> Qty</span>
                                                     </div>

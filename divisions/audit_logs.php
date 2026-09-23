@@ -326,7 +326,7 @@ ob_start();
                 <i class="bi bi-arrow-left me-1"></i> Back to Pending Requests
             </a>
             <h4 class="fw-bold text-dark mb-1">Historical Audit Records</h4>
-            <p class="text-muted small mb-0">Grouped by Transaction ID. Click any transaction to expand its full lifecycle event history.</p>
+            <p class="text-muted small mb-0">Grouped by Service ID. Click any service to expand its full lifecycle event history.</p>
         </div>
         <div class="dropdown">
             <button class="btn btn-navy btn-sm dropdown-toggle shadow-sm d-flex align-items-center gap-2" type="button" id="reportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -475,7 +475,7 @@ ob_start();
         <div class="col-md-5">
             <div class="input-group shadow-sm">
                 <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                <input type="text" id="globalAuditSearch" class="form-control border-start-0 ps-0" placeholder="Search Transaction ID (e.g. CECSID01), item, serial...">
+                <input type="text" id="globalAuditSearch" class="form-control border-start-0 ps-0" placeholder="Search Service ID (e.g. CECSID01)">
             </div>
         </div>
     </div>

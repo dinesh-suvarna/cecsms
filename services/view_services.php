@@ -457,7 +457,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // SWEETALERT2 STATUS TOGGLE CONFIRMATION
+   // SWEETALERT2 STATUS TOGGLE CONFIRMATION
     document.querySelectorAll('.toggle-pill').forEach(btn => {
         btn.addEventListener('click', function() {
             const token = this.getAttribute('data-token');
@@ -491,21 +491,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             };
 
-            if (newStatus === 'Unpaid') {
+            // Confirmation popup configured dynamically based on target status
+            if (newStatus === 'Paid') {
+                Swal.fire({
+                    title: 'Mark as Paid?',
+                    text: "Do you want to confirm this bill as fully paid?",
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#10b981', // Green UI for Paid
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, mark Paid'
+                }).then((result) => {
+                    if (result.isConfirmed) executeToggle();
+                });
+            } else {
                 Swal.fire({
                     title: 'Mark as Unpaid?',
                     text: "Are you sure you want to revert this bill status to Unpaid?",
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonColor: '#ffc107',
+                    confirmButtonColor: '#f43f5e', // Red UI for Unpaid warning
                     cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'Yes, mark Unpaid',
-                    customClass: { confirmButton: 'text-dark' }
+                    confirmButtonText: 'Yes, mark Unpaid'
                 }).then((result) => {
                     if (result.isConfirmed) executeToggle();
                 });
-            } else {
-                executeToggle();
             }
         });
     });

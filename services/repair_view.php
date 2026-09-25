@@ -29,11 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $asset_tag          = $repair['division_asset_id'];
                 $origin_division_id = $repair['origin_division_id'];
 
-                if ($action === 'complete') {
+               if ($action === 'complete') {
                     $final_cost       = floatval($_POST['final_cost'] ?? 0);
-                    $resolution_notes = trim($_POST['resolution_notes'] ?? 'Repair completed successfully.');
+                    $resolution_notes = trim($_POST['resolution_notes'] ?? 'Repair completed.');
+                    $bill_number      = trim($_POST['bill_number'] ?? ''); 
 
-                    // 1. Update repair record to completed
+                    // 1. Update the repair ticket to completed status
                     $up_rep = $conn->prepare("
                         UPDATE repairs 
                         SET status = 'completed', repair_cost = ?, resolution_notes = ?, completed_at = NOW() 
@@ -41,8 +42,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     ");
                     $up_rep->bind_param("dsi", $final_cost, $resolution_notes, $repair_id);
                     $up_rep->execute();
+                    $up_rep->close();
 
-                    $_SESSION['success_msg'] = "Repair resolution logged successfully. Asset is now ready to be returned.";
+                    // 2. Fetch repair info including stock_detail_id and repair_type
+                    $get_details = $conn->prepare("
+                        SELECT r.stock_detail_id, im.item_name, r.vendor_name, r.repair_type 
+                        FROM repairs r
+                        JOIN stock_details sd ON r.stock_detail_id = sd.id
+                        JOIN items_master im ON sd.stock_item_id = im.id
+                        WHERE r.id = ?
+                    ");
+                    $get_details->bind_param("i", $repair_id);
+                    $get_details->execute();
+                    $repair_info = $get_details->get_result()->fetch_assoc();
+                    $get_details->close();
+
+                    if ($repair_info && in_array($repair_info['repair_type'], ['external_paid', 'external_warranty'])) {
+                        $item_name    = $repair_info['item_name']; 
+                        $stock_id     = $repair_info['stock_detail_id'];
+                        $vendor_name  = $repair_info['vendor_name'];
+                        $service_type = ($repair_info['repair_type'] === 'external_paid') ? 'EXTERNAL PAID' : 'EXTERNAL WARRANTY';
+                        $bill_status  = ($repair_info['repair_type'] === 'external_paid') ? 'Unpaid' : 'Warranty';
+
+                        // 3. Look up vendor ID
+                        $vendor_id = null;
+                        if (!empty($vendor_name)) {
+                            $v_stmt = $conn->prepare("SELECT id FROM vendors WHERE vendor_name = ?");
+                            $v_stmt->bind_param("s", $vendor_name);
+                            $v_stmt->execute();
+                            $v_res = $v_stmt->get_result()->fetch_assoc();
+                            if ($v_res) {
+                                $vendor_id = (int)$v_res['id'];
+                            }
+                            $v_stmt->close();
+                        }
+
+                        // 4. Insert into centralized 'services' table with resolution notes & stock mapping
+                        $ins_service = $conn->prepare("
+                            INSERT INTO services (vendor_id, stock_detail_id, service_date, item_name, service_type, amount, bill_status, bill_number, resolution_notes, created_at) 
+                            VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, NOW())
+                        ");
+                        $ins_service->bind_param("iissdsss", 
+                            $vendor_id, 
+                            $stock_id,
+                            $item_name, 
+                            $service_type, 
+                            $final_cost, 
+                            $bill_status,
+                            $bill_number,
+                            $resolution_notes
+                        );
+                        $ins_service->execute();
+                        $ins_service->close();
+                    }
+
+                    $_SESSION['success_msg'] = "Repair completed and successfully logged into service records!";
+
 
                 } elseif ($action === 'return_origin') {
                     // 1. Update repair status to returned

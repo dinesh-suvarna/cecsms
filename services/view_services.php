@@ -153,6 +153,18 @@ body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color:
     height: 6px;
     background-color: #f43f5e;
     border-radius: 50%;
+
+.status-warranty {
+    background-color: rgba(243, 185, 25, 0.1) !important;
+    color: #2563eb !important;
+    border-color: rgba(59, 130, 246, 0.25) !important;
+}
+.status-warranty .status-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #3b82f6;
+    border-radius: 50%;
+}
 }
 </style>
 
@@ -294,8 +306,15 @@ body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color:
                                 </thead>
                                 <tbody>
                                     <?php foreach ($data['services'] as $row): 
-                                        $status = $row['bill_status'] ?? 'Unpaid';
-                                        $badge_class = ($status == 'Paid') ? 'status-paid' : 'status-unpaid';
+                                        $status = trim($row['bill_status'] ?? '');
+                                        
+                                        // Check if it's empty (warranty / no bill)
+                                        if (empty($status)) {
+                                            $display_status = 'WARRANTY';
+                                            $badge_class = 'status-warranty'; 
+                                            $display_status = strtoupper($status);
+                                            $badge_class = ($status === 'Paid') ? 'status-paid' : 'status-unpaid';
+                                        }
 
                                         // Encrypt service ID for action links
                                         $enc_service_id = encrypt_id($row['id']);
@@ -325,18 +344,27 @@ body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color:
 
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
-                                                <div class="bg-light border rounded d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; flex-shrink: 0;">
-                                                    <?php if ($img_url): ?>
-                                                        <img src="<?= $img_url ?>" style="width: 18px; height: 18px; object-fit: contain;">
-                                                    <?php else: ?>
-                                                        <i class="bi <?= $icon ?> text-secondary fs-6"></i>
-                                                    <?php endif; ?>
-                                                </div>
+                                                    <div class="bg-light border rounded d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; flex-shrink: 0;">
+                                                        <?php if ($img_url): ?>
+                                                            <img src="<?= $img_url ?>" style="width: 18px; height: 18px; object-fit: contain;">
+                                                        <?php else: ?>
+                                                            <i class="bi <?= $icon ?> text-secondary fs-6"></i>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 <div>
                                                     <div class="fw-bold text-dark lh-1"><?= htmlspecialchars($row['item_name']) ?></div>
-                                                    <div class="text-muted fw-semibold text-uppercase mt-1" style="font-size: 0.65rem;">
-                                                        <?= htmlspecialchars($row['service_type']) ?>
-                                                    </div>
+
+                                                    <?php 
+                                                    // specific resolution note (from repairs), 
+                                                    // fallback to the service_type (from manual entries)
+                                                    $display_note = !empty($row['resolution_notes']) ? $row['resolution_notes'] : $row['service_type'];
+                                                    ?>
+
+                                                    <?php if (!empty($display_note)): ?>
+                                                        <div class="text-secondary mt-1" style="font-size: 0.73rem;">
+                                                            <?= htmlspecialchars($display_note) ?>
+                                                        </div>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </td>
@@ -352,11 +380,22 @@ body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color:
                                         </td>
 
                                         <td>
-                                            <button class="status-badge <?= $badge_class ?> toggle-pill" 
-                                                    data-token="<?= htmlspecialchars($enc_service_id) ?>" 
-                                                    data-status="<?= $status ?>">
-                                                <span class="status-dot"></span> <?= strtoupper($status) ?>
-                                            </button>
+                                            <?php 
+                                            $status = trim($row['bill_status'] ?? '');
+                                            if (empty($status)): 
+                                            ?>
+                                                <span class="badge bg-light text-secondary border fw-semibold px-2 py-1" style="font-size: 0.68rem;">
+                                                    <i class="bi bi-shield-check me-1"></i> WARRANTY
+                                                </span>
+                                            <?php else: 
+                                                $badge_class = ($status === 'Paid') ? 'status-paid' : 'status-unpaid';
+                                            ?>
+                                                <button class="status-badge <?= $badge_class ?> toggle-pill" 
+                                                        data-token="<?= htmlspecialchars($enc_service_id) ?>" 
+                                                        data-status="<?= $status ?>">
+                                                    <span class="status-dot"></span> <?= strtoupper($status) ?>
+                                                </button>
+                                            <?php endif; ?>
                                         </td>
 
                                         <td class="text-end pe-3">

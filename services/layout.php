@@ -307,7 +307,7 @@ if (isset($conn) && in_array($role, ['SuperAdmin', 'Admin'], true)) {
                 <a href="repair_view.php" class="nav-link d-flex justify-content-between align-items-center <?= ($current_page == 'repair_view.php') ? 'active' : '' ?>">
                     <span class="d-flex align-items-center gap-2"><i class="bi bi-gear-wide-connected"></i> Repair Dashboard</span>
                     <?php if ((($nav_in_progress_count ?? 0) + ($nav_completed_count ?? 0)) > 0): ?>
-                        <span class="badge bg-warning text-dark rounded-pill px-2 py-1" style="font-size: 10px;"><?= ($nav_in_progress_count + $nav_completed_count) ?></span>
+                        <span class="badge bg-success rounded-pill px-2 py-1" style="font-size: 10px;"><?= ($nav_in_progress_count + $nav_completed_count) ?></span>
                     <?php endif; ?>
                 </a>
                 <a href="repair_logs.php" class="nav-link <?= ($current_page == 'repair_logs.php') ? 'active' : '' ?>">

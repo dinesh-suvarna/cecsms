@@ -9,10 +9,9 @@ if (($_SESSION['role'] ?? '') !== 'SuperAdmin') {
     exit;
 }
 
-$status_icon  = 'info';
-$status_title = 'Processing...';
-$status_text  = 'Initializing request.';
-$redirect     = "returned_assets.php";
+$redirect = "returned_assets.php";
+$status_type = 'success';
+$status_message = 'Initializing request.';
 
 if (isset($_GET['id']) && isset($_GET['action'])) {
     $id          = intval($_GET['id']);
@@ -79,9 +78,8 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
                 $log_stmt->bind_param("isiss", $stock_id, $asset_tag, $unit_name, $admin_id, $log_notes);
                 $log_stmt->execute();
 
-                $status_icon  = 'error';
-                $status_title = 'Request Denied';
-                $status_text  = "The request for asset $asset_tag has been rejected.";
+                $status_type = 'error';
+                $status_message = "The request for asset $asset_tag has been rejected.";
 
             } elseif ($action === 'return_requested') {
                 $log_notes = $ref_prefix . "Return approved by Admin. Asset returned to stock.";
@@ -99,34 +97,25 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
                     $conn->query("UPDATE dispatch_details SET returned_quantity = IFNULL(returned_quantity, 0) + 1 WHERE id = $dd_id"); 
                 }
 
-                $status_icon  = 'success';
-                $status_title = 'Return Approved';
-                $status_text  = "Asset $asset_tag has been returned back to available inventory.";
+                $status_type = 'success';
+                $status_message = "Asset $asset_tag has been returned back to available inventory.";
 
+            } elseif ($action === 'repair_requested') {
+                $log_notes = $ref_prefix . "Repair authorized by Admin. Asset $asset_tag moved to repair queue.";
+                $log_stmt  = $conn->prepare("
+                    INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
+                    VALUES (?, ?, ?, 'repair_approved', ?, ?)
+                ");
+                $log_stmt->bind_param("isiss", $stock_id, $asset_tag, $unit_name, $admin_id, $log_notes);
+                $log_stmt->execute();
 
-        } elseif ($action === 'repair_requested') {
-            $log_notes = $ref_prefix . "Repair authorized by Admin. Asset $asset_tag moved to repair queue.";
-            $log_stmt  = $conn->prepare("
-                INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
-                VALUES (?, ?, ?, 'repair_approved', ?, ?)
-            ");
-            $log_stmt->bind_param("isiss", $stock_id, $asset_tag, $unit_name, $admin_id, $log_notes);
-            $log_stmt->execute();
+                // Update stock & division asset status 
+                $conn->query("UPDATE stock_details SET status = 'maintenance' WHERE id = $stock_id");
+                $conn->query("UPDATE division_assets SET status = 'under_repair' WHERE id = $id");
 
-            // Update stock & division asset status 
-            $conn->query("UPDATE stock_details SET status = 'maintenance' WHERE id = $stock_id");
-            $conn->query("UPDATE division_assets SET status = 'under_repair' WHERE id = $id");
-
-            // Commit transaction
-            $conn->commit();
-
-            // Set success status and redirect back to returned assets (or straight to the queue)
-            $status_icon  = 'success';
-            $status_title = 'Sent to Repair Queue';
-            $status_text  = "Asset $asset_tag has been successfully authorized and added to the repair queue.";
-            $redirect     = "returned_assets.php"; // 
-
-
+                $status_type = 'success';
+                $status_message = "Asset $asset_tag has been successfully authorized and added to the repair queue.";
+                $redirect = "returned_assets.php"; 
 
             } elseif ($action === 'dispose_requested') {
                 $remark_stmt = $conn->prepare("SELECT notes FROM asset_logs WHERE asset_id = ? AND action_type = 'dispose_requested' ORDER BY id DESC LIMIT 1");
@@ -151,42 +140,26 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
 
                 $conn->query("DELETE FROM division_assets WHERE id = $id");
 
-                $status_icon  = 'success';
-                $status_title = 'Asset Sent to E-Waste';
-                $status_text  = "Asset $asset_tag decommissioned successfully.";
+                $status_type = 'success';
+                $status_message = "Asset $asset_tag decommissioned successfully.";
             }
 
             $conn->commit();
         } catch (Exception $e) {
             $conn->rollback();
-            $status_icon  = 'error';
-            $status_title = 'Database Error';
-            $status_text  = $e->getMessage();
+            $status_type = 'error';
+            $status_message = $e->getMessage();
         }
     } else {
-        $status_icon  = 'error';
-        $status_title = 'Record Not Found';
-        $status_text  = "Request no longer exists or was already processed.";
+        $status_type = 'error';
+        $status_message = "Request no longer exists or was already processed.";
     }
 }
+
+// Save message to session and redirect 
+$_SESSION['flash_message'] = $status_message;
+$_SESSION['flash_type']    = $status_type;
+
+header("Location: " . $redirect);
+exit();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Processing...</title>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-</head>
-<body>
-    <script>
-        Swal.fire({
-            icon: '<?= $status_icon ?>',
-            title: '<?= $status_title ?>',
-            text: '<?= $status_text ?>',
-            confirmButtonColor: '<?= ($status_icon == 'error') ? '#ef4444' : '#10b981' ?>'
-        }).then(() => {
-            window.location.href = '<?= $redirect ?>';
-        });
-    </script>
-</body>
-</html>

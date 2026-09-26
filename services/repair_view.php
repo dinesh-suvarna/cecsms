@@ -10,7 +10,7 @@ if (!in_array($_SESSION['role'] ?? '', ['SuperAdmin', 'Admin'], true)) {
     exit;
 }
 
-// --- HANDLE ACTIONS (MARK COMPLETED / RETURN TO ORIGIN / RETURN TO MAIN STOCK) ---
+// --- HANDLE ACTIONS (MARK COMPLETED / RETURN TO ORIGIN / RETURN TO MAIN STOCK/ MOVE TO EWASTE) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $repair_id = intval($_POST['repair_id'] ?? 0);
     $action    = $_POST['action'];
@@ -155,7 +155,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $log_stmt->bind_param("isis", $stock_detail_id, $asset_tag, $admin_id, $log_notes);
                     $log_stmt->execute();
 
-                    $_SESSION['success_msg'] = "Asset successfully returned to Main Stock inventory.";
+                     $_SESSION['success_msg'] = "Asset successfully returned to Main Stock inventory.";
+
+                } elseif ($action === 'e_waste') {
+                // 1. Pull the resolution notes from the repair record to use as the disposal reason
+                $disposal_reason = !empty($repair['resolution_notes']) ? $repair['resolution_notes'] : 'Unrepairable / Scrapped from Repair Queue';
+
+                // 2. Update repair ticket status to closed/e-waste
+                $up_rep = $conn->prepare("UPDATE repairs SET status = 'e_waste' WHERE id = ?");
+                $up_rep->bind_param("i", $repair_id);
+                $up_rep->execute();
+                $up_rep->close();
+
+                // 3. Update stock details status to 'disposed' (matching ewaste_registry lifecycle)
+                $up_sd = $conn->prepare("UPDATE stock_details SET status = 'disposed' WHERE id = ?");
+                $up_sd->bind_param("i", $stock_detail_id);
+                $up_sd->execute();
+                $up_sd->close();
+
+                // 4. Insert directly into the e-waste registry table with 'Pending_Verification' status
+                $ewaste_stmt = $conn->prepare("
+                    INSERT INTO ewaste_items (stock_detail_id, division_asset_id, disposal_reason, status) 
+                    VALUES (?, ?, ?, 'Pending_Verification')
+                ");
+                $ewaste_stmt->bind_param("iss", $stock_detail_id, $asset_tag, $disposal_reason);
+                $ewaste_stmt->execute();
+                $ewaste_stmt->close();
+
+                // 5. Remove or clear from active division assets (similar to disposal logic in process_request.php)
+                $del_da = $conn->prepare("DELETE FROM division_assets WHERE division_asset_id = ? AND stock_detail_id = ?");
+                $del_da->bind_param("si", $asset_tag, $stock_detail_id);
+                $del_da->execute();
+                $del_da->close();
+
+                // 6. Insert audit log entry for tracking
+                $unit_name = 'Repair Center / Main Stock';
+                $log_notes = "Asset decommissioned from repair queue and sent to E-Waste. Reason: " . $disposal_reason;
+                $log_stmt = $conn->prepare("
+                    INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
+                    VALUES (?, ?, ?, 'disposal_approved', ?, ?)
+                ");
+                $log_stmt->bind_param("isiss", $stock_detail_id, $asset_tag, $unit_name, $admin_id, $log_notes);
+                $log_stmt->execute();
+                $log_stmt->close();
+
+                  $_SESSION['success_msg'] = "Asset successfully moved to the E-Waste management registry!";  
+    
                 }
             }
             $conn->commit();
@@ -540,6 +585,14 @@ ob_start();
                                                                     <input type="hidden" name="action" value="return_main_stock">
                                                                     <button type="submit" class="btn btn-sm fw-bold text-nowrap btn-outline-secondary py-1 px-2 w-100" style="font-size: 10.5px;">
                                                                         <i class="bi bi-box-seam me-1"></i> Return to Main Stock
+                                                                    </button>
+                                                                </form>
+                                                                <!-- Move to E-Waste Button -->
+                                                                <form method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to declare this item unrepairable and route it to the E-Waste registry?');">
+                                                                    <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
+                                                                    <input type="hidden" name="action" value="e_waste">
+                                                                    <button type="submit" class="btn btn-sm fw-bold text-nowrap btn-outline-danger py-1 px-2 w-100" style="font-size: 10.5px;">
+                                                                        <i class="bi bi-trash3-fill me-1"></i> Move to E-Waste
                                                                     </button>
                                                                 </form>
                                                             </div>

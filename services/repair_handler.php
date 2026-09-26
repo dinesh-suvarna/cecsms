@@ -157,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn->commit();
 
             $_SESSION['success_msg'] = "Repair ticket successfully logged and assigned.";
-            header("Location: repair_view.php"); 
+            header("Location: repair_queue.php"); 
             exit;
         } catch (Exception $e) {
             $conn->rollback();

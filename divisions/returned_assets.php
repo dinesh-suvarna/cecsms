@@ -8,6 +8,7 @@ $page_icon  = "bi-shield-check";
 
 $role        = $_SESSION['role'] ?? '';
 $division_id = $_SESSION['division_id'] ?? 0;
+$modals_html = "";
 
 /* ================= HELPERS & ICONS ================= */
 if (!function_exists('getAssetIcon')) {
@@ -218,10 +219,86 @@ ob_start();
                                                 )">
                                             <i class="bi bi-gear-fill me-1"></i> Process Request
                                         </button>
+                                        
                                     </td>
                                     <?php endif; ?>
                                 </tr>
+                                <?php 
+                                    // 1. Return to Stock Modal
+                                    $modal_id_1 = "confirmReturnStockModal" . $row['id'];
+                                    $modals_html = $modals_html ?? '';
+                                    ob_start();
+                                ?>
+                                <div class="modal fade" id="<?= $modal_id_1 ?>" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 shadow rounded-4">
+                                            <div class="modal-header border-0 pb-0">
+                                                <h5 class="fw-bold text-dark"><i class="bi bi-box-arrow-in-left me-2"></i>Confirm Return to Stock</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body text-start">
+                                                <p class="text-muted mb-0">Are you sure you want to approve this return for asset <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong> and restore it to active unassigned stock?</p>
+                                            </div>
+                                            <div class="modal-footer border-0 pt-0">
+                                                <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
+                                                <a href="process_request.php?id=<?= $row['id'] ?>&action=return_requested" class="btn text-white fw-bold px-4" style="background-color: #173f63;">Yes, Proceed</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php 
+                                    $modals_html .= ob_get_clean();
+
+                                    // 2. Send for Repair Modal
+                                    $modal_id_2 = "confirmRepairModal" . $row['id'];
+                                    ob_start();
+                                ?>
+                                <div class="modal fade" id="<?= $modal_id_2 ?>" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 shadow rounded-4">
+                                            <div class="modal-header border-0 pb-0">
+                                                <h5 class="fw-bold text-dark"><i class="bi bi-tools me-2"></i>Confirm Send for Repair</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body text-start">
+                                                <p class="text-muted mb-0">Are you sure you want to send asset <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong> for repair?</p>
+                                            </div>
+                                            <div class="modal-footer border-0 pt-0">
+                                                <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
+                                                <a href="process_request.php?id=<?= $row['id'] ?>&action=repair_requested" class="btn text-white fw-bold px-4" style="background-color: #173f63;">Yes, Proceed</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php 
+                                    $modals_html .= ob_get_clean();
+
+                                    // 3. Scrap / Dispose Modal
+                                    $modal_id_3 = "confirmDisposeModal" . $row['id'];
+                                    ob_start();
+                                ?>
+                                <div class="modal fade" id="<?= $modal_id_3 ?>" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 shadow rounded-4">
+                                            <div class="modal-header border-0 pb-0">
+                                                <h5 class="fw-bold text-dark"><i class="bi bi-trash3 text-danger me-2"></i>Confirm Scrap / Dispose</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body text-start">
+                                                <p class="text-muted mb-0">Are you sure you want to decommission asset <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong> and log it to the E-Waste registry?</p>
+                                            </div>
+                                            <div class="modal-footer border-0 pt-0">
+                                                <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
+                                                <a href="process_request.php?id=<?= $row['id'] ?>&action=dispose_requested" class="btn btn-danger fw-bold px-4">Yes, Decommission</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php 
+                                    $modals_html .= ob_get_clean();
+                                ?>
                                 <?php endwhile; ?>
+                               
                             <?php else: ?>
                                 <tr>
                                     <td colspan="<?= ($role === 'SuperAdmin') ? '6' : '5' ?>" class="text-center py-5 text-muted">No pending lifecycle requests.</td>
@@ -237,6 +314,8 @@ ob_start();
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+let targetModalToOpen = null;
+
 function processItem(id, assetTag, itemName, serial, notes, iconClass, unitName, divisionName) {
     const displayNotes = notes ? notes : "No remarks provided by department.";
     const locationPath = `${divisionName} <i class="bi bi-chevron-right mx-1" style="font-size: 0.6rem;"></i> ${unitName}`;
@@ -252,7 +331,7 @@ function processItem(id, assetTag, itemName, serial, notes, iconClass, unitName,
                         </div>
                         <div>
                             <h6 class="mb-0 fw-bold">${itemName}</h6>
-                            <small class="text-muted">Tag: ${assetTag} | SN: ${serial}</small>
+                            <small class="text-muted">Asset Tag: ${assetTag} | SN: ${serial}</small>
                         </div>
                     </div>
                     
@@ -265,25 +344,25 @@ function processItem(id, assetTag, itemName, serial, notes, iconClass, unitName,
                 </div>
 
                 <div class="mb-3">
-                    <label class="extra-small text-uppercase fw-bold text-muted mb-1">Division Admin Reason / Justification</label>
-                    <div class="p-2.5 border rounded-3 bg-white italic small text-secondary shadow-sm">
-                        "${displayNotes}"
+                    <label class="extra-small text-uppercase fw-bold text-muted mb-1">Department Admin Reason / Justification</label>
+                    <div class="p-5.5 border bg-white fst-italic small text-secondary shadow-sm">
+                        ${displayNotes}
                     </div>
                 </div>
 
                 <label class="extra-small text-uppercase fw-bold text-dark mb-2">Select 1 of 3 Actions to Execute:</label>
                 
-                <button type="button" class="swal-action-btn" onclick="executeAction('${id}', 'return_requested')">
+                <button type="button" class="swal-action-btn" onclick="triggerBootstrapModal('confirmReturnStockModal${id}')">
                     <div class="fw-bold text-success"><i class="bi bi-box-arrow-in-left me-1"></i> 1. Return to Stock</div>
                     <div class="text-muted extra-small">Approve return and restore item back into active unassigned stock.</div>
                 </button>
 
-                <button type="button" class="swal-action-btn" onclick="executeAction('${id}', 'repair_requested')">
+                <button type="button" class="swal-action-btn" onclick="triggerBootstrapModal('confirmRepairModal${id}')">
                     <div class="fw-bold text-primary"><i class="bi bi-tools me-1"></i> 2. Send for Repair</div>
-                    <div class="text-muted extra-small">Mark status as under maintenance/repair.</div>
+                    <div class="text-muted extra-small">Assign to Maintenance / Repair.</div>
                 </button>
 
-                <button type="button" class="swal-action-btn" onclick="executeAction('${id}', 'dispose_requested')">
+                <button type="button" class="swal-action-btn" onclick="triggerBootstrapModal('confirmDisposeModal${id}')">
                     <div class="fw-bold text-danger"><i class="bi bi-trash3 me-1"></i> 3. Scrap / Dispose</div>
                     <div class="text-muted extra-small">Decommission item and log to E-Waste registry.</div>
                 </button>
@@ -299,7 +378,7 @@ function processItem(id, assetTag, itemName, serial, notes, iconClass, unitName,
         showCancelButton: true,
         showDenyButton: true,
         denyButtonText: 'Reject Request',
-        denyButtonColor: '#64748b',
+        denyButtonColor: '#ef4444',
         cancelButtonText: 'Close',
         preDeny: () => {
             const denySection = document.getElementById('denySection');
@@ -307,12 +386,35 @@ function processItem(id, assetTag, itemName, serial, notes, iconClass, unitName,
                 denySection.style.display = 'block';
                 return false;
             }
+        },
+        didClose: () => {
+            // 1. Force-wipe SweetAlert containers or classes
+            document.querySelectorAll('.swal2-container').forEach(el => el.remove());
+            document.body.classList.remove('swal2-shown', 'swal2-height-auto', 'swal2-backdrop-show');
+            document.body.style.overflow = '';
+
+            // 2. Launch the Bootstrap modal safely
+            if (targetModalToOpen) {
+                const modalId = targetModalToOpen;
+                targetModalToOpen = null;
+                
+                const modalElement = document.getElementById(modalId);
+                if (modalElement) {
+                    document.body.appendChild(modalElement);
+                    
+                    const myModal = new bootstrap.Modal(modalElement);
+                    myModal.show();
+                } else {
+                    console.error("Target modal element not found: " + modalId);
+                }
+            }
         }
     });
 }
 
-function executeAction(id, actionType) {
-    window.location.href = `process_request.php?id=${id}&action=${actionType}`;
+function triggerBootstrapModal(modalId) {
+    targetModalToOpen = modalId;
+    Swal.close(); 
 }
 
 function submitRejection(id) {
@@ -326,7 +428,8 @@ function submitRejection(id) {
 </script>
 
 <?php
-$content = ob_get_clean();
+$content = ob_get_clean() . $modals_html;
+
 if (($role ?? '') === ROLE_SUPERADMIN || ($role ?? '') === 'SuperAdmin') {
     include __DIR__ . "/../admin/adminlayout.php";
 } else {

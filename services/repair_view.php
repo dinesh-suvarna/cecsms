@@ -417,9 +417,17 @@ ob_start();
                                                             </span>
                                                         </td>
                                                         <td class="text-end pe-4">
-                                                            <button type="button" class="btn btn-sm btn-success fw-bold text-nowrap py-1 px-3" style="font-size: 11px;" data-bs-toggle="modal" data-bs-target="#completeModal<?= $row['id'] ?>">
-                                                                <i class="bi bi-check-circle me-1"></i> Resolve &amp; Close
-                                                            </button>
+                                                            <div class="d-flex flex-column gap-1 align-items-end">
+                                                                <!-- Resolve & Close Button -->
+                                                                <button type="button" class="btn btn-sm btn-success fw-bold text-nowrap py-1 px-3 w-100" style="font-size: 11px;" data-bs-toggle="modal" data-bs-target="#completeModal<?= $row['id'] ?>">
+                                                                    <i class="bi bi-check-circle me-1"></i> Resolve &amp; Close
+                                                                </button>
+
+                                                                <!-- Move to E-Waste Button -->
+                                                                <button type="button" class="btn btn-sm fw-bold text-nowrap btn-outline-danger py-1 px-2 w-100" style="font-size: 11px;" data-bs-toggle="modal" data-bs-target="#ewasteModal<?= $row['id'] ?>">
+                                                                    <i class="bi bi-trash3-fill me-1"></i> Move to E-Waste
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
 
@@ -456,6 +464,43 @@ ob_start();
                                                                     <div class="modal-footer border-0 pt-0">
                                                                         <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
                                                                         <button type="submit" class="btn btn-success fw-bold px-4">Complete &amp; Close Ticket</button>
+                                                                    </div>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <?php 
+                                                        $modals_html .= ob_get_clean();
+                                                    ?>
+                                                    <?php 
+                                                        ob_start();
+                                                    ?>
+                                                    <div class="modal fade" id="ewasteModal<?= $row['id'] ?>" tabindex="-1" aria-hidden="true">
+                                                        <div class="modal-dialog modal-dialog-centered">
+                                                            <div class="modal-content border-0 shadow rounded-4">
+                                                                <form method="POST">
+                                                                    <div class="modal-header border-0 pb-0">
+                                                                        <h5 class="fw-bold text-danger"><i class="bi bi-trash3-fill me-2"></i>Declare Unrepairable / E-Waste</h5>
+                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                    </div>
+                                                                    <div class="modal-body text-start">
+                                                                        <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
+                                                                        <input type="hidden" name="action" value="e_waste">
+
+                                                                        <div class="mb-3 p-3 bg-light rounded-3">
+                                                                            <div class="small text-muted">Asset Tag: <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong></div>
+                                                                            <div class="small text-muted">Item: <strong><?= htmlspecialchars($row['item_name']) ?></strong></div>
+                                                                            <div class="small text-muted">S/N: <strong><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></strong></div>
+                                                                        </div>
+
+                                                                        <div class="mb-3">
+                                                                            <label class="form-label fw-bold small">Disposal / Failure Reason <span class="text-danger">*</span></label>
+                                                                            <textarea name="resolution_notes" class="form-control" rows="3" placeholder="e.g., Motherboard short-circuited and completely unrepairable." required></textarea>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="modal-footer border-0 pt-0">
+                                                                        <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
+                                                                        <button type="submit" class="btn btn-danger fw-bold px-4">Confirm &amp; Route to E-Waste</button>
                                                                     </div>
                                                                 </form>
                                                             </div>
@@ -569,34 +614,83 @@ ob_start();
                                                             </span>
                                                         </td>
                                                         <td class="text-end pe-4">
-                                                            <div class="d-flex flex-column gap-1 align-items-end">
-                                                                <!-- Return to Origin Button -->
-                                                                <form method="POST" class="d-inline">
-                                                                    <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
-                                                                    <input type="hidden" name="action" value="return_origin">
-                                                                    <button type="submit" class="btn btn-sm fw-bold text-nowrap text-white py-1 px-2 w-100" style="background-color: #123b63; border-color: #123b63; font-size: 10.5px;">
-                                                                        <i class="bi bi-arrow-return-left me-1"></i> Return to Origin
-                                                                    </button>
-                                                                </form>
+    <div class="d-flex flex-column gap-1 align-items-end">
+        <!-- Return to Origin Trigger Button -->
+        <button type="button" class="btn btn-sm fw-bold text-nowrap text-white py-1 px-2 w-100" style="background-color: #123b63; border-color: #123b63; font-size: 10.5px;" data-bs-toggle="modal" data-bs-target="#returnOriginModal<?= $row['id'] ?>">
+            <i class="bi bi-arrow-return-left me-1"></i> Return to Origin
+        </button>
 
-                                                                <!-- Return to Main Stock Button -->
-                                                                <form method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to return this asset to Main Stock? (Use this if a replacement PC was already given to the division).');">
-                                                                    <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
-                                                                    <input type="hidden" name="action" value="return_main_stock">
-                                                                    <button type="submit" class="btn btn-sm fw-bold text-nowrap btn-outline-secondary py-1 px-2 w-100" style="font-size: 10.5px;">
-                                                                        <i class="bi bi-box-seam me-1"></i> Return to Main Stock
-                                                                    </button>
-                                                                </form>
-                                                                <!-- Move to E-Waste Button -->
-                                                                <form method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to declare this item unrepairable and route it to the E-Waste registry?');">
-                                                                    <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
-                                                                    <input type="hidden" name="action" value="e_waste">
-                                                                    <button type="submit" class="btn btn-sm fw-bold text-nowrap btn-outline-danger py-1 px-2 w-100" style="font-size: 10.5px;">
-                                                                        <i class="bi bi-trash3-fill me-1"></i> Move to E-Waste
-                                                                    </button>
-                                                                </form>
-                                                            </div>
-                                                        </td>
+        <!-- Return to Main Stock Trigger Button -->
+        <button type="button" class="btn btn-sm fw-bold text-nowrap btn-outline-secondary py-1 px-2 w-100" style="font-size: 10.5px;" data-bs-toggle="modal" data-bs-target="#returnStockModal<?= $row['id'] ?>">
+            <i class="bi bi-box-seam me-1"></i> Return to Main Stock
+        </button>
+    </div>
+</td>
+<?php 
+    // Capture Return to Origin Modal
+    ob_start();
+?>
+<div class="modal fade" id="returnOriginModal<?= $row['id'] ?>" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <form method="POST">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold text-dark"><i class="bi bi-arrow-return-left me-2"></i>Confirm Return to Origin</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-start">
+                    <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
+                    <input type="hidden" name="action" value="return_origin">
+                    <div class="mb-3 p-3 bg-light rounded-3">
+                        <div class="small text-muted">Item: <strong><?= htmlspecialchars($row['item_name']) ?></strong></div>
+                        <div class="small text-muted">S/N: <strong><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></strong></div>
+                        <div class="small text-muted">Asset Tag: <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong></div>
+                    </div>
+                    <p class="text-muted small mb-0">Are you sure you want to return this asset back to its originating division and unit? This will restore its status to assigned.</p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn text-white fw-bold px-4" style="background-color: #123b63;">Yes, Return Asset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php 
+    $modals_html .= ob_get_clean();
+
+    // Capture Return to Main Stock Modal
+    ob_start();
+?>
+<div class="modal fade" id="returnStockModal<?= $row['id'] ?>" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <form method="POST">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold text-dark"><i class="bi bi-box-seam me-2"></i>Confirm Return to Main Stock</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-start">
+                    <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
+                    <input type="hidden" name="action" value="return_main_stock">
+                    <div class="mb-3 p-3 bg-light rounded-3">
+                        <div class="small text-muted">Item: <strong><?= htmlspecialchars($row['item_name']) ?></strong></div>
+                        <div class="small text-muted">S/N: <strong><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></strong></div>
+                        <div class="small text-muted">Asset Tag: <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong></div>
+                    </div>
+                    <p class="text-muted small mb-0">Are you sure you want to return this asset to Main Stock? (Use this only if a replacement PC was already given to the division).</p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-secondary fw-bold px-4">Yes, Return to Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php 
+    $modals_html .= ob_get_clean();
+?>
                                                     </tr>
                                                 <?php endforeach; ?>
                                             </tbody>

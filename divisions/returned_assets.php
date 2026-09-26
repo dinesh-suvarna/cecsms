@@ -150,6 +150,22 @@ ob_start();
 </style>
 
 <div class="container-fluid py-4">
+
+    <!-- Flash Message Notification Banner -->
+    <?php if (isset($_SESSION['flash_message'])): ?>
+        <div class="alert alert-<?= ($_SESSION['flash_type'] === 'error') ? 'danger' : 'success' ?> alert-dismissible fade show shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi <?= ($_SESSION['flash_type'] === 'error') ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill' ?> fs-5"></i>
+                <div><?= htmlspecialchars($_SESSION['flash_message']) ?></div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <?php 
+            unset($_SESSION['flash_message']);
+            unset($_SESSION['flash_type']);
+        ?>
+    <?php endif; ?>
+
     <!-- Header with Link to Audit Trail Page -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -174,11 +190,11 @@ ob_start();
                     <table class="table align-middle mb-0 lifecycle-table">
                         <thead>
                             <tr>
+                                <th>Date & Time</th>
                                 <th class="ps-4">Asset ID</th>
                                 <th>Item Details</th>
                                 <th>Department</th>
                                 <th>Lab / Facility</th>
-                                <th>Status</th>
                                 <?php if ($role === 'SuperAdmin'): ?>
                                     <th class="text-end pe-4">Action</th>
                                 <?php endif; ?>
@@ -195,6 +211,10 @@ ob_start();
                                     $unitFullName = (!empty($row['unit_code']) ? $row['unit_code'] . " - " : "") . $row['unit_name'];
                                 ?>
                                 <tr>
+                                    <td>
+                                        <div class="small text-dark fw-semibold"><?= date('M d, Y', strtotime($row['assigned_at'])) ?></div>
+                                        <div class="extra-small text-muted"><?= date('h:i A', strtotime($row['assigned_at'])) ?></div>
+                                    </td>
                                     <td class="ps-4 fw-bold text-dark"><?= $row['division_asset_id'] ?></td>
                                     <td>
                                         <div class="fw-semibold small"><?= htmlspecialchars($row['item_name']) ?></div>
@@ -202,7 +222,6 @@ ob_start();
                                     </td>
                                     <td><div class="small text-secondary"><?= htmlspecialchars($row['department']) ?></div></td>
                                     <td><div class="small"><?= $unit_display ?></div></td>
-                                    <td><span class="badge-request status-return">PENDING REVIEW</span></td>
                                     
                                     <?php if ($role === 'SuperAdmin'): ?>
                                     <td class="text-end pe-4">
@@ -219,10 +238,10 @@ ob_start();
                                                 )">
                                             <i class="bi bi-gear-fill me-1"></i> Process Request
                                         </button>
-                                        
                                     </td>
                                     <?php endif; ?>
                                 </tr>
+                    
                                 <?php 
                                     // 1. Return to Stock Modal
                                     $modal_id_1 = "confirmReturnStockModal" . $row['id'];

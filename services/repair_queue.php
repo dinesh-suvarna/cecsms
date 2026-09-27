@@ -24,7 +24,15 @@ $query = "
             NULLIF((SELECT al.notes FROM asset_logs al WHERE al.asset_id = sd.id AND al.action_type IN ('service_requested', 'repair_requested') ORDER BY al.id DESC LIMIT 1), ''),
             NULLIF(dm.remarks, ''),
             'No remarks provided'
-        ) AS original_notes
+        ) AS original_notes,
+        (
+            SELECT al.created_at 
+            FROM asset_logs al 
+            WHERE al.asset_id = sd.id 
+              AND al.action_type IN ('repair_approved') 
+            ORDER BY al.created_at DESC 
+            LIMIT 1
+        ) AS repair_requested_at
     FROM division_assets da
     JOIN stock_details sd ON da.stock_detail_id = sd.id
     JOIN items_master im ON sd.stock_item_id = im.id
@@ -115,17 +123,26 @@ ob_start();
                                 <table class="table table-hover align-middle mb-0">
                                     <thead class="table-custom-header text-uppercase fs-7">
                                         <tr>
-                                            <th class="ps-4" style="width: 28%;">Item & Asset Tag</th>
+                                            <th class="ps-4" style="width: 18%;">Date & Time</th>
+                                            <th style="width: 22%;">Item & Asset Tag</th>
                                             <th style="width: 14%;">Serial Number</th>
-                                            <th style="width: 26%;">Unit Location</th>
-                                            <th style="width: 16%;">Issue / Remarks</th>
-                                            <th class="text-end pe-4" style="width: 16%;">Actions</th>
+                                            <th style="width: 20%;">Labs / Facilities</th>
+                                            <th style="width: 14%;">Issue / Remarks</th>
+                                            <th class="text-end pe-4" style="width: 12%;">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php foreach ($items as $row): ?>
                                             <tr>
                                                 <td class="ps-4 py-3">
+                                                    <?php if (!empty($row['repair_requested_at'])): ?>
+                                                        <div class="small text-dark fw-semibold"><?= date('d M, Y', strtotime($row['repair_requested_at'])) ?></div>
+                                                        <div class="extra-small text-muted" style="font-size: 0.75rem;"><?= date('h:i A', strtotime($row['repair_requested_at'])) ?></div>
+                                                    <?php else: ?>
+                                                        <span class="text-muted small">---</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
                                                     <div class="fw-bold text-dark mb-1"><?= htmlspecialchars($row['item_name']) ?></div>
                                                     <div class="text-muted small text-break" style="font-size: 0.8rem;"><?= htmlspecialchars($row['asset_tag']) ?></div>
                                                 </td>
@@ -152,14 +169,14 @@ ob_start();
                                                 <td class="text-end pe-4">
                                                     <div class="d-inline-flex align-items-center justify-content-end">
                                                         <a href="<?= e_url('repair_handler.php', $row['division_asset_id_pk'], 'token') ?>" 
-                                                           class="btn btn-sm fw-bold text-nowrap text-white py-1 px-3" 
-                                                           style="background-color: #123b63; border-color: #123b63; font-size: 11px;"
-                                                           title="Process and Route Repair">
+                                                        class="btn btn-sm fw-bold text-nowrap text-white py-1 px-3" 
+                                                        style="background-color: #123b63; border-color: #123b63; font-size: 11px;"
+                                                        title="Process and Route Repair">
                                                             <i class="bi bi-tools me-1"></i> Process Repair
                                                         </a>
                                                     </div>
                                                 </td>
-                                            </tr>
+                                        </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>

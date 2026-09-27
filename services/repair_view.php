@@ -131,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $log_stmt->bind_param("isis", $stock_detail_id, $asset_tag, $admin_id, $log_notes);
                     $log_stmt->execute();
 
-                    $_SESSION['success_msg'] = "Asset successfully returned to its originating division and unit.";
+                    $_SESSION['success_msg'] = "Asset successfully returned to its originating department and labs/facilities.";
 
                 } elseif ($action === 'return_main_stock') {
                     // 1. Update repair status to returned
@@ -367,12 +367,13 @@ ob_start();
                                         <table class="table table-hover align-middle mb-0">
                                             <thead class="table-custom-header text-uppercase fs-7">
                                                 <tr>
-                                                    <th class="ps-4" style="width: 25%;">Item &amp; Asset Tag</th>
-                                                    <th style="width: 18%;">Origin Location</th>
-                                                    <th style="width: 15%;">Type &amp; Vendor</th>
-                                                    <th style="width: 20%;">Issue Description</th>
-                                                    <th style="width: 10%;">Cost</th>
-                                                    <th style="width: 10%;">Status</th>
+                                                    <th class="ps-4" style="width: 16%;">Date &amp; Time</th>
+                                                    <th style="width: 20%;">Item &amp; Asset Tag</th>
+                                                    <th style="width: 16%;">Origin Location</th>
+                                                    <th style="width: 14%;">Type &amp; Vendor</th>
+                                                    <th style="width: 16%;">Issue Description</th>
+                                                    <th style="width: 8%;">Cost</th>
+                                                    <th style="width: 8%;">Status</th>
                                                     <th class="text-end pe-4" style="width: 12%;">Actions</th>
                                                 </tr>
                                             </thead>
@@ -380,6 +381,14 @@ ob_start();
                                                 <?php foreach ($items as $row): ?>
                                                     <tr>
                                                         <td class="ps-4 py-3">
+                                                            <?php if (!empty($row['created_at'])): ?>
+                                                                <div class="small text-dark fw-semibold"><?= date('d M, Y', strtotime($row['created_at'])) ?></div>
+                                                                <div class="extra-small text-muted" style="font-size: 0.75rem;"><?= date('h:i A', strtotime($row['created_at'])) ?></div>
+                                                            <?php else: ?>
+                                                                <span class="text-muted small">---</span>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                        <td>
                                                             <div class="fw-bold text-dark mb-1"><?= htmlspecialchars($row['item_name']) ?></div>
                                                             <div class="text-muted small text-break fw-semibold" style="font-size: 0.8rem;"><?= htmlspecialchars($row['division_asset_id']) ?></div>
                                                             <div class="text-secondary" style="font-size: 0.75rem;">S/N: <?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></div>
@@ -564,19 +573,28 @@ ob_start();
                                         <table class="table table-hover align-middle mb-0">
                                             <thead class="table-custom-header text-uppercase fs-7">
                                                 <tr>
-                                                    <th class="ps-4" style="width: 22%;">Item &amp; Asset Tag</th>
-                                                    <th style="width: 15%;">Origin Location</th>
-                                                    <th style="width: 13%;">Type &amp; Vendor</th>
-                                                    <th style="width: 18%;">Resolution Notes</th>
-                                                    <th style="width: 9%;">Cost</th>
-                                                    <th style="width: 9%;">Status</th>
-                                                    <th class="text-end pe-4" style="width: 14%;">Actions</th>
+                                                    <th class="ps-4" style="width: 15%;">Date &amp; Time</th>
+                                                    <th style="width: 18%;">Item &amp; Asset Tag</th>
+                                                    <th style="width: 14%;">Origin Location</th>
+                                                    <th style="width: 12%;">Type &amp; Vendor</th>
+                                                    <th style="width: 16%;">Resolution Notes</th>
+                                                    <th style="width: 8%;">Cost</th>
+                                                    <th style="width: 8%;">Status</th>
+                                                    <th class="text-end pe-4" style="width: 13%;">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <?php foreach ($items as $row): ?>
                                                     <tr>
                                                         <td class="ps-4 py-3">
+                                                            <?php if (!empty($row['created_at'])): ?>
+                                                                <div class="small text-dark fw-semibold"><?= date('d M, Y', strtotime($row['completed_at'])) ?></div>
+                                                                <div class="extra-small text-muted" style="font-size: 0.75rem;"><?= date('h:i A', strtotime($row['completed_at'])) ?></div>
+                                                            <?php else: ?>
+                                                                <span class="text-muted small">---</span>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                        <td>
                                                             <div class="fw-bold text-dark mb-1"><?= htmlspecialchars($row['item_name']) ?></div>
                                                             <div class="text-muted small text-break fw-semibold" style="font-size: 0.8rem;"><?= htmlspecialchars($row['division_asset_id']) ?></div>
                                                             <div class="text-secondary" style="font-size: 0.75rem;">S/N: <?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></div>
@@ -646,7 +664,7 @@ ob_start();
                         <div class="small text-muted">S/N: <strong><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></strong></div>
                         <div class="small text-muted">Asset Tag: <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong></div>
                     </div>
-                    <p class="text-muted small mb-0">Are you sure you want to return this asset back to its originating division and unit? This will restore its status to assigned.</p>
+                    <p class="text-muted small mb-0">Are you sure you want to return this asset back to its originating department and labs/facilities?</p>
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
@@ -678,7 +696,7 @@ ob_start();
                         <div class="small text-muted">S/N: <strong><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></strong></div>
                         <div class="small text-muted">Asset Tag: <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong></div>
                     </div>
-                    <p class="text-muted small mb-0">Are you sure you want to return this asset to Main Stock? (Use this only if a replacement PC was already given to the division).</p>
+                    <p class="text-muted small mb-0">Are you sure you want to return this asset to Main Stock? (Use this only if a replacement item was already given to the department).</p>
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>

@@ -101,7 +101,7 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
                 $status_message = "Asset $asset_tag has been returned back to available inventory.";
 
             } elseif ($action === 'repair_requested') {
-                $log_notes = $ref_prefix . "Repair authorized by Admin. Asset $asset_tag moved to repair queue.";
+                $log_notes = $ref_prefix . "Repair authorized by System Admin. Asset sent to repair .";
                 $log_stmt  = $conn->prepare("
                     INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
                     VALUES (?, ?, ?, 'repair_approved', ?, ?)
@@ -114,7 +114,7 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
                 $conn->query("UPDATE division_assets SET status = 'under_repair' WHERE id = $id");
 
                 $status_type = 'success';
-                $status_message = "Asset $asset_tag has been successfully authorized and added to the repair queue.";
+                $status_message = "Asset $asset_tag has been successfully authorized and added to the repair requests.";
                 $redirect = "returned_assets.php"; 
 
             } elseif ($action === 'dispose_requested') {
@@ -124,7 +124,7 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
                 $remark_res      = $remark_stmt->get_result()->fetch_assoc();
                 $disposal_reason = $remark_res['notes'] ?? 'Decommissioned by Admin';
 
-                $log_notes = $ref_prefix . "Asset $asset_tag decommissioned and sent to E-Waste.";
+                $log_notes = $ref_prefix . "Asset decommissioned and sent to E-Waste.";
                 $log_stmt  = $conn->prepare("
                     INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
                     VALUES (?, ?, ?, 'disposal_approved', ?, ?)

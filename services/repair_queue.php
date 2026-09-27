@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
-require_once __DIR__ . "/../config/crypto.php"; // Required for e_url()
+require_once __DIR__ . "/../config/crypto.php"; 
 include "../admin/auth.php";
 include "../includes/session.php";
 
@@ -61,7 +61,6 @@ ob_start();
 ?>
 
 <style>
-    /* Custom styling for solid navy active accordion headers */
     .accordion-button.collapsed {
         background-color: #ffffff;
         color: #123b63;
@@ -73,7 +72,6 @@ ob_start();
     .accordion-button:not(.collapsed)::after {
         filter: brightness(0) invert(1);
     }
-    /* Custom light shade background for table headers */
     .table-custom-header th {
         background-color: #f1f5f9 !important;
         color: #123b63 !important;
@@ -83,6 +81,15 @@ ob_start();
 </style>
 
 <div class="container-fluid py-4">
+    <?php if (isset($_SESSION['success_msg'])): ?>
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <?= htmlspecialchars($_SESSION['success_msg']); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <?php unset($_SESSION['success_msg']); // Clear it so it doesn't show again on refresh ?>
+    <?php endif; ?>
+
     <div class="card shadow-sm border-0 rounded-4 mb-4">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
             <h5 class="fw-bold mb-0" style="color: #123b63;">

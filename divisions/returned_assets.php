@@ -3,7 +3,7 @@ require_once __DIR__ . "/../config/db.php";
 include "../admin/auth.php";
 include "../includes/session.php";
 
-$page_title = "Lifecycle Management & Requests";
+$page_title = "Service Management & Requests";
 $page_icon  = "bi-shield-check";
 
 $role        = $_SESSION['role'] ?? '';
@@ -89,7 +89,7 @@ ob_start();
     }
     .card-custom { border: none; border-radius: 1.25rem; background: #ffffff; overflow: hidden; }
     
-    /* Lifecycle Table Styling */
+    /* Service Table Styling */
     .lifecycle-table thead th {
         background-color: var(--emerald-50);
         color: var(--emerald-600);
@@ -170,7 +170,7 @@ ob_start();
     <!-- Header with Link to Audit Trail Page -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold text-dark mb-1">Lifecycle Management & Requests</h4>
+            <h4 class="fw-bold text-dark mb-1">Service Management & Requests</h4>
             <p class="text-muted small mb-0">Review and action pending department transitions.</p>
         </div>
         <div class="d-flex align-items-center gap-3">
@@ -321,7 +321,7 @@ ob_start();
                                
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="<?= ($role === 'SuperAdmin') ? '6' : '5' ?>" class="text-center py-5 text-muted">No pending lifecycle requests.</td>
+                                    <td colspan="<?= ($role === 'SuperAdmin') ? '6' : '5' ?>" class="text-center py-5 text-muted">No pending service requests.</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -341,7 +341,7 @@ function processItem(id, assetTag, itemName, serial, notes, iconClass, unitName,
     const locationPath = `${divisionName} <i class="bi bi-chevron-right mx-1" style="font-size: 0.6rem;"></i> ${unitName}`;
 
     Swal.fire({
-        title: '<div class="text-start fw-bold mb-0" style="font-size:1.1rem;">Lifecycle Action Request</div>',
+        title: '<div class="text-start fw-bold mb-0" style="font-size:1.1rem;">Service Request Actions</div>',
         html: `
             <div class="text-start mt-2">
                 <div class="p-3 border rounded-3 bg-light mb-3">

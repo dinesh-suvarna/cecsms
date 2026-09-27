@@ -70,7 +70,7 @@ if (!$asset) {
                     <h4 class="fw-bold text-dark mb-1" style="font-size: 1.1rem;">Asset Not Found</h4>
                     <p class="text-muted small mb-3">The requested asset could not be found, or it has already been processed and moved out of the pending repair queue.</p>
                     <a href="returned_assets.php" class="btn btn-erp-cancel px-3">
-                        <i class="bi bi-arrow-left me-1"></i>Back to Returned Assets
+                        <i class="bi bi-arrow-left me-1"></i>Back to Repair Assets
                     </a>
                 </div>
             </div>
@@ -239,11 +239,11 @@ ob_start();
             </div>
             <div>
                 <h3><?= htmlspecialchars($page_title) ?></h3>
-                <p>Configure repair routing, vendor assignment, and warranty tracking for this asset.</p>
+                <p>Configure repair routing, vendor assignment and warranty tracking for this asset.</p>
             </div>
         </div>
-        <a href="returned_assets.php" class="btn btn-erp-cancel px-3">
-            <i class="bi bi-arrow-left me-1"></i> Back to Returned Assets
+        <a href="repair_queue.php" class="btn btn-erp-cancel px-3">
+            <i class="bi bi-arrow-left me-1"></i> Back to Repair Process
         </a>
     </div>
 
@@ -265,12 +265,12 @@ ob_start();
             <div class="p-3 bg-white rounded-1 mb-4 border">
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <span class="text-muted extra-small text-uppercase fw-bold" style="font-size:.65rem;">Asset Tag / Item</span>
+                        <span class="text-muted extra-small text-uppercase fw-bold" style="font-size:.65rem;">Item /Asset Tag</span>
                         <div class="fw-bold text-dark" style="font-size:.85rem;"><?= htmlspecialchars($asset['item_name']) ?> — <?= htmlspecialchars($asset['asset_tag']) ?></div>
                     </div>
                     <div class="col-md-6">
                         <span class="text-muted extra-small text-uppercase fw-bold" style="font-size:.65rem;">Serial Number</span>
-                        <div class="fw-semibold text-secondary" style="font-size:.85rem;"><?= htmlspecialchars($asset['serial_number'] ?: 'N/A') ?></div>
+                        <div class="fw-semibold text-dark" style="font-size:.85rem;"><?= htmlspecialchars($asset['serial_number'] ?: 'N/A') ?></div>
                     </div>
                     <div class="col-md-6">
                         <span class="text-muted extra-small text-uppercase fw-bold" style="font-size:.65rem;">Originating Location</span>
@@ -347,7 +347,7 @@ ob_start();
 
                     <div class="col-12 mt-4 pt-3 border-top">
                         <div class="d-flex justify-content-between align-items-center">
-                            <a href="returned_assets.php" class="btn btn-erp-cancel px-3">
+                            <a href="repair_queue.php" class="btn btn-erp-cancel px-3">
                                 <i class="bi bi-arrow-left me-1"></i> Cancel
                             </a>
                             <button type="submit" class="btn btn-erp-primary px-4">

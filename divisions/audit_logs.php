@@ -7,33 +7,111 @@ $page_title = "Historical Audit Records";
 $page_icon  = "bi-journal-text";
 
 $role        = $_SESSION['role'] ?? '';
-$division_id = $_SESSION['division_id'] ?? 0;
+$session_division_id = $_SESSION['division_id'] ?? 0;
 
-/* ================= HELPERS & ICONS ================= */
-if (!function_exists('getAssetIcon')) {
-    function getAssetIcon(string $itemName) {
-        $name = strtolower($itemName ?? '');
+/* ================= CAPTURE FILTER INPUTS ================= */
+$filter_institution = $_GET['institution_id'] ?? '';
+$filter_division    = $_GET['division_id'] ?? ($role !== 'SuperAdmin' ? $session_division_id : '');
+$filter_unit        = $_GET['unit_id'] ?? '';
+
+$is_filtered = (!empty($filter_institution) || (!empty($filter_division) && $role === 'SuperAdmin' && $filter_division != $session_division_id) || !empty($filter_unit));
+
+/* ================= HELPERS: DYNAMIC CATEGORY & ITEM ICONS ================= */
+if (!function_exists('getCategoryIcon')) {
+    function getCategoryIcon(string $category): string {
+        $cat = strtolower(trim($category));
+        if (str_contains($cat, 'computer') || str_contains($cat, 'pc') || str_contains($cat, 'laptop')) {
+            return 'bi-pc-display';
+        } elseif (str_contains($cat, 'accessory') || str_contains($cat, 'peripherals')) {
+            return 'bi-keyboard';
+        } elseif (str_contains($cat, 'network') || str_contains($cat, 'router') || str_contains($cat, 'switch')) {
+            return 'bi-box-seam';
+        } elseif (str_contains($cat, 'component') || str_contains($cat, 'hardware')) {
+            return 'bi-cpu';
+        } elseif (str_contains($cat, 'furniture')) {
+            return 'bi-lamp';
+        } elseif (str_contains($cat, 'mobile') || str_contains($cat, 'phone')) {
+            return 'bi-phone';
+        }
+        return 'bi-folder';
+    }
+}
+
+if (!function_exists('getItemDetailIcon')) {
+    function getItemDetailIcon(?string $itemName, ?string $category = ''): string {
+        $name = strtolower(trim($itemName ?? ''));
+        $cat  = strtolower(trim($category ?? ''));
+
+        // Remove spaces, hyphens, underscores to match variations like "ip com", "access point", etc.
+        $cleanName = str_replace([' ', '-', '_'], '', $name);
+
         switch (true) {
+            // 1. HIGH-PRIORITY SPECIFIC ITEM MATCHES
+            case (
+                str_contains($cleanName, 'accesspoint') || 
+                str_contains($cleanName, 'ipcom') || 
+                str_contains($name, 'wifi')
+            ):
+                return 'bi-wifi';
+
+            case (str_contains($name, 'rack') || str_contains($name, 'server')):
+                return 'bi-hdd-rack'; 
+
+            case (str_contains($name, 'switch') || str_contains($name, 'patch panel') || str_contains($name, 'hub')):
+                return 'bi-hdd-stack'; 
+
+            case (str_contains($name, 'router')):
+                return 'bi-router';
+
             case (str_contains($name, 'computer') || str_contains($name, 'desktop')):
                 return 'bi-pc-display';
+
             case (str_contains($name, 'laptop')):
                 return 'bi-laptop';
-            case (str_contains($name, 'monitor')):
+
+            case (str_contains($name, 'monitor') || str_contains($name, 'display')):
                 return 'bi-display';
+
             case (str_contains($name, 'printer')):
                 return 'bi-printer';
+
             case (str_contains($name, 'keyboard')):
                 return 'bi-keyboard';
+
             case (str_contains($name, 'mouse')):
                 return 'bi-mouse3';
+
+            case (str_contains($name, 'projector')):
+                return 'bi-projector'; 
+
+            case (str_contains($name, 'biometric') || str_contains($name, 'fingerprint')):
+                return 'bi-person-bounding-box';
+
             case (str_contains($name, 'ups') || str_contains($name, 'battery')):
                 return 'bi-lightning-charge';
+
             case (str_contains($name, 'table') || str_contains($name, 'desk')):
                 return 'bi-table';
+
             case (str_contains($name, 'chair')):
                 return 'bi-person-workspace';
+
             case (str_contains($name, 'camera') || str_contains($name, 'cctv')):
                 return 'bi-camera-video';
+
+            // 2. CATEGORY FALLBACKS 
+            case (str_contains($cat, 'computer')):
+                return 'bi-pc-display';
+
+            case (str_contains($cat, 'network')):
+                return 'bi-box-seam';
+
+            case (str_contains($cat, 'biometric')):
+                return 'bi-person-bounding-box';
+
+            case (str_contains($cat, 'mobile') || str_contains($name, 'phone')):
+                return 'bi-phone';
+
             default:
                 return 'bi-box-seam';
         }
@@ -45,6 +123,13 @@ if (!function_exists('renderAccordionItem')) {
     function renderAccordionItem(string $trx_id, array $transactions, string $unique_id, string $parent_accordion_id) {
         $latest_trx = $transactions[0]; 
         $primary_item = htmlspecialchars($latest_trx['item_name']);
+        $icon_class = getItemDetailIcon($latest_trx['item_name'], $latest_trx['category'] ?? '');
+        
+        $raw_unit_name = $latest_trx['snapshot_unit'] ?? $latest_trx['active_unit'] ?? $latest_trx['history_unit'] ?? 'Main Stock / Returned';
+        $unit_code = $latest_trx['active_unit_code'] ?? $latest_trx['history_unit_code'] ?? '';
+        $final_unit = !empty($unit_code) ? "{$unit_code} - {$raw_unit_name}" : $raw_unit_name;
+        
+        $division_name = $latest_trx['division_name'] ?? 'Division';
         
         $raw_action = $latest_trx['action_type'];
         switch ($raw_action) {
@@ -76,22 +161,40 @@ if (!function_exists('renderAccordionItem')) {
             </h2>
             <div id="collapse_<?= $unique_id ?>" class="accordion-collapse collapse" aria-labelledby="heading_<?= $unique_id ?>" data-bs-parent="#<?= $parent_accordion_id ?>">
                 <div class="accordion-body bg-light p-3">
+                    
+                    <!-- SUMMARY HEADER WITH DIVISION & UNIT CODE -->
+                    <div class="bg-white p-3 rounded-3 border mb-3 d-flex flex-wrap align-items-center justify-content-between gap-3 shadow-sm">
+                        <div class="d-flex align-items-center">
+                            <div class="icon-box me-3 flex-shrink-0 bg-light p-2 rounded">
+                                <i class="bi <?= $icon_class ?> fs-4 text-secondary"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark"><?= htmlspecialchars($latest_trx['item_name']) ?></div>
+                                <div class="text-primary small fw-semibold">SN: <?= htmlspecialchars($latest_trx['serial_number'] ?? 'N/A') ?></div>
+                            </div>
+                        </div>
+                        <div class="border-start ps-3">
+                            <div class="text-muted small d-flex align-items-center gap-1">
+                                <i class="bi bi-building"></i> <span><?= htmlspecialchars($division_name) ?></span>
+                            </div>
+                            <div class="fw-medium text-dark"><?= htmlspecialchars($final_unit) ?></div>
+                            <div class="text-muted" style="font-size: 0.75rem;">ID: <?= htmlspecialchars($latest_trx['display_tag']) ?></div>
+                        </div>
+                    </div>
+
+                    <!-- TABLE -->
                     <div class="table-responsive bg-white rounded-3 border shadow-sm">
                         <table class="table audit-table align-middle mb-0">
                             <colgroup>
                                 <col style="width: 18%;">
                                 <col style="width: 22%;">
-                                <col style="width: 18%;">
-                                <col style="width: 14%;">
-                                <col style="width: 14%;">
-                                <col style="width: 14%;">
+                                <col style="width: 20%;">
+                                <col style="width: 40%;">
                             </colgroup>
                             <thead>
                                 <tr>
                                     <th class="ps-4">Timestamp</th>
-                                    <th>Asset Details</th>
-                                    <th>Unit / Laboratory</th>
-                                    <th class="text-center">Lifecycle Event</th>
+                                    <th class="text-center">Service State</th>
                                     <th class="text-center">Executed By</th>
                                     <th>Remarks</th>
                                 </tr>
@@ -100,9 +203,6 @@ if (!function_exists('renderAccordionItem')) {
                                 <?php foreach ($transactions as $row): 
                                     $status = $row['action_type'];
                                     $notes = $row['notes'] ?? '';
-                                    $icon_class = getAssetIcon($row['item_name']);
-                                    $final_unit = $row['snapshot_unit'] ?? $row['active_unit'] ?? $row['history_unit'] ?? 'Main Stock / Returned';
-                                    
                                     $clean_notes = preg_replace('/\[REF:#\d+\]\s*/', '', $notes);
 
                                     switch ($status) {
@@ -123,11 +223,11 @@ if (!function_exists('renderAccordionItem')) {
                                             $badge_class = "bg-success-subtle text-success-emphasis border-success-subtle";
                                             break;
                                         case 'repair_returned_to_origin':
-                                            $status_label = "REPAIR RETURNED<br>TO ORIGIN";
+                                            $status_label = "REPAIR RETURNED TO ORIGIN";
                                             $badge_class = "bg-success-subtle text-success-emphasis border-success-subtle";
                                             break;
                                         case 'repair_returned_to_main_stock':
-                                            $status_label = "REPAIR RETURNED<br>TO MAIN STOCK";
+                                            $status_label = "REPAIR RETURNED TO MAIN STOCK";
                                             $badge_class = "bg-primary-subtle text-primary-emphasis border-primary-subtle";
                                             break;
                                         case 'request_rejected': case 'return_rejected':
@@ -135,30 +235,16 @@ if (!function_exists('renderAccordionItem')) {
                                             $badge_class = "bg-danger-subtle text-danger border-danger-subtle";
                                             break;
                                         default:
-                                            $status_label = !empty($status) ? strtoupper(str_replace('_', '<br>', $status)) : "N/A";
+                                            $status_label = !empty($status) ? strtoupper(str_replace('_', ' ', $status)) : "N/A";
                                             $badge_class = "bg-secondary-subtle text-secondary-emphasis border-secondary-subtle";
                                             break;
                                     }
                                 ?>
                                 <tr>
                                     <td class="ps-4">
-                                        <div class="fw-medium text-dark"><?= date('d M, Y', strtotime($row['created_at'])) ?></div>
-                                        <div class="text-muted small"><?= date('h:i A', strtotime($row['created_at'])) ?></div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="icon-box me-2 flex-shrink-0">
-                                                <i class="bi <?= $icon_class ?> fs-5 text-secondary"></i>
-                                            </div>
-                                            <div class="text-break">
-                                                <div class="fw-semibold text-dark"><?= htmlspecialchars($row['item_name']) ?></div>
-                                                <div class="fw-semibold text-primary small">SN: <?= htmlspecialchars($row['serial_number'] ?? 'N/A') ?></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="fw-medium text-dark text-break"><?= htmlspecialchars($final_unit) ?></div>
-                                        <div class="small text-muted text-break">ID: <?= htmlspecialchars($row['display_tag']) ?></div>
+                                        <div class="fw-medium text-dark"><?= date('d M', strtotime($row['created_at'])) ?></div>
+                                        <div class="text-muted small fw-semibold"><?= date('Y', strtotime($row['created_at'])) ?></div>
+                                        <div class="text-muted small mt-1"><?= date('h:i A', strtotime($row['created_at'])) ?></div>
                                     </td>
                                     <td class="text-center">
                                         <span class="badge border <?= $badge_class ?> text-uppercase px-2 py-1 lh-sm d-inline-block" style="font-size: 0.62rem; font-weight: 700;">
@@ -172,7 +258,22 @@ if (!function_exists('renderAccordionItem')) {
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="text-muted small text-break d-block" style="line-height: 1.35;"><?= htmlspecialchars($clean_notes ?: 'No notes recorded.') ?></span>
+                                        <span class="text-muted small text-break d-block"><?= htmlspecialchars($clean_notes ?: 'No notes recorded.') ?></span>
+                                        <?php if (in_array($status, ['repair_requested', 'repair_approved'])): ?>
+                                            <?php if (!empty($row['repair_type']) && strtolower($row['repair_type']) === 'internal'): ?>
+                                                <div class="mt-2 pt-1 border-top">
+                                                    <span class="text-primary text-break d-block" style="font-size: 0.6rem;">
+                                                        <i class="bi bi-tools me-1"></i> Maintenance (Internal)
+                                                    </span>
+                                                </div>
+                                            <?php elseif (!empty($row['vendor_name'])): ?>
+                                                <div class="mt-2 pt-1 border-top">
+                                                    <span class="text-primary text-break d-block" style="font-size: 0.6rem;">
+                                                        <i class="bi bi-person-vcard me-1"></i> <?= htmlspecialchars($row['vendor_name']) ?>
+                                                    </span>
+                                                </div>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
@@ -186,6 +287,11 @@ if (!function_exists('renderAccordionItem')) {
     }
 }
 
+/* ================= FETCH DROPDOWN OPTIONS ================= */
+$institutions_res = $conn->query("SELECT id, institution_name FROM institutions ORDER BY institution_name ASC");
+$divisions_res    = $conn->query("SELECT id, division_name FROM divisions" . (!empty($filter_institution) ? " WHERE institution_id = " . intval($filter_institution) : "") . " ORDER BY division_name ASC");
+$units_res_filter = $conn->query("SELECT id, unit_name FROM units" . (!empty($filter_division) ? " WHERE division_id = " . intval($filter_division) : "") . " ORDER BY unit_name ASC");
+
 /* ================= 2. FETCH AUDIT LOGS ================= */
 $logs_query = "
     SELECT 
@@ -195,7 +301,10 @@ $logs_query = "
         al.action_type, 
         al.notes,
         im.item_name, 
+        im.category,
         sd.serial_number,
+        r.vendor_name,
+        r.repair_type,
         COALESCE(
             al.asset_tag, 
             da.division_asset_id, 
@@ -209,7 +318,10 @@ $logs_query = "
         ) AS display_tag,
         NULLIF(al.unit_name, '0') AS snapshot_unit,
         un_active.unit_name AS active_unit,
+        un_active.unit_code AS active_unit_code,
         un_history.unit_name AS history_unit,
+        un_history.unit_code AS history_unit_code,
+        COALESCE(d_active.division_name, d_history.division_name, 'Main Division') AS division_name,
         u.username AS staff_name,
         u.role AS user_role
     FROM asset_logs al
@@ -220,24 +332,41 @@ $logs_query = "
     LEFT JOIN dispatch_details dd_active ON da.dispatch_detail_id = dd_active.id
     LEFT JOIN dispatch_master dm_active ON dd_active.dispatch_id = dm_active.id
     LEFT JOIN units un_active ON dm_active.unit_id = un_active.id
+    LEFT JOIN divisions d_active ON dm_active.division_id = d_active.id
+    LEFT JOIN institutions i_active ON d_active.institution_id = i_active.id
     LEFT JOIN dispatch_details dd_history ON sd.id = dd_history.stock_detail_id
     LEFT JOIN dispatch_master dm_history ON dd_history.dispatch_id = dm_history.id
     LEFT JOIN units un_history ON dm_history.unit_id = un_history.id
+    LEFT JOIN divisions d_history ON dm_history.division_id = d_history.id
+    LEFT JOIN institutions i_history ON d_history.institution_id = i_history.id
+    LEFT JOIN repairs r ON sd.id = r.stock_detail_id
     WHERE 1=1
 ";
+
+// Apply dynamic filter conditions
+if (!empty($filter_institution)) {
+    $logs_query .= " AND (d_active.institution_id = " . intval($filter_institution) . " OR d_history.institution_id = " . intval($filter_institution) . ")";
+}
+if (!empty($filter_division)) {
+    $logs_query .= " AND (dm_active.division_id = " . intval($filter_division) . " OR dm_history.division_id = " . intval($filter_division) . ")";
+}
+if (!empty($filter_unit)) {
+    $logs_query .= " AND (dm_active.unit_id = " . intval($filter_unit) . " OR dm_history.unit_id = " . intval($filter_unit) . ")";
+}
+
+// Role restriction safeguard if not SuperAdmin
+if ($role !== 'SuperAdmin') { 
+    $logs_query .= " AND (dm_active.division_id = $session_division_id OR dm_history.division_id = $session_division_id OR al.performed_by = {$_SESSION['user_id']})"; 
+}
 
 $global_logs_query = $logs_query . " GROUP BY al.id ORDER BY al.created_at ASC, al.id ASC";
 $global_logs_res = $conn->query($global_logs_query);
 
-if ($role !== 'SuperAdmin') { 
-    $logs_query .= " AND (dm_active.division_id = $division_id OR dm_history.division_id = $division_id OR al.performed_by = {$_SESSION['user_id']})"; 
-}
-
 $logs_query .= " GROUP BY al.id ORDER BY al.created_at DESC";
 $logs_res = $conn->query($logs_query);
 
-// Retrieve available units for report dropdown
-$units_query = "SELECT id, unit_name FROM units WHERE division_id = $division_id ORDER BY unit_name ASC";
+// Retrieve units for report dropdown header button
+$units_query = "SELECT id, unit_name FROM units WHERE division_id = " . ($role === 'SuperAdmin' ? "1" : $session_division_id) . " ORDER BY unit_name ASC";
 $units_res   = $conn->query($units_query);
 
 ob_start();
@@ -316,45 +445,136 @@ ob_start();
         background-color: transparent;
         border-bottom: 3px solid #1e293b;
     }
+
+    .auto-resize-select {
+        border-radius: 4px;
+        border: 1px solid #d9e0e7;
+        padding: 0.35rem 0.8rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #18344d;
+        background-color: #f8fafc;
+        transition: all 0.18s ease;
+        max-width: none !important;
+        min-width: 140px;
+        box-sizing: border-box;
+    }
+    .auto-resize-select:focus {
+        border-color: #123b63;
+        box-shadow: 0 0 0 3px rgba(18, 59, 99, 0.12);
+        background-color: #fff;
+    }
 </style>
 
-<div class="container-fluid py-4">
+<div class="container-fluid pt-2 pb-4">
     <!-- Header with Return Button -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <a href="returned_assets.php" class="text-decoration-none text-muted small fw-semibold d-inline-flex align-items-center mb-2">
                 <i class="bi bi-arrow-left me-1"></i> Back to Pending Requests
             </a>
-            <h4 class="fw-bold text-dark mb-1">Historical Audit Records</h4>
-            <p class="text-muted small mb-0">Grouped by Service ID. Click any service to expand its full lifecycle event history.</p>
+            <h4 class="fw-bold text-dark mb-1">Service History & Audit</h4>
+            <p class="text-muted small mb-0">Grouped by Service ID. Click any service to expand its full service history.</p>
         </div>
-        <div class="dropdown">
-            <button class="btn btn-navy btn-sm dropdown-toggle shadow-sm d-flex align-items-center gap-2" type="button" id="reportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-file-earmark-arrow-down-fill"></i> Generate Report
+        <div class="d-flex align-items-center gap-2">
+            <!-- Filter Toggle Button -->
+            <button class="btn btn-outline-secondary btn-sm shadow-sm d-flex align-items-center gap-2" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapseSection" aria-expanded="<?= $is_filtered ? 'true' : 'false' ?>" aria-controls="filterCollapseSection">
+                <i class="bi bi-funnel-fill"></i> Filter Options
             </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="reportDropdown">
-                <li><h6 class="dropdown-header text-uppercase extra-small">Export Options</h6></li>
-                <li>
-                    <a class="dropdown-item d-flex align-items-center gap-2" href="generate_audit_report.php?type=full">
-                        <i class="bi bi-building text-primary"></i> Full Division Report
-                    </a>
-                </li>
-                <li><hr class="dropdown-divider"></li>
-                <li><h6 class="dropdown-header text-uppercase extra-small">Unit-Wise Report</h6></li>
-                <?php if ($units_res && $units_res->num_rows > 0): ?>
-                    <?php while($u = $units_res->fetch_assoc()): ?>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2" href="generate_audit_report.php?type=unit&unit_id=<?= $u['id'] ?>">
-                                <i class="bi bi-geo-alt text-secondary"></i> <?= htmlspecialchars($u['unit_name']) ?>
-                            </a>
-                        </li>
-                    <?php endwhile; ?>
-                <?php else: ?>
-                    <li><span class="dropdown-item text-muted small">No units assigned</span></li>
-                <?php endif; ?>
-            </ul>
+            
+            <div class="dropdown">
+                <button class="btn btn-navy btn-sm dropdown-toggle shadow-sm d-flex align-items-center gap-2" type="button" id="reportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-file-earmark-arrow-down-fill"></i> Generate Report
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="reportDropdown">
+                    <li><h6 class="dropdown-header text-uppercase extra-small">Export Options</h6></li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center gap-2" href="generate_audit_report.php?type=full">
+                            <i class="bi bi-building text-primary"></i> Full Division Report
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header text-uppercase extra-small">Unit-Wise Report</h6></li>
+                    <?php if ($units_res && $units_res->num_rows > 0): ?>
+                        <?php while($u = $units_res->fetch_assoc()): ?>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2" href="generate_audit_report.php?type=unit&unit_id=<?= $u['id'] ?>">
+                                    <i class="bi bi-geo-alt text-secondary"></i> <?= htmlspecialchars($u['unit_name']) ?>
+                                </a>
+                            </li>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <li><span class="dropdown-item text-muted small">No units assigned</span></li>
+                    <?php endif; ?>
+                </ul>
+            </div>
         </div>
     </div>
+
+    <!-- COLLAPSIBLE FILTER SECTION -->
+    <div class="collapse <?= $is_filtered ? 'show' : '' ?> mb-4" id="filterCollapseSection">
+        <div class="card card-custom shadow-sm p-3">
+            <form method="GET" action="" class="row g-3 align-items-end">
+                
+                <!-- ROW 1: Institution & Division -->
+                <?php if ($role === 'SuperAdmin'): ?>
+                <div class="col-md-6">
+                    <label for="institution_id" class="form-label small fw-bold text-muted">Institution</label>
+                    <select name="institution_id" id="institution_id" class="form-select form-select-sm auto-resize-select w-100" onchange="this.form.submit()">
+                        <option value="">All Institutions</option>
+                        <?php if ($institutions_res && $institutions_res->num_rows > 0): ?>
+                            <?php while($inst = $institutions_res->fetch_assoc()): ?>
+                                <option value="<?= $inst['id'] ?>" <?= $filter_institution == $inst['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($inst['institution_name']) ?>
+                                </option>
+                            <?php endwhile; ?>
+                        <?php endif; ?>
+                    </select>
+                </div>
+                <?php endif; ?>
+
+                <div class="<?= $role === 'SuperAdmin' ? 'col-md-6' : 'col-md-12' ?>">
+                    <label for="division_id" class="form-label small fw-bold text-muted">Division</label>
+                    <select name="division_id" id="division_id" class="form-select form-select-sm auto-resize-select w-100" onchange="this.form.submit()" <?= $role !== 'SuperAdmin' ? 'disabled' : '' ?>>
+                        <option value="">All Divisions</option>
+                        <?php if ($divisions_res && $divisions_res->num_rows > 0): ?>
+                            <?php while($div = $divisions_res->fetch_assoc()): ?>
+                                <option value="<?= $div['id'] ?>" <?= $filter_division == $div['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($div['division_name']) ?>
+                                </option>
+                            <?php endwhile; ?>
+                        <?php endif; ?>
+                    </select>
+                </div>
+
+                <!-- ROW 2: Unit / Lab & Buttons -->
+                <div class="col-md-6">
+                    <label for="unit_id" class="form-label small fw-bold text-muted">Unit / Lab</label>
+                    <select name="unit_id" id="unit_id" class="form-select form-select-sm auto-resize-select w-100" onchange="this.form.submit()">
+                        <option value="">All Units / Labs</option>
+                        <?php if ($units_res_filter && $units_res_filter->num_rows > 0): ?>
+                            <?php while($unit = $units_res_filter->fetch_assoc()): ?>
+                                <option value="<?= $unit['id'] ?>" <?= $filter_unit == $unit['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($unit['unit_name']) ?>
+                                </option>
+                            <?php endwhile; ?>
+                        <?php endif; ?>
+                    </select>
+                </div>
+
+                <div class="col-md-6 d-flex gap-2">
+                    <button type="submit" class="btn btn-navy btn-sm flex-grow-1 shadow-sm">
+                        <i class="bi bi-filter"></i> Apply Filter
+                    </button>
+                    <a href="?" class="btn btn-outline-secondary btn-sm px-3" title="Reset Filters">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reset
+                    </a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
     <?php 
         $grouped_logs = [];
         $global_log_to_transaction = [];
@@ -515,7 +735,7 @@ ob_start();
                 </div>
             <?php else: ?>
                 <div class="card card-custom shadow-sm p-4 text-center text-muted">
-                    No service requested audit logs found.
+                    No service requested audit logs found for the selected filter.
                 </div>
             <?php endif; ?>
         </div>
@@ -530,7 +750,7 @@ ob_start();
                 </div>
             <?php else: ?>
                 <div class="card card-custom shadow-sm p-4 text-center text-muted">
-                    No records currently under repair.
+                    No records currently under repair for the selected filter.
                 </div>
             <?php endif; ?>
         </div>
@@ -545,7 +765,7 @@ ob_start();
                 </div>
             <?php else: ?>
                 <div class="card card-custom shadow-sm p-4 text-center text-muted">
-                    No completed historical records found.
+                    No completed historical records found for the selected filter.
                 </div>
             <?php endif; ?>
         </div>
@@ -555,7 +775,47 @@ ob_start();
 </div>
 
 <script>
+function autoResizeSelect(selectElement) {
+    if (!selectElement) return;
+
+    const tempSpan = document.createElement('span');
+    tempSpan.style.visibility = 'hidden';
+    tempSpan.style.position = 'absolute';
+    tempSpan.style.whiteSpace = 'nowrap';
+
+    const style = window.getComputedStyle(selectElement);
+    tempSpan.style.font = style.font;
+    tempSpan.style.fontSize = style.fontSize;
+    tempSpan.style.fontFamily = style.fontFamily;
+    tempSpan.style.fontWeight = style.fontWeight;
+
+    const selectedText = selectElement.options[selectElement.selectedIndex]?.text || '';
+    tempSpan.textContent = selectedText;
+
+    document.body.appendChild(tempSpan);
+
+    const calculatedWidth = Math.ceil(tempSpan.getBoundingClientRect().width) + 50;
+    selectElement.style.width = `${calculatedWidth}px`;
+
+    document.body.removeChild(tempSpan);
+}
+
 document.addEventListener('DOMContentLoaded', function () {
+    // Auto-resize dropdown initialization
+    const dynamicDropdowns = document.querySelectorAll('.auto-resize-select');
+    dynamicDropdowns.forEach(select => {
+        autoResizeSelect(select);
+        select.addEventListener('change', (e) => autoResizeSelect(e.target));
+    });
+
+    // Re-adjust select widths when filter collapse section is toggled open
+    const filterCollapse = document.getElementById('filterCollapseSection');
+    if (filterCollapse) {
+        filterCollapse.addEventListener('shown.bs.collapse', function () {
+            dynamicDropdowns.forEach(select => autoResizeSelect(select));
+        });
+    }
+
     const searchInput = document.getElementById('globalAuditSearch');
     
     if (searchInput) {

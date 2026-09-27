@@ -51,8 +51,8 @@ $pending_query = "SELECT
             u.unit_code,
             u.unit_name,
             da.status,
-            da.assigned_at,
-            al.notes
+            al.notes,
+            al.created_at AS created_at
         FROM division_assets da
         JOIN dispatch_details dd ON da.dispatch_detail_id = dd.id
         JOIN dispatch_master dm ON dd.dispatch_id = dm.id
@@ -73,7 +73,8 @@ $pending_query = "SELECT
 if ($role !== 'SuperAdmin') {
     $pending_query .= " AND dm.division_id = " . intval($division_id);
 }
-$pending_query .= " ORDER BY da.assigned_at DESC";
+// Sort by the audit log request timestamp instead of assigned_at
+$pending_query .= " ORDER BY al.created_at DESC";
 $pending_res = $conn->query($pending_query);
 
 
@@ -212,8 +213,8 @@ ob_start();
                                 ?>
                                 <tr>
                                     <td>
-                                        <div class="small text-dark fw-semibold"><?= date('M d, Y', strtotime($row['assigned_at'])) ?></div>
-                                        <div class="extra-small text-muted"><?= date('h:i A', strtotime($row['assigned_at'])) ?></div>
+                                    <div class="small text-dark fw-semibold"><?= date('d M, Y', strtotime($row['created_at'])) ?></div>
+                                    <div class="extra-small text-muted"><?= date('h:i A', strtotime($row['created_at'])) ?></div>
                                     </td>
                                     <td class="ps-4 fw-bold text-dark"><?= $row['division_asset_id'] ?></td>
                                     <td>

@@ -1,5 +1,4 @@
 <?php
-// repair_view.php
 require_once __DIR__ . "/../config/db.php";
 include "../admin/auth.php";
 include "../includes/session.php";
@@ -126,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     }
 
                     // 4. Insert final concluding audit log entry
-                    $log_notes = $existing_ref . "Asset returned to originating division/unit after repair";
+                    $log_notes = $existing_ref . "Asset returned to originating department and labs/facilities after repair";
                     $log_stmt = $conn->prepare("INSERT INTO asset_logs (asset_id, asset_tag, action_type, performed_by, notes) VALUES (?, ?, 'repair_returned_to_origin', ?, ?)");
                     $log_stmt->bind_param("isis", $stock_detail_id, $asset_tag, $admin_id, $log_notes);
                     $log_stmt->execute();
@@ -150,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $up_sd->execute();
 
                     // 4. Insert audit log entry for returning to main stock
-                    $log_notes = "Asset returned to main stock pool after repair (replacement already provided to division)";
+                    $log_notes = "Asset returned to main stock after repair (replacement already provided to department)";
                     $log_stmt = $conn->prepare("INSERT INTO asset_logs (asset_id, asset_tag, action_type, performed_by, notes) VALUES (?, ?, 'repair_returned_to_main_stock', ?, ?)");
                     $log_stmt->bind_param("isis", $stock_detail_id, $asset_tag, $admin_id, $log_notes);
                     $log_stmt->execute();

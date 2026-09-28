@@ -189,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                     // 6. Insert audit log entry with disposal reason
                     $unit_name = 'Repair Center / Main Stock';
-                    $log_notes = "Asset decommissioned from repair queue and sent to E-Waste. Reason: " . $disposal_reason;
+                    $log_notes = "Asset decommissioned as it is not repairable and sent to E-Waste. Reason: " . $disposal_reason;
                     $log_stmt = $conn->prepare("
                         INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
                         VALUES (?, ?, ?, 'disposal_approved', ?, ?)

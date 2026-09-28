@@ -893,9 +893,5 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <?php
 $content = ob_get_clean();
-if (($role ?? '') === ROLE_SUPERADMIN || ($role ?? '') === 'SuperAdmin') {
     include __DIR__ . "/../admin/adminlayout.php";
-} else {
-    include __DIR__ . "/../divisions/divisionslayout.php";
-}
 ?>

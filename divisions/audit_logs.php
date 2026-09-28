@@ -258,7 +258,17 @@ if (!function_exists('renderAccordionItem')) {
                                         </div>
                                     </td>
                                     <td>
+                                        <?php 
+                                            $disposal_reason = '';
+                                            if (in_array($status, ['dispose_requested', 'disposal_approved'])) {
+                                                if (preg_match('/Reason:\s*(.*)$/i', $clean_notes, $matches)) {
+                                                    $disposal_reason = trim($matches[1]);
+                                                    $clean_notes = trim(preg_replace('/\.?\s*Reason:\s*.*$/i', '', $clean_notes));
+                                                }
+                                            }
+                                        ?>
                                         <span class="text-muted small text-break d-block"><?= htmlspecialchars($clean_notes ?: 'No notes recorded.') ?></span>
+                    
                                         <?php if (in_array($status, ['repair_requested', 'repair_approved'])): ?>
                                             <?php if (!empty($row['repair_type']) && strtolower($row['repair_type']) === 'internal'): ?>
                                                 <div class="mt-2 pt-1 border-top">
@@ -273,6 +283,22 @@ if (!function_exists('renderAccordionItem')) {
                                                     </span>
                                                 </div>
                                             <?php endif; ?>
+                                        <?php endif; ?>
+
+                                        <?php if (in_array($status, ['dispose_requested', 'disposal_approved']) && !empty($disposal_reason)): ?>
+                                            <div class="mt-2 pt-1 border-top">
+                                                <span class="text-danger text-break d-block" style="font-size: 0.6rem;">
+                                                    <i class="bi bi-exclamation-octagon me-1"></i> Reason: <?= htmlspecialchars($disposal_reason) ?>
+                                                </span>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <?php if ($status === 'repair_returned_to_origin' && !empty($row['resolution_notes'])): ?>
+                                            <div class="mt-2 pt-1 border-top">
+                                                <span class="text-success text-break d-block" style="font-size: 0.6rem;">
+                                                    <i class="bi bi-check2-circle me-1"></i> Resolution: <?= htmlspecialchars($row['resolution_notes']) ?>
+                                                </span>
+                                            </div>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
@@ -305,6 +331,7 @@ $logs_query = "
         sd.serial_number,
         r.vendor_name,
         r.repair_type,
+        r.resolution_notes,
         COALESCE(
             al.asset_tag, 
             da.division_asset_id, 

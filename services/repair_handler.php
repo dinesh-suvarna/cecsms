@@ -291,7 +291,7 @@ ob_start();
                     <!-- Division Remarks Box -->
                     <div class="col-md-6">
                         <span class="text-muted extra-small text-uppercase fw-bold" style="font-size:.65rem;">Department Remarks / Queue Notes</span>
-                        <div class="p-2 bg-light rounded-1 border text-secondary" style="font-size:.8rem; min-height: 36px;">
+                        <div class="p-2 bg-light rounded-1 border text-danger" style="font-size:.8rem; min-height: 36px;">
                             <?php if ($asset['original_notes'] === 'No remarks provided'): ?>
                                 <span class="text-muted fst-italic">No remarks provided by department.</span>
                             <?php else: ?>

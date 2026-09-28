@@ -321,23 +321,28 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
                 </a>
             </div>
 
-            <?php if($role === ROLE_SUPERADMIN): ?>
-                <div class="nav-group-label">Service & Requests</div>
+            <?php if(in_array($role, [ROLE_SUPERADMIN, ROLE_ADMIN], true)): ?>
+            <div class="nav-group-label">Service & Requests</div>
                 <div class="nav flex-column">    
-                    <a href="/cecsms/services/index.php" class="nav-link d-flex justify-content-between align-items-center <?= (strpos($_SERVER['PHP_SELF'],'services') !== false)?'active':'' ?>">
-                        <span class="d-flex align-items-center gap-2">
-                            <i class="bi bi-tools"></i> Services
-                        </span>
-                        <?php if ($services_badge_count > 0): ?>
-                            <span class="badge rounded-pill bg-warning text-dark extra-small" style="font-size: 10px;"><?= $services_badge_count ?></span>
-                        <?php endif; ?>
-                    </a>
-                    <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'returned_assets.php') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">
-                        <span><i class="bi bi-arrow-down-left-square me-2"></i> Service Requests</span>
-                        <?php if (!empty($pending_count) && $pending_count > 0): ?>
-                            <span class="badge rounded-pill bg-warning text-dark ms-auto extra-small"><?= $pending_count ?></span>
-                        <?php endif; ?>
-                    </a>
+                    <?php if($role === ROLE_SUPERADMIN): ?>
+                        <a href="/cecsms/services/index.php" class="nav-link d-flex justify-content-between align-items-center <?= (strpos($_SERVER['PHP_SELF'],'services') !== false)?'active':'' ?>">
+                            <span class="d-flex align-items-center gap-2">
+                                <i class="bi bi-tools"></i> Services
+                            </span>
+                            <?php if ($services_badge_count > 0): ?>
+                                <span class="badge rounded-pill bg-warning text-dark extra-small" style="font-size: 10px;"><?= $services_badge_count ?></span>
+                            <?php endif; ?>
+                        </a>
+                        
+                        <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'returned_assets.php') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">
+                            <span><i class="bi bi-arrow-down-left-square me-2"></i> Service Requests</span>
+                            <?php if (!empty($pending_count) && $pending_count > 0): ?>
+                                <span id="sidebarPendingBadge" class="badge rounded-pill bg-warning text-dark ms-auto extra-small"><?= $pending_count ?></span>
+                            <?php else: ?>
+                                <span id="sidebarPendingBadge" class="badge rounded-pill bg-warning text-dark ms-auto extra-small" style="display: none;">0</span>
+                            <?php endif; ?>
+                        </a>
+                    <?php endif; ?>
                     <a href="/cecsms/divisions/audit_logs.php" class="nav-link d-flex justify-content-between align-items-center <?= (strpos($_SERVER['PHP_SELF'],'audit_logs.php') !== false)?'active':'' ?>">
                         <span class="d-flex align-items-center gap-2">
                             <i class="bi bi-journal-text me-2"></i> Service Status
@@ -445,11 +450,11 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
 
                     <div class="dropdown-menu dropdown-menu-end shadow-lg border mt-2 p-0 rounded-3 overflow-hidden" style="width: 320px;">
                         <div class="p-3 border-bottom bg-light">
-    <div class="d-flex justify-content-between align-items-center">
-        <h6 class="mb-0 fw-bold extra-small text-uppercase">Stock Transitions</h6>
-        <span class="badge bg-success-subtle text-success extra-small" id="dropdownPendingBadge"><?= $pending_count ?> Pending</span>
-    </div>
-</div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 fw-bold extra-small text-uppercase">Service Requests</h6>
+                                <span class="badge bg-success-subtle text-success extra-small" id="dropdownPendingBadge"><?= $pending_count ?> Pending</span>
+                            </div>
+                        </div>
                         <div class="overflow-y-auto" style="max-height: 320px;">
                             <?php if ($pending_count > 0 && isset($notif_res) && $notif_res->num_rows > 0): ?>
                                 <?php while($n = $notif_res->fetch_assoc()): 
@@ -554,37 +559,50 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
     
     <script>
         $(document).ready(function() {
-    function fetchNotifications() {
-        $.ajax({
-            url: '/cecsms/admin/get_notifications.php',
-            method: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                let widget = $('#notificationWidget');
-                
-                if (response.role === 'Admin') {
-                    widget.find('button .badge').remove();
-                    $('#dropdownPendingBadge').text('Admin');
-                } else if (response.count > 0) {
-                    let badge = widget.find('button .badge');
-                    if (badge.length) {
-                        badge.text(response.count);
-                    } else {
-                        widget.find('button').append(`<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="font-size: 9px;">${response.count}</span>`);
+            function fetchNotifications() {
+                $.ajax({
+                    url: '/cecsms/admin/get_notifications.php',
+                    method: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        let widget = $('#notificationWidget');
+                        let sidebarBadge = $('#sidebarPendingBadge');
+                        
+                        if (response.role === 'Admin') {
+                            widget.find('button .badge').remove();
+                            $('#dropdownPendingBadge').text('Admin');
+                            sidebarBadge.hide();
+                        } else if (response.count > 0) {
+                            // 1. Update Top Bell Icon Badge
+                            let badge = widget.find('button .badge');
+                            if (badge.length) {
+                                badge.text(response.count);
+                            } else {
+                                widget.find('button').append(`<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="font-size: 9px;">${response.count}</span>`);
+                            }
+                            
+                            // 2. Update Dropdown Header Badge Text
+                            $('#dropdownPendingBadge').text(response.count + ' Pending');
+
+                            // 3. Update Sidebar Service Requests Badge (Using the same count logic)
+                            sidebarBadge.text(response.count).show();
+                        } else {
+                            // Hide/Remove badges if count drops to 0
+                            widget.find('button .badge').remove();
+                            $('#dropdownPendingBadge').text('0 Pending');
+                            sidebarBadge.hide();
+                        }
+                        
+                        // Update dropdown list items dynamically
+                        widget.find('.overflow-y-auto').html(response.html);
                     }
-                    $('#dropdownPendingBadge').text(response.count + ' Pending');
-                } else {
-                    widget.find('button .badge').remove();
-                    $('#dropdownPendingBadge').text('0 Pending');
-                }
-                
-                widget.find('.overflow-y-auto').html(response.html);
+                });
             }
+    
+            // Fetch immediately on load, then poll every 5 seconds
+            fetchNotifications();
+            setInterval(fetchNotifications, 5000);
         });
-    }
-    fetchNotifications();
-    setInterval(fetchNotifications, 5000);
-});
     </script>
 </script>
 </body>

@@ -157,49 +157,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                      $_SESSION['success_msg'] = "Asset successfully returned to Main Stock inventory.";
 
                 } elseif ($action === 'e_waste') {
-                // 1. Pull the resolution notes from the repair record to use as the disposal reason
-                $disposal_reason = !empty($repair['resolution_notes']) ? $repair['resolution_notes'] : 'Unrepairable / Scrapped from Repair Queue';
+                    // 1. Capture the disposal reason submitted from the modal input
+                    $disposal_reason = trim($_POST['resolution_notes'] ?? 'Unrepairable / Scrapped from Repair Queue');
 
-                // 2. Update repair ticket status to closed/e-waste
-                $up_rep = $conn->prepare("UPDATE repairs SET status = 'e_waste' WHERE id = ?");
-                $up_rep->bind_param("i", $repair_id);
-                $up_rep->execute();
-                $up_rep->close();
+                    // 2. Update repair ticket status AND save the disposal reason into the repairs table
+                    $up_rep = $conn->prepare("UPDATE repairs SET status = 'e_waste', resolution_notes = ? WHERE id = ?");
+                    $up_rep->bind_param("si", $disposal_reason, $repair_id);
+                    $up_rep->execute();
+                    $up_rep->close();
 
-                // 3. Update stock details status to 'disposed' (matching ewaste_registry lifecycle)
-                $up_sd = $conn->prepare("UPDATE stock_details SET status = 'disposed' WHERE id = ?");
-                $up_sd->bind_param("i", $stock_detail_id);
-                $up_sd->execute();
-                $up_sd->close();
+                    // 3. Update stock details status to 'disposed'
+                    $up_sd = $conn->prepare("UPDATE stock_details SET status = 'disposed' WHERE id = ?");
+                    $up_sd->bind_param("i", $stock_detail_id);
+                    $up_sd->execute();
+                    $up_sd->close();
 
-                // 4. Insert directly into the e-waste registry table with 'Pending_Verification' status
-                $ewaste_stmt = $conn->prepare("
-                    INSERT INTO ewaste_items (stock_detail_id, division_asset_id, disposal_reason, status) 
-                    VALUES (?, ?, ?, 'Pending_Verification')
-                ");
-                $ewaste_stmt->bind_param("iss", $stock_detail_id, $asset_tag, $disposal_reason);
-                $ewaste_stmt->execute();
-                $ewaste_stmt->close();
+                    // 4. Insert directly into the e-waste registry table with 'Pending_Verification' status
+                    $ewaste_stmt = $conn->prepare("
+                        INSERT INTO ewaste_items (stock_detail_id, division_asset_id, disposal_reason, status) 
+                        VALUES (?, ?, ?, 'Pending_Verification')
+                    ");
+                    $ewaste_stmt->bind_param("iss", $stock_detail_id, $asset_tag, $disposal_reason);
+                    $ewaste_stmt->execute();
+                    $ewaste_stmt->close();
 
-                // 5. Remove or clear from active division assets (similar to disposal logic in process_request.php)
-                $del_da = $conn->prepare("DELETE FROM division_assets WHERE division_asset_id = ? AND stock_detail_id = ?");
-                $del_da->bind_param("si", $asset_tag, $stock_detail_id);
-                $del_da->execute();
-                $del_da->close();
+                    // 5. Remove from active division assets
+                    $del_da = $conn->prepare("DELETE FROM division_assets WHERE division_asset_id = ? AND stock_detail_id = ?");
+                    $del_da->bind_param("si", $asset_tag, $stock_detail_id);
+                    $del_da->execute();
+                    $del_da->close();
 
-                // 6. Insert audit log entry for tracking
-                $unit_name = 'Repair Center / Main Stock';
-                $log_notes = "Asset decommissioned from repair queue and sent to E-Waste. Reason: " . $disposal_reason;
-                $log_stmt = $conn->prepare("
-                    INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
-                    VALUES (?, ?, ?, 'disposal_approved', ?, ?)
-                ");
-                $log_stmt->bind_param("isiss", $stock_detail_id, $asset_tag, $unit_name, $admin_id, $log_notes);
-                $log_stmt->execute();
-                $log_stmt->close();
+                    // 6. Insert audit log entry with disposal reason
+                    $unit_name = 'Repair Center / Main Stock';
+                    $log_notes = "Asset decommissioned from repair queue and sent to E-Waste. Reason: " . $disposal_reason;
+                    $log_stmt = $conn->prepare("
+                        INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
+                        VALUES (?, ?, ?, 'disposal_approved', ?, ?)
+                    ");
+                    $log_stmt->bind_param("isiss", $stock_detail_id, $asset_tag, $unit_name, $admin_id, $log_notes);
+                    $log_stmt->execute();
+                    $log_stmt->close();
 
-                  $_SESSION['success_msg'] = "Asset successfully moved to the E-Waste management registry!";  
-    
+                    $_SESSION['success_msg'] = "Asset successfully moved to the E-Waste management registry!";  
                 }
             }
             $conn->commit();
@@ -221,10 +220,18 @@ $query = "
         COALESCE(d.division_name, 'General / Unassigned Division') AS division_name, 
         un.unit_name,
         un.unit_code,
-        u.username as technician_name
+        u.username as technician_name,
+        r.issue_description AS repair_issue_desc,
+        COALESCE(
+            NULLIF((SELECT al.notes FROM asset_logs al WHERE al.asset_id = sd.id AND al.action_type IN ('service_requested', 'repair_requested') ORDER BY al.id DESC LIMIT 1), ''),
+            NULLIF(dm.remarks, ''),
+            'No remarks provided'
+        ) AS original_notes
     FROM repairs r
     JOIN stock_details sd ON r.stock_detail_id = sd.id
     JOIN items_master im ON sd.stock_item_id = im.id
+    LEFT JOIN dispatch_details dd ON r.division_asset_id = dd.id 
+    LEFT JOIN dispatch_master dm ON dd.dispatch_id = dm.id
     LEFT JOIN divisions d ON r.origin_division_id = d.id
     LEFT JOIN units un ON r.origin_unit_id = un.id
     LEFT JOIN users u ON r.performed_by = u.id
@@ -370,7 +377,7 @@ ob_start();
                                                     <th style="width: 20%;">Item &amp; Asset Tag</th>
                                                     <th style="width: 16%;">Origin Location</th>
                                                     <th style="width: 14%;">Type &amp; Vendor</th>
-                                                    <th style="width: 16%;">Issue Description</th>
+                                                    <th style="width: 16%;">Issue & Diagnosis</th>
                                                     <th style="width: 8%;">Cost</th>
                                                     <th style="width: 8%;">Status</th>
                                                     <th class="text-end pe-4" style="width: 12%;">Actions</th>
@@ -414,7 +421,14 @@ ob_start();
                                                             <div class="small fw-medium text-secondary"><?= htmlspecialchars($row['vendor_name'] ?: 'Internal Tech') ?></div>
                                                         </td>
                                                         <td class="small text-muted" style="max-width: 200px;">
-                                                            <div><?= htmlspecialchars($row['issue_description']) ?></div>
+                                                            <div class="mb-1">
+                                                                <span class="fw-bold text-dark" style="font-size: 0.7rem; text-transform: uppercase;">Issue:</span>
+                                                                <div class="text-secondary"><?= htmlspecialchars($row['original_notes'] ?? 'No remarks') ?></div>
+                                                            </div>
+                                                            <div>
+                                                                <span class="fw-bold text-dark" style="font-size: 0.7rem; text-transform: uppercase;">Diagnosis:</span>
+                                                                <div class="text-primary fw-semibold"><?= htmlspecialchars($row['repair_issue_desc'] ?? 'N/A') ?></div>
+                                                            </div>
                                                         </td>
                                                         <td class="fw-semibold text-dark">
                                                             ₹<?= number_format($row['repair_cost'], 2) ?>

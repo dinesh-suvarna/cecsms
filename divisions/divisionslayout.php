@@ -11,6 +11,70 @@ $current_page = basename($_SERVER['PHP_SELF']);
 $role = $_SESSION["role"] ?? 'User';
 $notif_division_id = $_SESSION['division_id'] ?? 0;
 
+// Calculate live count of pending component stocks that need tagging
+$pending_tags_count = 0;
+if (isset($conn)) {
+    $whereClause = ($role === 'SuperAdmin') ? "" : "WHERE cs.division_id = ?";
+    $badgeQuery = "
+        SELECT COUNT(*) as pending_stocks FROM (
+            SELECT cs.id, cs.total_quantity, IFNULL(ca.assigned_count, 0) AS assigned_qty
+            FROM component_stock cs
+            LEFT JOIN (
+                SELECT stock_id, COUNT(*) AS assigned_count 
+                FROM component_assets 
+                GROUP BY stock_id
+            ) ca ON ca.stock_id = cs.id
+            $whereClause
+        ) AS subquery
+        WHERE assigned_qty < total_quantity
+    ";
+    
+    if ($role === 'SuperAdmin') {
+        $res = $conn->query($badgeQuery);
+        if ($res && $row = $res->fetch_assoc()) {
+            $pending_tags_count = (int)$row['pending_stocks'];
+        }
+    } else {
+        $stmt = $conn->prepare($badgeQuery);
+        if ($stmt) {
+            $stmt->bind_param("i", $notif_division_id);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            if ($row = $res->fetch_assoc()) {
+                $pending_tags_count = (int)$row['pending_stocks'];
+            }
+            $stmt->close();
+        }
+    }
+}
+
+// Calculate live count of pending dispatches specifically for Assign Asset ID (ignoring scrapped items)
+$pending_dispatch_count = 0;
+if (isset($conn) && $notif_division_id > 0) {
+    $dispatchQuery = "
+        SELECT COUNT(DISTINCT dd.id) as pending_dispatches
+        FROM dispatch_master dm
+        INNER JOIN dispatch_details dd ON dm.id = dd.dispatch_id
+        LEFT JOIN division_assets da ON dd.id = da.dispatch_detail_id
+        LEFT JOIN stock_details sd ON dd.stock_detail_id = sd.id 
+        WHERE dm.division_id = ? 
+          AND dm.status = 'active' 
+          AND da.id IS NULL
+          AND (sd.status IS NULL OR sd.status != 'scrapped')
+    ";
+    
+    $stmt_d = $conn->prepare($dispatchQuery);
+    if ($stmt_d) {
+        $stmt_d->bind_param("i", $notif_division_id);
+        $stmt_d->execute();
+        $res_d = $stmt_d->get_result();
+        if ($row_d = $res_d->fetch_assoc()) {
+            $pending_dispatch_count = (int)$row_d['pending_dispatches'];
+        }
+        $stmt_d->close();
+    }
+}
+
 /**
  * 1. Fetches Repair/Return status updates from asset_logs
  * 2. Fetches Dispatches from SuperAdmin where items don't have a Division Asset ID yet
@@ -129,6 +193,7 @@ $notif_count = $notifications ? $notifications->num_rows : 0;
             border-radius: 6px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 12px;
             font-size: 0.88rem;
             font-weight: 500;
@@ -249,37 +314,50 @@ $notif_count = $notifications ? $notifications->num_rows : 0;
             <div class="nav-group-label">Overview</div>
             <div class="nav flex-column">
                 <a href="/cecsms/divisions/division_dashboard.php" class="nav-link <?= ($current_page == 'division_dashboard.php') ? 'active' : '' ?>">
-                    <i class="bi bi-grid-1x2"></i> Dashboard
+                    <span><i class="bi bi-grid-1x2 me-2"></i> Dashboard</span>
                 </a>
             </div>
 
             <div class="nav-group-label">Master Data</div>
             <div class="nav flex-column">
                 <a href="../vendors/vendor_manager.php?type=Computer" class="nav-link <?= (($_GET['type'] ?? '') == 'Computer') ? 'active' : '' ?>">
-                    <i class="bi bi-person-vcard"></i> Manage Vendors
+                    <span><i class="bi bi-person-vcard me-2"></i> Manage Vendors</span>
                 </a>
+            </div>
+
+            <div class="nav-group-label">Components</div>
+            <div class="nav flex-column">
                 <a href="/cecsms/divisions/add_components.php" class="nav-link <?= ($current_page == 'add_components.php') ? 'active' : '' ?>">
-                    <i class="bi bi-plugin"></i> Components & ICs
+                    <span><i class="bi bi-plugin me-2"></i> Components & ICs</span>
+                </a>
+                <a href="/cecsms/divisions/tag_component_assets.php" class="nav-link <?= ($current_page == 'tag_component_assets.php') ? 'active' : '' ?>">
+                    <span><i class="bi bi-tags me-2"></i> Tag Component Assets</span>
+                    <?php if ($pending_tags_count > 0): ?>
+                        <span class="badge bg-danger rounded-pill extra-small"><?= $pending_tags_count ?></span>
+                    <?php endif; ?>
                 </a>
                 <a href="/cecsms/divisions/view_components.php" class="nav-link <?= ($current_page == 'view_components.php') ? 'active' : '' ?>">
-                    <i class="bi bi-layers-half"></i> Component Stock
+                    <span><i class="bi bi-layers-half me-2"></i> Component Stock</span>
                 </a>
             </div>
 
             <div class="nav-group-label">Asset Management</div>
             <div class="nav flex-column">
                 <a href="/cecsms/divisions/assign_asset.php" class="nav-link <?= ($current_page == 'assign_asset.php') ? 'active' : '' ?>">
-                    <i class="bi bi-tag"></i> Assign Asset ID
+                    <span><i class="bi bi-tag me-2"></i> Assign Asset ID</span>
+                    <?php if ($pending_dispatch_count > 0): ?>
+                        <span class="badge bg-primary rounded-pill extra-small"><?= $pending_dispatch_count ?></span>
+                    <?php endif; ?>
                 </a>
                 <a href="/cecsms/divisions/assigned_assets.php" class="nav-link <?= ($current_page == 'assigned_assets.php') ? 'active' : '' ?>">
-                    <i class="bi bi-check-circle"></i> View My Assets
+                    <span><i class="bi bi-check-circle me-2"></i> View My Assets</span>
                 </a>
             </div>
 
             <div class="nav-group-label">Maintenance</div>
             <div class="nav flex-column">
                 <a href="/cecsms/divisions/asset_logs.php" class="nav-link <?= ($current_page == 'asset_logs.php') ? 'active' : '' ?>">
-                    <i class="bi bi-journal-text"></i> Asset Audit Logs
+                    <span><i class="bi bi-journal-text me-2"></i> Asset Audit Logs</span>
                 </a>
             </div>
         </div>
@@ -348,21 +426,17 @@ $notif_count = $notifications ? $notifications->num_rows : 0;
                         <div id="notif-list" class="overflow-y-auto" style="max-height: 350px;">
                             <?php if ($notif_count > 0): ?>
                                 <?php while($n = $notifications->fetch_assoc()): 
-                                    $type = $n['action_type'];
-                                    $ref_id = $n['ref_id'];
-                                    $is_dispatch = ($type === 'NEW_DISPATCH');
-                                    $is_rejected = (strpos($type, 'rejected') !== false || strpos($type, 'REJECTED') !== false);
+                                $type = $n['action_type'];
+                                $ref_id = $n['ref_id'];
+                                $is_dispatch = ($type === 'NEW_DISPATCH');
+                                $is_rejected = (strpos($type, 'rejected') !== false || strpos($type, 'REJECTED') !== false);
 
-                                    if ($is_dispatch) {
-                                        $icon = 'bi-box-seam text-primary';
-                                        $link = 'assign_asset.php'; 
-                                        $title = "New Dispatch Received";
+                                    if ($is_dispatch) {$icon = 'bi-box-seam text-primary';
+                                        $link = 'assign_asset.php';$title = "New Dispatch Received";
                                         $message = "Items have arrived. Please <strong>Assign Asset IDs</strong>.";
                                     } else {
-                                        $icon = $is_rejected ? 'bi-x-circle text-danger' : 'bi-check-circle text-success';
-                                        $link = "mark_notif_read.php?id=" . urlencode($ref_id);
-                                        $title = str_replace('_', ' ', $type);
-                                        $message = "Your request for <strong>" . htmlspecialchars($n['item_name']) . "</strong> has been " . ($is_rejected ? 'rejected' : 'approved') . ".";
+                                        $icon =$is_rejected ? 'bi-x-circle text-danger' : 'bi-check-circle text-success';
+                                        $link = "mark_notif_read.php?id=" . urlencode($ref_id);$title = str_replace('_', ' ', $type);$message = "Your request for <strong>" . htmlspecialchars($n['item_name']) . "</strong> has been " . ($is_rejected ? 'rejected' : 'approved') . ".";
                                     }
                                 ?>
                                     <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start whitespace-normal" href="<?= $link ?>">

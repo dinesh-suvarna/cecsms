@@ -8,21 +8,28 @@ $page_title = "Add Components";
 $page_icon  = "bi-cpu";
 
 $notif_division_id = $_SESSION['division_id'] ?? 0;
+$user_role = $_SESSION['role'] ?? '';
 
 // Fetch Vendors
 $vendor_res = $conn->query("SELECT id, vendor_name FROM vendors ORDER BY vendor_name ASC");
+$unit_query = $conn->prepare("SELECT id, unit_name FROM units WHERE division_id = ? ORDER BY unit_name ASC");
+$unit_query->bind_param("i", $notif_division_id);
+$unit_query->execute();
+$unit_res = $unit_query->get_result();
 
 // --- BACKEND PROCESSING ---
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_component'])) {
     $item_name = mysqli_real_escape_string($conn, $_POST['item_name']);
-    $category = mysqli_real_escape_string($conn, $_POST['category']);
-    $spec = mysqli_real_escape_string($conn, $_POST['specification']);
-    $qty = (int)$_POST['quantity'];
-    $price = (float)$_POST['unit_price'];
+    $category  = mysqli_real_escape_string($conn, $_POST['category']);
+    $spec      = mysqli_real_escape_string($conn, $_POST['specification']);
+    $qty       = (int)$_POST['quantity'];
+    $price     = (float)$_POST['unit_price'];
     $vendor_id = !empty($_POST['vendor_id']) ? (int)$_POST['vendor_id'] : "NULL";
+    $bill_no   = !empty($_POST['bill_no']) ? "'" . mysqli_real_escape_string($conn, $_POST['bill_no']) . "'" : "NULL";
+    $unit_id   = !empty($_POST['unit_id']) ? (int)$_POST['unit_id'] : "NULL";
 
-    $sql = "INSERT INTO component_stock (division_id, item_name, category, specification, total_quantity, unit_price, vendor_id) 
-            VALUES ($notif_division_id, '$item_name', '$category', '$spec', '$qty', '$price', $vendor_id)";
+    $sql = "INSERT INTO component_stock (division_id, item_name, category, specification, total_quantity, unit_price, vendor_id, bill_no, unit_id) 
+            VALUES ($notif_division_id, '$item_name', '$category', '$spec', '$qty', '$price', $vendor_id, $bill_no, $unit_id)";
 
     if ($conn->query($sql)) {
         notify('success', "Stock Updated: $item_name added successfully."); 
@@ -179,6 +186,7 @@ ob_start();
                                 <option value="Connectors">Wires & Breadboards</option>
                                 <option value="Motors">Servos & DC Motors</option>
                                 <option value="Passives">Resistors & Capacitors</option>
+                                <option value="Electronic Equipments">Electronic Equipments / Test Instruments</option>
                             </select>
                         </div>
 
@@ -208,6 +216,21 @@ ob_start();
                             </select>
                         </div>
 
+                        <div class="col-md-6">
+                            <label class="form-label-erp">Bill / Invoice Number</label>
+                            <input type="text" name="bill_no" class="form-control form-control-erp" placeholder="e.g. INV-2026-001">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label-erp">Assign to Labs / Facilities</label>
+                            <select name="unit_id" class="form-select form-select-erp" required>
+                                <option value="">Select Unit...</option>
+                                <?php while($u = $unit_res->fetch_assoc()): ?>
+                                    <option value="<?= $u['id'] ?>"><?= htmlspecialchars($u['unit_name']) ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
+
                         <div class="col-12 mt-4 pt-3 border-top d-flex justify-content-end gap-2">
                             <button type="reset" class="btn btn-erp-secondary">Clear</button>
                             <button type="submit" name="add_component" class="btn btn-erp-primary">
@@ -228,7 +251,8 @@ const categorySpecs = {
     "Semiconductors": "e.g. Dual H-Bridge, 2A Peak, 5-35V DC / 8-bit Shift Register",
     "Connectors": "e.g. 40-pin M-M Ribbon, 20cm / 830 Point MB-102 Breadboard",
     "Motors": "e.g. SG90 9g, 1.6kg/cm Torque, 180 Degree / 300RPM DC Gear Motor",
-    "Passives": "e.g. 10k Ohm, 1/4W, 5% / 100uF 25V Electrolytic"
+    "Passives": "e.g. 10k Ohm, 1/4W, 5% / 100uF 25V Electrolytic",
+    "Electronic Equipments": "e.g. Dual Channel, 100MHz / Regulated 0-30V, 2A / Single Mode Function Generator"
 };
 
 const categorySelect = document.getElementById('categorySelect');
@@ -250,7 +274,7 @@ categorySelect.addEventListener('change', function() {
 <?php
 $content = ob_get_clean();
 
-if (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin') {
+if (isset($user_role) && $user_role === 'SuperAdmin') {
     include "../stock/stocklayout.php";
 } else {
     include "../divisions/divisionslayout.php";

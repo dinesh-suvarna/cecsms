@@ -55,15 +55,38 @@ if ($action === 'verify') {
 } 
 // --- DELETE ACTION ---
 elseif ($action === 'delete') {
-    $stmt = $conn->prepare("DELETE FROM furniture_assets WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    
-    if ($stmt->execute()) {
-        echo json_encode(['success' => true]);
-    } else {
-        // Check for foreign key constraints (e.g., if the asset is linked to other records)
-        echo json_encode(['success' => false, 'message' => 'Database error: Could not delete asset.']);
+    try {
+        // 1. Get the stock_id associated with this asset before deleting it
+        $stock_lookup = $conn->prepare("SELECT stock_id FROM furniture_assets WHERE id = ?");
+        $stock_lookup->bind_param("i", $id);
+        $stock_lookup->execute();
+        $stock_data = $stock_lookup->get_result()->fetch_assoc();
+        $stock_id = $stock_data['stock_id'] ?? null;
+
+        // 2. Delete the asset record
+        $stmt = $conn->prepare("DELETE FROM furniture_assets WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        
+        if ($stmt->execute()) {
+            // 3. Automatically decrease total_qty in furniture_stock so it doesn't trigger the tagging queue
+            if ($stock_id) {
+                $update_stock = $conn->prepare("UPDATE furniture_stock SET total_qty = GREATEST(0, total_qty - 1) WHERE id = ?");
+                $update_stock->bind_param("i", $stock_id);
+                $update_stock->execute();
+            }
+
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Database error: Could not delete asset.']);
+        }
+    } catch (mysqli_sql_exception $e) {
+        // catch foreign key constraints or database relation errors
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Constraint Error: Cannot delete this asset because it is linked to active logs or records.'
+        ]);
     }
+    exit();
 }
 // --- EDIT TAG ACTION ---
 elseif ($action === 'edit_tag') {
@@ -93,7 +116,7 @@ elseif ($action === 'edit_tag') {
     }
 } 
 
-// --- NEW: LIFECYCLE ACTION (Return, Repair, Decommission) ---
+// --- LIFECYCLE ACTION (Return, Repair, Decommission) ---
 elseif ($action === 'lifecycle') {
     $type = $_POST['type'] ?? ''; // 'return', 'repair', or 'dispose'
     

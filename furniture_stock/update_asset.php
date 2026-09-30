@@ -68,9 +68,9 @@ elseif ($action === 'delete') {
         $stmt->bind_param("i", $id);
         
         if ($stmt->execute()) {
-            // 3. Automatically decrease total_qty in furniture_stock so it doesn't trigger the tagging queue
+            // 3. Automatically decrease BOTH total_qty and available_qty in furniture_stock
             if ($stock_id) {
-                $update_stock = $conn->prepare("UPDATE furniture_stock SET total_qty = GREATEST(0, total_qty - 1) WHERE id = ?");
+                $update_stock = $conn->prepare("UPDATE furniture_stock SET total_qty = GREATEST(0, total_qty - 1), available_qty = GREATEST(0, available_qty - 1) WHERE id = ?");
                 $update_stock->bind_param("i", $stock_id);
                 $update_stock->execute();
             }

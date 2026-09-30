@@ -230,13 +230,12 @@ ob_start();
                     <?php if (!$active_stock || ($current_assets >= (int)$active_stock['total_quantity'])): ?>
                         <div class="text-center py-5">
                             <div class="mb-3">
-                                <span class="bg-success bg-opacity-15 text-success p-3 rounded-circle d-inline-flex">
-                                    <i class="bi bi-check-lg display-5"></i>
+                                <span >
+                                    <i class="bi bi-check2-circle text-success display-4 d-block mb-3 opacity-75"></i>
                                 </span>
                             </div>
                             <h5 class="fw-bold text-dark">Ready for Assignment</h5>
                             <p class="text-muted small mb-4">Select another pending item from the queue or proceed to assign these tags to units.</p>
-                            <a href="assign_asset.php" class="btn btn-navy px-4 rounded-3 small">Go to Assign Assets</a>
                         </div>
                     <?php else: 
                         $left_to_tag = (int)$active_stock['total_quantity'] - $current_assets;

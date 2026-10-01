@@ -12,7 +12,7 @@ $user_role = $_SESSION['role'] ?? '';
 
 // Fetch Vendors
 $vendor_res = $conn->query("SELECT id, vendor_name FROM vendors ORDER BY vendor_name ASC");
-$unit_query = $conn->prepare("SELECT id, unit_name FROM units WHERE division_id = ? ORDER BY unit_name ASC");
+$unit_query = $conn->prepare("SELECT id, unit_name,unit_code FROM units WHERE division_id = ? ORDER BY unit_code ASC");
 $unit_query->bind_param("i", $notif_division_id);
 $unit_query->execute();
 $unit_res = $unit_query->get_result();
@@ -226,7 +226,7 @@ ob_start();
                             <select name="unit_id" class="form-select form-select-erp" required>
                                 <option value="">Select Unit...</option>
                                 <?php while($u = $unit_res->fetch_assoc()): ?>
-                                    <option value="<?= $u['id'] ?>"><?= htmlspecialchars($u['unit_name']) ?></option>
+                                    <option value="<?= $u['id'] ?>"><?= htmlspecialchars($u['unit_code']) ?> - <?= htmlspecialchars($u['unit_name']) ?></option>
                                 <?php endwhile; ?>
                             </select>
                         </div>

@@ -25,13 +25,21 @@ function getCategoryData(mysqli $conn, string $category, string $role, int $divi
         $v_stmt->bind_param("s", $category);
     } else {
         if ($category === 'Computer') {
+            // Fetch vendors that have records in either stock_details (via dispatch) OR component_stock
             $v_query = "SELECT DISTINCT v.* 
                         FROM vendors v
-                        JOIN stock_details sd ON v.id = sd.vendor_id
-                        JOIN dispatch_details dd ON sd.id = dd.stock_detail_id
-                        JOIN dispatch_master dm ON dd.dispatch_id = dm.id
-                        WHERE v.category = ? AND dm.division_id = ?
+                        WHERE v.category = ? AND v.id IN (
+                            SELECT sd.vendor_id FROM stock_details sd 
+                            JOIN dispatch_details dd ON sd.id = dd.stock_detail_id
+                            JOIN dispatch_master dm ON dd.dispatch_id = dm.id
+                            WHERE dm.division_id = ?
+                            UNION
+                            SELECT cs.vendor_id FROM component_stock cs 
+                            WHERE cs.division_id = ? OR cs.division_id IS NULL
+                        )
                         ORDER BY v.vendor_name ASC";
+            $v_stmt = $conn->prepare($v_query);
+            $v_stmt->bind_param("sii", $category, $division_id, $division_id);
         } elseif ($category === 'Furniture') {
             $v_query = "SELECT DISTINCT v.* 
                         FROM vendors v
@@ -39,6 +47,8 @@ function getCategoryData(mysqli $conn, string $category, string $role, int $divi
                         JOIN units u ON fs.unit_id = u.id
                         WHERE v.category = ? AND u.division_id = ?
                         ORDER BY v.vendor_name ASC";
+            $v_stmt = $conn->prepare($v_query);
+            $v_stmt->bind_param("si", $category, $division_id);
         } elseif ($category === 'Electricals') {
             $v_query = "SELECT DISTINCT v.* 
                         FROM vendors v
@@ -46,11 +56,11 @@ function getCategoryData(mysqli $conn, string $category, string $role, int $divi
                         JOIN units u ON es.unit_id = u.id
                         WHERE v.category = ? AND u.division_id = ?
                         ORDER BY v.vendor_name ASC";
+            $v_stmt = $conn->prepare($v_query);
+            $v_stmt->bind_param("si", $category, $division_id);
         } else {
             return [];
         }
-        $v_stmt = $conn->prepare($v_query);
-        $v_stmt->bind_param("si", $category, $division_id);
     }
 
     $v_stmt->execute();
@@ -62,117 +72,71 @@ function getCategoryData(mysqli $conn, string $category, string $role, int $divi
     // 2. Fetch Transaction History per Vendor
     foreach ($vendors as $vendor) {
         $vendor_id = $vendor['id'];
-        $stmt = null; 
+        $history = [];
 
         if ($category === 'Computer') {
+            // Fetch from stock_details
             if ($role === 'SuperAdmin' || $division_id === 0) {
-                $query = "SELECT 
-                            MAX(sd.bill_date) as bill_date, 
-                            sd.bill_no, 
-                            im.item_name, 
-                            'Computer' as cat, 
-                            SUM(sd.quantity) as qty, 
-                            (SUM(sd.quantity * sd.amount) / SUM(sd.quantity)) as price 
-                          FROM stock_details sd 
-                          JOIN items_master im ON sd.stock_item_id = im.id 
-                          WHERE sd.vendor_id = ? 
-                          GROUP BY sd.bill_no, im.id
-                          ORDER BY MAX(sd.bill_date) DESC";
-                $stmt = $conn->prepare($query);
-                $stmt->bind_param("i", $vendor_id);
+                $q1 = "SELECT MAX(sd.bill_date) as bill_date, sd.bill_no, im.item_name, 'Computer' as cat, SUM(sd.quantity) as qty, (SUM(sd.quantity * sd.amount) / SUM(sd.quantity)) as price FROM stock_details sd JOIN items_master im ON sd.stock_item_id = im.id WHERE sd.vendor_id = ? GROUP BY sd.bill_no, im.id";
+                $s1 = $conn->prepare($q1);
+                $s1->bind_param("i", $vendor_id);
             } else {
-                $query = "SELECT 
-                            MAX(sd.bill_date) as bill_date, 
-                            sd.bill_no, 
-                            im.item_name, 
-                            'Computer' as cat, 
-                            SUM(dd.quantity) as qty, 
-                            (SUM(dd.quantity * sd.amount) / SUM(dd.quantity)) as price 
-                          FROM stock_details sd 
-                          JOIN items_master im ON sd.stock_item_id = im.id 
-                          JOIN dispatch_details dd ON sd.id = dd.stock_detail_id
-                          JOIN dispatch_master dm ON dd.dispatch_id = dm.id
-                          WHERE sd.vendor_id = ? AND dm.division_id = ?
-                          GROUP BY sd.bill_no, im.id
-                          ORDER BY MAX(sd.bill_date) DESC";
-                $stmt = $conn->prepare($query);
-                $stmt->bind_param("ii", $vendor_id, $division_id);
+                $q1 = "SELECT MAX(sd.bill_date) as bill_date, sd.bill_no, im.item_name, 'Computer' as cat, SUM(dd.quantity) as qty, (SUM(dd.quantity * sd.amount) / SUM(dd.quantity)) as price FROM stock_details sd JOIN items_master im ON sd.stock_item_id = im.id JOIN dispatch_details dd ON sd.id = dd.stock_detail_id JOIN dispatch_master dm ON dd.dispatch_id = dm.id WHERE sd.vendor_id = ? AND dm.division_id = ? GROUP BY sd.bill_no, im.id";
+                $s1 = $conn->prepare($q1);
+                $s1->bind_param("ii", $vendor_id, $division_id);
             }
+            $s1->execute();
+            $h1 = $s1->get_result()->fetch_all(MYSQLI_ASSOC);
+            $s1->close();
+
+            // Fetch from component_stock
+            if ($role === 'SuperAdmin' || $division_id === 0) {
+                $q2 = "SELECT MAX(cs.created_at) as bill_date, cs.bill_no, cs.item_name, 'Computer' as cat, SUM(cs.total_quantity) as qty, (SUM(cs.total_quantity * cs.unit_price) / SUM(cs.total_quantity)) as price FROM component_stock cs WHERE cs.vendor_id = ? GROUP BY cs.bill_no, cs.item_name";
+                $s2 = $conn->prepare($q2);
+                $s2->bind_param("i", $vendor_id);
+            } else {
+                $q2 = "SELECT MAX(cs.created_at) as bill_date, cs.bill_no, cs.item_name, 'Computer' as cat, SUM(cs.total_quantity) as qty, (SUM(cs.total_quantity * cs.unit_price) / SUM(cs.total_quantity)) as price FROM component_stock cs WHERE cs.vendor_id = ? AND (cs.division_id = ? OR cs.division_id IS NULL) GROUP BY cs.bill_no, cs.item_name";
+                $s2 = $conn->prepare($q2);
+                $s2->bind_param("ii", $vendor_id, $division_id);
+            }
+            $s2->execute();
+            $h2 = $s2->get_result()->fetch_all(MYSQLI_ASSOC);
+            $s2->close();
+
+            // Merge both histories
+            $history = array_merge($h1, $h2);
+            // Sort combined history by bill_date descending
+            usort($history, function($a, $b) {
+                return strtotime($b['bill_date']) <=> strtotime($a['bill_date']);
+            });
+
         } elseif ($category === 'Furniture') {
             if ($role === 'SuperAdmin' || $division_id === 0) {
-                $query = "SELECT 
-                            MAX(fs.bill_date) as bill_date, 
-                            fs.bill_no, 
-                            fi.item_name, 
-                            'Furniture' as cat, 
-                            SUM(fs.total_qty) as qty, 
-                            (SUM(fs.total_qty * fs.unit_price) / SUM(fs.total_qty)) as price 
-                          FROM furniture_stock fs 
-                          JOIN furniture_items fi ON fs.furniture_item_id = fi.id 
-                          WHERE fs.vendor_id = ? 
-                          GROUP BY fs.bill_no, fi.id
-                          ORDER BY MAX(fs.bill_date) DESC";
+                $query = "SELECT MAX(fs.bill_date) as bill_date, fs.bill_no, fi.item_name, 'Furniture' as cat, SUM(fs.total_qty) as qty, (SUM(fs.total_qty * fs.unit_price) / SUM(fs.total_qty)) as price FROM furniture_stock fs JOIN furniture_items fi ON fs.furniture_item_id = fi.id WHERE fs.vendor_id = ? GROUP BY fs.bill_no, fi.id ORDER BY MAX(fs.bill_date) DESC";
                 $stmt = $conn->prepare($query);
                 $stmt->bind_param("i", $vendor_id);
             } else {
-                $query = "SELECT 
-                            MAX(fs.bill_date) as bill_date, 
-                            fs.bill_no, 
-                            fi.item_name, 
-                            'Furniture' as cat, 
-                            SUM(fs.total_qty) as qty, 
-                            (SUM(fs.total_qty * fs.unit_price) / SUM(fs.total_qty)) as price 
-                          FROM furniture_stock fs 
-                          JOIN furniture_items fi ON fs.furniture_item_id = fi.id 
-                          JOIN units u ON fs.unit_id = u.id
-                          WHERE fs.vendor_id = ? AND u.division_id = ?
-                          GROUP BY fs.bill_no, fi.id
-                          ORDER BY MAX(fs.bill_date) DESC";
+                $query = "SELECT MAX(fs.bill_date) as bill_date, fs.bill_no, fi.item_name, 'Furniture' as cat, SUM(fs.total_qty) as qty, (SUM(fs.total_qty * fs.unit_price) / SUM(fs.total_qty)) as price FROM furniture_stock fs JOIN furniture_items fi ON fs.furniture_item_id = fi.id JOIN units u ON fs.unit_id = u.id WHERE fs.vendor_id = ? AND u.division_id = ? GROUP BY fs.bill_no, fi.id ORDER BY MAX(fs.bill_date) DESC";
                 $stmt = $conn->prepare($query);
                 $stmt->bind_param("ii", $vendor_id, $division_id);
             }
+            $stmt->execute();
+            $history = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
         } elseif ($category === 'Electricals') {
             if ($role === 'SuperAdmin' || $division_id === 0) {
-                $query = "SELECT 
-                            MAX(es.bill_date) as bill_date, 
-                            es.bill_no, 
-                            ei.item_name, 
-                            'Electricals' as cat, 
-                            SUM(es.total_qty) as qty, 
-                            (SUM(es.total_qty * es.unit_price) / SUM(es.total_qty)) as price 
-                          FROM electrical_stock es 
-                          JOIN electrical_items ei ON es.electrical_item_id = ei.id 
-                          WHERE es.vendor_id = ? 
-                          GROUP BY es.bill_no, ei.id
-                          ORDER BY MAX(es.bill_date) DESC";
+                $query = "SELECT MAX(es.bill_date) as bill_date, es.bill_no, ei.item_name, 'Electricals' as cat, SUM(es.total_qty) as qty, (SUM(es.total_qty * es.unit_price) / SUM(es.total_qty)) as price FROM electrical_stock es JOIN electrical_items ei ON es.electrical_item_id = ei.id WHERE es.vendor_id = ? GROUP BY es.bill_no, ei.id ORDER BY MAX(es.bill_date) DESC";
                 $stmt = $conn->prepare($query);
                 $stmt->bind_param("i", $vendor_id);
             } else {
-                $query = "SELECT 
-                            MAX(es.bill_date) as bill_date, 
-                            es.bill_no, 
-                            ei.item_name, 
-                            'Electricals' as cat, 
-                            SUM(es.total_qty) as qty, 
-                            (SUM(es.total_qty * es.unit_price) / SUM(es.total_qty)) as price 
-                          FROM electrical_stock es 
-                          JOIN electrical_items ei ON es.electrical_item_id = ei.id 
-                          JOIN units u ON es.unit_id = u.id
-                          WHERE es.vendor_id = ? AND u.division_id = ?
-                          GROUP BY es.bill_no, ei.id
-                          ORDER BY MAX(es.bill_date) DESC";
+                $query = "SELECT MAX(es.bill_date) as bill_date, es.bill_no, ei.item_name, 'Electricals' as cat, SUM(es.total_qty) as qty, (SUM(es.total_qty * es.unit_price) / SUM(es.total_qty)) as price FROM electrical_stock es JOIN electrical_items ei ON es.electrical_item_id = ei.id JOIN units u ON es.unit_id = u.id WHERE es.vendor_id = ? AND u.division_id = ? GROUP BY es.bill_no, ei.id ORDER BY MAX(es.bill_date) DESC";
                 $stmt = $conn->prepare($query);
                 $stmt->bind_param("ii", $vendor_id, $division_id);
             }
+            $stmt->execute();
+            $history = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
         }
-
-        if (!$stmt) {
-            continue;
-        }
-
-        $stmt->execute();
-        $history = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        $stmt->close();
 
         $total_spend = 0;
         foreach ($history as $item) {
@@ -219,12 +183,10 @@ ob_start();
         color: var(--erp-text-main);
     }
 
-    /* Container padding to push content slightly right */
 .page-wrapper {
     padding: 24px 28px 36px;
 }
 
-/* Header layout & horizontal divider line */
 .inst-header {
     display: flex;
     justify-content: space-between;
@@ -235,14 +197,12 @@ ob_start();
     border-bottom: 1px solid var(--erp-border, #d9e0e7);
 }
 
-/* Header left side flex layout */
 .inst-header-left {
     display: flex;
     align-items: center;
     gap: 14px;
 }
 
-/* Header icon box */
 .inst-header-icon {
     width: 42px;
     height: 42px;
@@ -257,7 +217,6 @@ ob_start();
     flex-shrink: 0;
 }
 
-    /* Search Box Styling */
     .global-search-wrapper {
         position: relative;
         max-width: 360px;
@@ -288,7 +247,6 @@ ob_start();
         font-size: 0.85rem;
     }
 
-    /* Tabs Styling */
     .erp-tabs .nav-link { 
         color: var(--erp-text-muted); 
         font-weight: 600; 
@@ -310,7 +268,6 @@ ob_start();
         color: var(--erp-text-main); 
     }
 
-    /* Accordion Styling */
     .accordion-item { 
         border: 1px solid var(--erp-border) !important; 
         border-radius: 8px !important; 
@@ -382,7 +339,6 @@ ob_start();
     <!-- Header Block -->
     <div class="inst-header">
         <div class="inst-header-left">
-            <!-- Icon Box -->
             <div class="inst-header-icon">
                 <i class="bi bi-folder-symlink-fill"></i>
             </div>
@@ -393,7 +349,6 @@ ob_start();
         </div>
 
         <div class="d-flex align-items-center gap-2">
-            <!-- Global Search Input -->
             <div class="global-search-wrapper">
                 <i class="bi bi-search global-search-icon"></i>
                 <input type="text" id="detailsGlobalSearch" class="global-search-input" placeholder="Search vendors, bills, items...">
@@ -506,14 +461,14 @@ ob_start();
                                                     <?php else: ?>
                                                         <?php foreach ($history as $row): 
                                                             $line_total = $row['qty'] * $row['price'];
-                                                            $date_formatted = date('M d, Y', strtotime($row['bill_date']));
+                                                            $date_formatted = !empty($row['bill_date']) ? date('M d, Y', strtotime($row['bill_date'])) : 'N/A';
                                                         ?>
                                                             <tr>
                                                                 <td class="ps-4">
                                                                     <span class="fw-semibold text-dark extra-small"><?= $date_formatted ?></span>
                                                                 </td>
                                                                 <td>
-                                                                    <span class="fw-semibold text-dark extra-small">#<?= htmlspecialchars($row['bill_no']) ?></span>
+                                                                    <span class="fw-semibold text-dark extra-small">#<?= htmlspecialchars($row['bill_no'] ?? 'N/A') ?></span>
                                                                 </td>
                                                                 <td>
                                                                     <span class="fw-semibold text-dark extra-small"><?= htmlspecialchars($row['item_name']) ?></span>
@@ -555,7 +510,6 @@ ob_start();
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Print logic
     document.querySelectorAll('.btn-print-vendor').forEach(button => {
         button.addEventListener('click', function (e) {
             e.stopPropagation();
@@ -602,10 +556,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Default tab tracking (defaults to Computer tab)
     let defaultTabBtn = document.querySelector('#sectorTabs button[data-bs-target="#tab-computer"]');
 
-    // Update active tab manually when user clicks
     document.querySelectorAll('#sectorTabs button').forEach(button => {
         button.addEventListener('click', function() {
             if (!document.getElementById('detailsGlobalSearch').value.trim()) {
@@ -614,7 +566,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // REAL-TIME GLOBAL CROSS-TAB SEARCH
     const searchInput = document.getElementById('detailsGlobalSearch');
     if (searchInput) {
         searchInput.addEventListener('input', function() {
@@ -642,7 +593,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             if (query.length > 0) {
-                // If active tab has no matches, switch to the first tab that has matches
                 const activePane = document.querySelector('.tab-pane.show.active');
                 const activeMatches = activePane ? activePane.querySelectorAll('.accordion-item:not([style*="display: none"])').length : 0;
 
@@ -654,7 +604,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             } else {
-                // Search cleared: Switch back to default tab (Computer)
                 if (defaultTabBtn) {
                     const tabTrigger = bootstrap.Tab.getOrCreateInstance(defaultTabBtn);
                     tabTrigger.show();
@@ -663,7 +612,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // URL Param handler
     const urlParams = new URLSearchParams(window.location.search);
     const cat = urlParams.get('cat');
     const vendorId = urlParams.get('vendor_id');

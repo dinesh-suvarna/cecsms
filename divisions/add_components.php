@@ -186,7 +186,7 @@ ob_start();
                                 <option value="Connectors">Wires & Breadboards</option>
                                 <option value="Motors">Servos & DC Motors</option>
                                 <option value="Passives">Resistors & Capacitors</option>
-                                <option value="Electronic Equipments">Electronic Equipments / Test Instruments</option>
+                                <option value="Electronic Equipments/Test Instruments">Electronic Equipments / Test Instruments</option>
                             </select>
                         </div>
 
@@ -252,7 +252,7 @@ const categorySpecs = {
     "Connectors": "e.g. 40-pin M-M Ribbon, 20cm / 830 Point MB-102 Breadboard",
     "Motors": "e.g. SG90 9g, 1.6kg/cm Torque, 180 Degree / 300RPM DC Gear Motor",
     "Passives": "e.g. 10k Ohm, 1/4W, 5% / 100uF 25V Electrolytic",
-    "Electronic Equipments": "e.g. Dual Channel, 100MHz / Regulated 0-30V, 2A / Single Mode Function Generator"
+    "Electronic Equipments/Test Instruments": "e.g. Dual Channel, 100MHz / Regulated 0-30V, 2A / Single Mode Function Generator"
 };
 
 const categorySelect = document.getElementById('categorySelect');

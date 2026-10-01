@@ -57,22 +57,16 @@ function getAssetIcon(string $itemName, $category = '') {
     $cat  = strtolower($category);
     
     switch (true) {
-        // Oscilloscopes & Power Scopes
         case (strpos($name, 'oscilloscope') !== false || strpos($name, 'power scope') !== false):
             return 'bi-activity';
-        // Function Generators
         case (strpos($name, 'function generator') !== false):
             return 'bi-soundwave';
-        // Regulated Power Supply
         case (strpos($name, 'power supply') !== false):
             return 'bi-plug-fill';
-        // Trainer Kits
         case (strpos($name, 'trainer kit') !== false):
             return 'bi-laptop';
-        // IC Testers
         case (strpos($name, 'ic tester') !== false):
             return 'bi-cpu-fill';
-        // Standard Components
         case (strpos($name, 'ram') !== false || $cat === 'ram'):
             return 'bi-memory';
         case (strpos($name, 'ssd') !== false || strpos($name, 'hdd') !== false || strpos($name, 'storage') !== false):
@@ -123,35 +117,59 @@ ob_start();
     box-shadow: 0 0 0 3px rgba(43, 98, 143, 0.15) !important;
 }
 
-/* Accordion Styling matching comp.JPG */
-.unit-accordion .accordion-item {
+/* Outer Unit Accordion */
+.unit-accordion > .accordion-item {
     border: 1px solid var(--erp-border) !important;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.85rem;
+    border-radius: 8px !important;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.unit-accordion > .accordion-item > .accordion-header > .accordion-button {
+    background-color: #f1f5f9;
+    color: var(--erp-navy-dark);
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 1rem 1.25rem;
+}
+
+.unit-accordion > .accordion-item > .accordion-header > .accordion-button:not(.collapsed) {
+    background-color: #e2e8f0;
+    color: var(--erp-navy);
+    border-left: 5px solid var(--erp-navy);
+    box-shadow: none;
+}
+
+/* Inner Component Accordion */
+.inner-component-accordion .accordion-item {
+    border: 1px solid var(--erp-border) !important;
+    margin-bottom: 0.5rem;
     border-radius: 6px !important;
     background: #ffffff;
     overflow: hidden;
 }
 
-.unit-accordion .accordion-button {
+.inner-component-accordion .accordion-button {
     background-color: #f8fafc;
     color: var(--erp-navy-dark);
-    font-weight: 700;
-    font-size: 0.95rem;
-    padding: 0.85rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0.75rem 1rem;
 }
 
-.unit-accordion .accordion-button:not(.collapsed) {
+.inner-component-accordion .accordion-button:not(.collapsed) {
     background-color: #edf3f8;
     color: var(--erp-navy);
-    border-left: 4px solid var(--erp-navy);
+    border-left: 3px solid var(--erp-navy);
     box-shadow: none;
 }
 
-.unit-accordion .accordion-button::after {
+.accordion-button::after {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23123b63'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
 }
 
-/* Table layout matching comp in.JPG */
+/* Table layout */
 .table-erp-minimal th {
     background-color: var(--erp-panel-soft) !important;
     color: var(--erp-text-soft);
@@ -159,12 +177,12 @@ ob_start();
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    padding: 12px 16px;
+    padding: 10px 14px;
     border-bottom: 1px solid var(--erp-border);
 }
 
 .table-erp-minimal td {
-    padding: 12px 16px;
+    padding: 10px 14px;
     font-size: 0.88rem;
     color: var(--erp-text);
     border-bottom: 1px solid #edf0f3;
@@ -211,6 +229,16 @@ ob_start();
     transition: background-color 0.15s ease;
 }
 .btn-erp-primary:hover { background-color: var(--erp-navy-dark); color: #ffffff; }
+
+.btn-edit-link {
+    padding: 0;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    border: none;
+    background: none;
+    transition: color 0.15s;
+}
+.btn-edit-link:hover { color: var(--erp-navy, #173f63); }
 </style>
 
 <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1060;">
@@ -236,13 +264,13 @@ ob_start();
                 <h4 class="fw-bold mb-1" style="color: var(--erp-navy-dark); font-size: 1.25rem;">
                     Component Asset Registry
                 </h4>
-                <p class="text-muted small mb-0">Track all uniquely tagged individual hardware components and microcontrollers.</p>
+                <p class="text-muted small mb-0">Track all uniquely tagged individual hardware components grouped by units and items.</p>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
             <div class="input-group bg-white rounded border overflow-hidden" style="width: 300px;">
                 <span class="input-group-text bg-transparent border-0 pe-1"><i class="bi bi-search text-muted"></i></span>
-                <input type="text" id="assetSearch" class="form-control border-0 extra-small" placeholder="Search by asset tag, name, spec...">
+                <input type="text" id="assetSearch" class="form-control border-0 extra-small" placeholder="Search asset tag, unit, name...">
             </div>
             <a href="tag_component_assets.php" class="btn btn-erp-primary">
                 <i class="bi bi-plus-circle me-1"></i> Tag New Assets
@@ -250,7 +278,7 @@ ob_start();
         </div>
     </div>
 
-    <!-- Accordion Section -->
+    <!-- Data Fetching -->
     <?php
     $where_sql = ($user_role === 'SuperAdmin') ? "1=1" : "cs.division_id = $user_division_id";
     
@@ -260,23 +288,31 @@ ob_start();
             ca.asset_tag,
             cs.item_name,
             cs.category,
-            cs.specification
+            cs.specification,
+            u.unit_code,
+            u.unit_name
         FROM component_assets ca
         JOIN component_stock cs ON ca.stock_id = cs.id
+        LEFT JOIN units u ON cs.unit_id = u.id
         WHERE $where_sql
-        ORDER BY cs.item_name ASC, ca.asset_tag ASC
+        ORDER BY u.unit_code ASC, cs.item_name ASC, ca.asset_tag ASC
     ";
     
     $result = $conn->query($query);
-    $component_groups = [];
+    $unit_groups = [];
     if ($result) {
         while ($row = $result->fetch_assoc()) {
-            $component_groups[$row['item_name']][] = $row;
+            $unit_label = (!empty($row['unit_code']) || !empty($row['unit_name'])) 
+                          ? trim(($row['unit_code'] ?? '') . ' - ' . ($row['unit_name'] ?? '')) 
+                          : 'General / Unassigned Unit';
+            $item_name = $row['item_name'];
+            
+            $unit_groups[$unit_label][$item_name][] = $row;
         }
     }
     ?>
 
-    <?php if (empty($component_groups)): ?>
+    <?php if (empty($unit_groups)): ?>
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body text-center py-5 text-muted small">
                 <i class="bi bi-folder2-open display-6 d-block mb-2 opacity-50"></i>
@@ -284,76 +320,113 @@ ob_start();
             </div>
         </div>
     <?php else: ?>
-        <div class="accordion unit-accordion" id="componentAccordion">
-            <?php $i = 0; foreach ($component_groups as $item_name => $grouped_items): $i++; 
-                $collapseId = "componentCollapse_" . $i;
-                $first_item = $grouped_items[0];
-                $category = $first_item['category'] ?? 'General';
-                $sl_no = 1;
+        <!-- Outer Unit Accordion -->
+        <div class="accordion unit-accordion" id="unitAccordion">
+            <?php $u_idx = 0; foreach ($unit_groups as $unit_label => $items_array): $u_idx++; 
+                $unitCollapseId = "unitCollapse_" . $u_idx;
+                
+                $total_unit_assets = 0;
+                foreach($items_array as $item_assets) {
+                    $total_unit_assets += count($item_assets);
+                }
             ?>
             <div class="accordion-item shadow-sm asset-group-card">
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed d-flex align-items-center justify-content-between flex-wrap gap-2" 
                             type="button" 
                             data-bs-toggle="collapse" 
-                            data-bs-target="#<?= $collapseId ?>">
+                            data-bs-target="#<?= $unitCollapseId ?>">
                         <div class="d-flex align-items-center flex-wrap gap-2 me-3">
-                            <i class="bi <?= getAssetIcon($item_name, $category) ?> fs-5 me-1" style="color: var(--erp-navy);"></i>
-                            <span class="fw-bold text-dark me-2"><?= htmlspecialchars($item_name) ?></span>
-                        
+                            <i class="bi bi-building fs-5 me-1" style="color: var(--erp-navy);"></i>
+                            <span class="fw-bold text-dark me-2"><?= htmlspecialchars($unit_label) ?></span>
                         </div>
                         <div class="me-3">
-                            <span class="badge bg-light text-secondary border fw-bold px-2 py-1" style="font-size: 0.75rem;">
-                                Total Items: <?= count($grouped_items) ?>
+                            <span class="badge bg-white text-secondary border fw-bold px-2 py-1 shadow-sm" style="font-size: 0.75rem;">
+                                Total Unit Assets: <?= $total_unit_assets ?>
                             </span>
                         </div>
                     </button>
                 </h2>
                 
-                <div id="<?= $collapseId ?>" class="accordion-collapse collapse" data-bs-parent="#componentAccordion">
-                    <div class="accordion-body p-0 bg-white">
-                        <div class="table-responsive">
-                            <table class="table align-middle table-erp-minimal mb-0">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 70px;" class="ps-3">Sl.No</th>
-                                        <th>Component Item</th>
-                                        <th>Specifications & Category</th>
-                                        <th>Asset Tag ID</th>
-                                        <th class="pe-3 text-end">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($grouped_items as $asset): ?>
-                                    <tr class="hover-row asset-row-item">
-                                        <td class="ps-3 text-muted fw-semibold"><?= $sl_no++ ?></td>
-                                        <td>
-                                            <div class="fw-bold text-dark"><?= htmlspecialchars($item_name) ?></div>
-                                        </td>
-                                        <td>
-                                            <div class="text-secondary fw-semibold extra-small"><?= htmlspecialchars($asset['specification'] ?? 'No specifications added') ?></div>
-                                            <div class="text-muted extra-small"><?= htmlspecialchars($category) ?></div>
-                                        </td>
-                                        <td>
-                                            <div class="d-inline-flex align-items-center gap-2">
-                                                <span class="fw-bold text-primary" style="font-size: 0.88rem;">
-                                                    <?= htmlspecialchars($asset['asset_tag']) ?>
-                                                </span>
-                                                <button class="btn btn-icon btn-sm py-0 px-1 border-0 bg-transparent text-secondary" onclick="openEditTagModal(<?= $asset['asset_id'] ?>, '<?= htmlspecialchars($asset['asset_tag'], ENT_QUOTES) ?>')" title="Edit Tag">
-                                                    <i class="bi bi-pencil-square text-primary"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                        <td class="pe-3 text-end">
-                                            <button class="btn btn-icon delete-asset-btn text-danger" data-id="<?= $asset['asset_id'] ?>" title="Delete Tag">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
+                <div id="<?= $unitCollapseId ?>" class="accordion-collapse collapse" data-bs-parent="#unitAccordion">
+                    <div class="accordion-body bg-light p-3">
+                        
+                        <!-- Inner Component Accordion -->
+                        <div class="accordion inner-component-accordion" id="componentAccordion_<?= $u_idx ?>">
+                            <?php $c_idx = 0; foreach ($items_array as $item_name => $grouped_items): $c_idx++; 
+                                $compCollapseId = "compCollapse_" . $u_idx . "_" . $c_idx;
+                                $first_item = $grouped_items[0];
+                                $category = $first_item['category'] ?? 'General';
+                                $sl_no = 1;
+                            ?>
+                            <div class="accordion-item shadow-sm">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed d-flex align-items-center justify-content-between flex-wrap gap-2" 
+                                            type="button" 
+                                            data-bs-toggle="collapse" 
+                                            data-bs-target="#<?= $compCollapseId ?>">
+                                        <div class="d-flex align-items-center flex-wrap gap-2 me-3">
+                                            <i class="bi <?= getAssetIcon($item_name, $category) ?> fs-5 me-1" style="color: var(--erp-navy);"></i>
+                                            <span class="fw-bold text-dark me-2"><?= htmlspecialchars($item_name) ?></span>
+                                        </div>
+                                        <div class="me-3">
+                                            <span class="badge bg-light text-secondary border fw-bold px-2 py-1" style="font-size: 0.75rem;">
+                                                Total Items: <?= count($grouped_items) ?>
+                                            </span>
+                                        </div>
+                                    </button>
+                                </h2>
+                                
+                                <div id="<?= $compCollapseId ?>" class="accordion-collapse collapse" data-bs-parent="#componentAccordion_<?= $u_idx ?>">
+                                    <div class="accordion-body p-0 bg-white">
+                                        <div class="table-responsive">
+                                            <table class="table align-middle table-erp-minimal mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width: 70px;" class="ps-3">Sl.No</th>
+                                                        <th>Component Item</th>
+                                                        <th>Specifications & Category</th>
+                                                        <th>Asset Tag ID</th>
+                                                        <th class="pe-3 text-end">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($grouped_items as $asset): ?>
+                                                    <tr class="hover-row asset-row-item">
+                                                        <td class="ps-3 text-muted fw-semibold"><?= $sl_no++ ?></td>
+                                                        <td>
+                                                            <div class="fw-bold text-dark"><?= htmlspecialchars($item_name) ?></div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="text-secondary fw-semibold extra-small"><?= htmlspecialchars($asset['specification'] ?? 'No specifications added') ?></div>
+                                                            <div class="text-muted extra-small"><?= htmlspecialchars($category) ?></div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="d-inline-flex align-items-center gap-2">
+                                                                <span class="fw-bold text-primary" style="font-size: 0.88rem;">
+                                                                    <?= htmlspecialchars($asset['asset_tag']) ?>
+                                                                </span>
+                                                                <button type="button" class="btn-edit-link" onclick="openEditTagModal(<?= $asset['asset_id'] ?>, '<?= htmlspecialchars($asset['asset_tag'], ENT_QUOTES) ?>')" title="Edit Tag">
+                                                                    <i class="bi bi-pencil-square text-danger"></i>
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                        <td class="pe-3 text-end">
+                                                            <button type="button" class="btn btn-icon delete-asset-btn text-danger" data-id="<?= $asset['asset_id'] ?>" title="Delete Tag">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -362,41 +435,20 @@ ob_start();
     <?php endif; ?>
 </div>
 
-<!-- Edit Asset Tag Modal -->
-<div class="modal fade" id="editTagModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-md modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-3">
-            <div class="modal-header border-bottom p-3">
-                <h6 class="fw-bold mb-0">Update Component Asset Tag</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="POST">
-                <div class="modal-body p-4">
-                    <input type="hidden" name="db_id" id="edit_db_id">
-                    <label class="form-label small fw-semibold text-secondary">Asset Tag ID</label>
-                    <input type="text" name="new_asset_tag" id="edit_asset_tag" class="form-control fw-bold form-control-lg fs-6 text-uppercase" required autocomplete="off">
-                </div>
-                <div class="modal-footer border-0 p-3 pt-0">
-                    <button type="submit" name="update_asset_tag" class="btn btn-erp-primary w-100 fw-bold">Save Changes</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 $(document).ready(function(){
-    // Toast notification support if set
     <?php if(isset($_SESSION['success'])): ?>
-        const toast = new bootstrap.Toast(document.getElementById('liveToast'));
-        $('#toastMsg').text("<?= $_SESSION['success'] ?>");
-        toast.show();
+        const toastEl = document.getElementById('liveToast');
+        if (toastEl) {
+            const toast = new bootstrap.Toast(toastEl);
+            $('#toastMsg').text("<?= $_SESSION['success'] ?>");
+            toast.show();
+        }
         <?php unset($_SESSION['success']); ?>
     <?php endif; ?>
 
-    // Live search filter across the accordion cards and rows
     $("#assetSearch").on("keyup", function() {
         let value = $(this).val().toLowerCase();
         $(".asset-group-card").each(function() {
@@ -410,6 +462,7 @@ $(document).ready(function(){
     });
 });
 
+// Clean and reliable modal trigger function matching assigned_assets.php approach
 function openEditTagModal(id, tag) {
     document.getElementById('edit_db_id').value = id;
     document.getElementById('edit_asset_tag').value = tag;
@@ -463,6 +516,30 @@ $(document).on('click', '.delete-asset-btn', function() {
 
 <?php
 $content = ob_get_clean();
+
+/* ================= MODALS ================= */
+$modal_html = '
+<div class="modal fade" id="editTagModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header border-bottom p-3">
+                <h6 class="fw-bold mb-0">Update Component Asset Tag</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="db_id" id="edit_db_id">
+                    <label class="form-label small fw-semibold text-secondary">Asset Tag ID</label>
+                    <input type="text" name="new_asset_tag" id="edit_asset_tag" class="form-control fw-bold form-control-lg fs-6 text-uppercase" required autocomplete="off">
+                </div>
+                <div class="modal-footer border-0 p-3 pt-0">
+                    <button type="submit" name="update_asset_tag" class="btn btn-primary w-100 fw-bold" style="background-color: var(--erp-navy); border-color: var(--erp-navy);">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>';
+
 if ($user_role === 'SuperAdmin') { 
     include "../stock/stocklayout.php"; 
 } else { 

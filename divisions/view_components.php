@@ -74,6 +74,12 @@ ob_start();
 
 .extra-small { font-size: .78rem; }
 
+/* Prevent Action Buttons from Stacking */
+.action-cell {
+    white-space: nowrap !important;
+    width: 1%;
+}
+
 /* Form Controls */
 .form-label-erp {
     font-size: 0.75rem;
@@ -91,14 +97,10 @@ ob_start();
     padding: 0.55rem 2.25rem 0.55rem 0.75rem !important; 
     color: var(--erp-text);
     background-color: #ffffff;
-    
-    
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
     background-repeat: no-repeat !important;
     background-position: right 0.75rem center !important;
     background-size: 16px 12px !important;
-    
-    
     -webkit-appearance: none !important;
     -moz-appearance: none !important;
     appearance: none !important;
@@ -149,6 +151,17 @@ ob_start();
 
 .division-header:hover { background-color: #f1f5f9 !important; }
 
+.unit-header {
+    background-color: #ffffff !important;
+    border: 1px solid var(--erp-border) !important;
+    border-left: 4px solid #4a5568 !important;
+    border-radius: 4px;
+    margin: 8px 14px;
+    padding: 10px 14px !important;
+    cursor: pointer;
+}
+.unit-header:hover { background-color: #f8fafc !important; }
+
 /* Table Details Styling */
 .table thead th {
     font-size: 0.75rem;
@@ -164,13 +177,6 @@ ob_start();
     border-bottom: 1px solid #edf0f3;
     padding: 12px 16px;
     font-size: 0.88rem;
-}
-
-.stock-badge {
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-weight: 700;
-    font-size: 0.75rem;
 }
 
 .bg-amber-subtle   { background-color: #fef3c7 !important; color: #92400e !important; }
@@ -281,76 +287,171 @@ ob_start();
     <div id="registryContent">
         <?php
         $sql_filter = ($user_role === 'SuperAdmin') ? "1=1" : "c.division_id = $notif_division_id";
-        $sql = "SELECT c.*, v.vendor_name, i.institution_name, d.division_name FROM component_stock c 
-                LEFT JOIN vendors v ON c.vendor_id = v.id LEFT JOIN divisions d ON c.division_id = d.id
-                LEFT JOIN institutions i ON d.institution_id = i.id WHERE $sql_filter ORDER BY i.institution_name, d.division_name, c.id DESC";
+        $sql = "SELECT c.*, v.vendor_name, i.institution_name, d.division_name, u.unit_code, u.unit_name 
+                FROM component_stock c 
+                LEFT JOIN vendors v ON c.vendor_id = v.id 
+                LEFT JOIN divisions d ON c.division_id = d.id
+                LEFT JOIN institutions i ON d.institution_id = i.id 
+                LEFT JOIN units u ON c.unit_id = u.id 
+                WHERE $sql_filter 
+                ORDER BY i.institution_name, d.division_name, u.unit_code, c.id DESC";
         $res = $conn->query($sql);
         $data = [];
-        while($r = $res->fetch_assoc()){ $data[$r['institution_name'] ?? 'Unassigned'][$r['division_name'] ?? 'General'][] = $r; }
+        
+        while($r = $res->fetch_assoc()){
+            $inst = $r['institution_name'] ?? 'Unassigned Institution';
+            $div = $r['division_name'] ?? 'General Division';
+            $unit = (!empty($r['unit_code']) || !empty($r['unit_name'])) ? trim($r['unit_code'] . ' - ' . $r['unit_name']) : 'General / Unassigned Unit';
+            
+            if ($user_role === 'SuperAdmin') {
+                $data[$inst][$div][$unit][] = $r;
+            } else {
+                $data[$unit][] = $r;
+            }
+        }
 
-        foreach($data as $instName => $divisions):
-            $inst_id = "inst_" . md5($instName);
+        if ($user_role === 'SuperAdmin'):
+            // --- SUPERADMIN HIERARCHY: Institution -> Division -> Units ---
+            foreach($data as $instName => $divisions):
+                $inst_id = "inst_" . md5($instName);
         ?>
-        <div class="card institution-card overflow-hidden">
-            <div class="card-header inst-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#body_<?= $inst_id ?>" aria-expanded="false">
-                <div class="fw-bold text-dark d-flex align-items-center" style="font-size: 0.90rem;">
-                    <i class="bi bi-caret-right-fill me-2 toggle-icon"></i>
-                    <span><?= strtoupper($instName) ?></span>
+            <div class="card institution-card overflow-hidden">
+                <div class="card-header inst-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#body_<?= $inst_id ?>" aria-expanded="false">
+                    <div class="fw-bold text-dark d-flex align-items-center" style="font-size: 0.90rem;">
+                        <i class="bi bi-caret-right-fill me-2 toggle-icon"></i>
+                        <span><?= strtoupper($instName) ?></span>
+                    </div>
+                </div>
+                <div id="body_<?= $inst_id ?>" class="collapse">
+                    <div class="card-body p-0">
+                        <?php foreach($divisions as $divName => $units): $div_id = "div_" . md5($instName . $divName); ?>
+                            <div class="division-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#div_body_<?= $div_id ?>" aria-expanded="false">
+                                <div class="fw-bold text-dark d-flex align-items-center" style="font-size: 0.88rem;">
+                                    <i class="bi bi-caret-right-fill me-2 toggle-icon"></i>
+                                    <span><?= $divName ?></span>
+                                </div>
+                            </div>
+                            <div id="div_body_<?= $div_id ?>" class="collapse px-2 pb-2">
+                                <?php foreach($units as $unitName => $items): $unit_id = "unit_" . md5($instName . $divName . $unitName); ?>
+                                    <div class="unit-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#unit_body_<?= $unit_id ?>" aria-expanded="false">
+                                        <div class="fw-bold text-secondary d-flex align-items-center" style="font-size: 0.84rem;">
+                                            <i class="bi bi-caret-right-fill me-2 toggle-icon"></i>
+                                            <span><i class="bi bi-building me-1"></i> <?= $unitName ?></span>
+                                        </div>
+                                        <span class="badge rounded-pill bg-light text-secondary border px-2 py-1 fw-semibold" style="font-size: 0.72rem;"><?= count($items) ?> items</span>
+                                    </div>
+                                    <div id="unit_body_<?= $unit_id ?>" class="collapse px-2 pb-2">
+                                        <div class="table-responsive rounded border bg-white">
+                                            <table class="table align-middle mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="ps-3">Component / Specifications</th>
+                                                        <th>Vendor</th>
+                                                        <th class="text-center">Unit Price</th>
+                                                        <th class="text-center">Stock Qty</th>
+                                                        <th class="text-center">Total Amount</th>
+                                                        <th class="pe-3 text-end action-cell">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach($items as $row): 
+                                                        $qty = (int)$row['total_quantity'];
+                                                        $unit_price = (float)$row['unit_price'];
+                                                        $total_amount = $unit_price * $qty;
+                                                        $badge = ($qty <= 5) ? 'bg-danger-subtle' : (($qty < 15) ? 'bg-amber-subtle' : 'bg-success-subtle');
+                                                    ?>
+                                                    <tr id="row-<?= $row['id'] ?>" class="inventory-row">
+                                                        <td class="ps-3">
+                                                            <div class="fw-bold text-dark" style="font-size: 0.90rem;"><?= htmlspecialchars($row['item_name']) ?></div>
+                                                            <div class="text-muted extra-small">
+                                                                <span class="fw-semibold text-secondary"><?= htmlspecialchars($row['category']) ?></span> 
+                                                                <?php if(!empty($row['specification'])): ?> • <?= htmlspecialchars($row['specification']) ?><?php endif; ?>
+                                                            </div>
+                                                        </td>
+                                                        <td><span class="extra-small text-muted"><?= htmlspecialchars($row['vendor_name'] ?? 'Direct Stock') ?></span></td>
+                                                        <td class="text-center extra-small fw-bold text-secondary"><?= inr($unit_price, true) ?></td>
+                                                        <td class="text-center"><span class="fw-bold text-secondary" <?= $badge ?>"><?= $qty ?> <small>pcs</small></span></td>
+                                                        <td class="text-center extra-small fw-bold text-dark"><?= inr($total_amount, true) ?></td>
+                                                        <td class="pe-3 text-end action-cell">
+                                                            <button class="btn btn-icon edit-btn me-1" data-id="<?= $row['id'] ?>" data-name="<?= htmlspecialchars($row['item_name']) ?>" data-cat="<?= htmlspecialchars($row['category']) ?>" data-spec="<?= htmlspecialchars($row['specification']) ?>" data-qty="<?= $qty ?>" data-price="<?= $unit_price ?>" data-vendor="<?= $row['vendor_id'] ?>"><i class="bi bi-pencil"></i></button>
+                                                            <button class="btn btn-icon delete-btn text-danger" data-id="<?= $row['id'] ?>"><i class="bi bi-trash"></i></button>
+                                                        </td>
+                                                    </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
-            <div id="body_<?= $inst_id ?>" class="collapse">
-                <div class="card-body p-0">
-                    <?php foreach($divisions as $divName => $items): $div_id = "div_" . md5($instName . $divName); ?>
-                        <div class="division-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#div_body_<?= $div_id ?>" aria-expanded="false">
-                            <div class="fw-bold text-dark d-flex align-items-center" style="font-size: 0.88rem;">
-                                <i class="bi bi-caret-right-fill me-2 toggle-icon"></i>
-                                <span><?= $divName ?></span>
-                            </div>
-                            <span class="badge rounded-pill bg-white text-secondary border px-2 py-1 fw-semibold" style="font-size: 0.72rem;"><?= count($items) ?> items</span>
+        <?php 
+            endforeach;
+        else:
+            // --- DIVISION ADMIN HIERARCHY: Only Units Accordion ---
+            foreach($data as $unitName => $items): 
+                $unit_id = "unit_" . md5($unitName);
+        ?>
+            <div class="card institution-card overflow-hidden">
+                <div class="card-header unit-header d-flex justify-content-between align-items-center m-0 border-0 rounded-0" data-bs-toggle="collapse" data-bs-target="#unit_body_<?= $unit_id ?>" aria-expanded="false" style="background-color: var(--erp-panel-soft) !important; border-left: 4px solid var(--erp-navy) !important; padding: 14px 20px !important;">
+                    <div class="fw-bold text-dark d-flex align-items-center" style="font-size: 0.90rem;">
+                        <i class="bi bi-caret-right-fill me-2 toggle-icon"></i>
+                        <span><i class="bi bi-building me-1"></i> <?= $unitName ?></span>
+                    </div>
+                    <span class="badge rounded-pill bg-white text-secondary border px-2 py-1 fw-semibold" style="font-size: 0.72rem;"><?= count($items) ?> items</span>
+                </div>
+                <div id="unit_body_<?= $unit_id ?>" class="collapse">
+                    <div class="card-body p-0">
+                        <div class="table-responsive bg-white">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="ps-3">Component / Specifications</th>
+                                        <th>Vendor</th>
+                                        <th class="text-center">Unit Price</th>
+                                        <th class="text-center">Stock Qty</th>
+                                        <th class="text-center">Total Amount</th>
+                                        <th class="pe-3 text-end action-cell">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach($items as $row): 
+                                        $qty = (int)$row['total_quantity'];
+                                        $unit_price = (float)$row['unit_price'];
+                                        $total_amount = $unit_price * $qty;
+                                        $badge = ($qty <= 5) ? 'bg-danger-subtle' : (($qty < 15) ? 'bg-amber-subtle' : 'bg-success-subtle');
+                                    ?>
+                                    <tr id="row-<?= $row['id'] ?>" class="inventory-row">
+                                        <td class="ps-3">
+                                            <div class="fw-bold text-dark" style="font-size: 0.90rem;"><?= htmlspecialchars($row['item_name']) ?></div>
+                                            <div class="text-muted extra-small">
+                                                <span class="fw-semibold text-secondary"><?= htmlspecialchars($row['category']) ?></span> 
+                                                <?php if(!empty($row['specification'])): ?> • <?= htmlspecialchars($row['specification']) ?><?php endif; ?>
+                                            </div>
+                                        </td>
+                                        <td><span class="extra-small text-muted"><?= htmlspecialchars($row['vendor_name'] ?? 'Direct Stock') ?></span></td>
+                                        <td class="text-center extra-small fw-bold text-secondary"><?= inr($unit_price, true) ?></td>
+                                        <td class="text-center"><span class = "fw-bold text-secondary" <?= $badge ?>"><?= $qty ?> <small>pcs</small></span></td>
+                                        <td class="text-center extra-small fw-bold text-dark"><?= inr($total_amount, true) ?></td>
+                                        <td class="pe-3 text-end action-cell">
+                                            <button class="btn btn-icon edit-btn me-1" data-id="<?= $row['id'] ?>" data-name="<?= htmlspecialchars($row['item_name']) ?>" data-cat="<?= htmlspecialchars($row['category']) ?>" data-spec="<?= htmlspecialchars($row['specification']) ?>" data-qty="<?= $qty ?>" data-price="<?= $unit_price ?>" data-vendor="<?= $row['vendor_id'] ?>"><i class="bi bi-pencil"></i></button>
+                                            <button class="btn btn-icon delete-btn text-danger" data-id="<?= $row['id'] ?>"><i class="bi bi-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
                         </div>
-                        <div id="div_body_<?= $div_id ?>" class="collapse px-3 pb-3">
-                            <div class="table-responsive rounded border bg-white">
-                                <table class="table align-middle mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th class="ps-3">Component / Specifications</th>
-                                            <th>Vendor</th>
-                                            <th class="text-center">Unit Price</th>
-                                            <th class="text-center">Stock Qty</th>
-                                            <th class="pe-3 text-end">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach($items as $row): 
-                                            $qty = (int)$row['total_quantity'];
-                                            $badge = ($qty <= 5) ? 'bg-danger-subtle' : (($qty < 15) ? 'bg-amber-subtle' : 'bg-success-subtle');
-                                        ?>
-                                        <tr id="row-<?= $row['id'] ?>" class="inventory-row">
-                                            <td class="ps-3">
-                                                <div class="fw-bold text-dark" style="font-size: 0.90rem;"><?= htmlspecialchars($row['item_name']) ?></div>
-                                                <div class="text-muted extra-small">
-                                                    <span class="fw-semibold text-secondary"><?= htmlspecialchars($row['category']) ?></span> 
-                                                    <?php if(!empty($row['specification'])): ?> • <?= htmlspecialchars($row['specification']) ?><?php endif; ?>
-                                                </div>
-                                            </td>
-                                            <td><span class="extra-small text-muted"><?= htmlspecialchars($row['vendor_name'] ?? 'Direct Stock') ?></span></td>
-                                            <td class="text-center extra-small fw-bold text-secondary"><?= inr($row['unit_price'], true) ?></td>
-                                            <td class="text-center"><span class="stock-badge <?= $badge ?>"><?= $qty ?> <small>pcs</small></span></td>
-                                            <td class="pe-3 text-end">
-                                                <button class="btn btn-icon edit-btn me-1" data-id="<?= $row['id'] ?>" data-name="<?= htmlspecialchars($row['item_name']) ?>" data-cat="<?= htmlspecialchars($row['category']) ?>" data-spec="<?= htmlspecialchars($row['specification']) ?>" data-qty="<?= $qty ?>" data-price="<?= $row['unit_price'] ?>" data-vendor="<?= $row['vendor_id'] ?>"><i class="bi bi-pencil"></i></button>
-                                                <button class="btn btn-icon delete-btn text-danger" data-id="<?= $row['id'] ?>"><i class="bi bi-trash"></i></button>
-                                            </td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
-        </div>
-        <?php endforeach; ?>
+        <?php 
+            endforeach;
+        endif; 
+        ?>
     </div>
 </div>
 
@@ -370,7 +471,7 @@ $(document).ready(function(){
         if (value === "") {
             $(".inventory-row").show();
             $(".collapse").collapse('hide');
-            $(".institution-card, .division-header").show();
+            $(".institution-card, .division-header, .unit-header").show();
             return;
         }
 
@@ -384,6 +485,12 @@ $(document).ready(function(){
                 $(this).closest('.collapse').collapse('show');
                 $(this).closest('.institution-card').find('> .collapse').collapse('show');
             }
+        });
+
+        $(".unit-header").each(function() {
+            let targetId = $(this).data('bs-target');
+            let visibleRows = $(targetId).find(".inventory-row:visible").length;
+            $(this).toggle(visibleRows > 0);
         });
 
         $(".division-header").each(function() {
@@ -422,8 +529,8 @@ $(document).ready(function(){
             text: "Permanently remove this item from the component registry?",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#123b63', // Matches --erp-navy
-            cancelButtonColor: '#718191',  // Matches --erp-muted
+            confirmButtonColor: '#123b63', 
+            cancelButtonColor: '#718191',  
             confirmButtonText: '<i class="bi bi-trash me-1"></i> Yes, delete it',
             cancelButtonText: 'Cancel',
             reverseButtons: true,

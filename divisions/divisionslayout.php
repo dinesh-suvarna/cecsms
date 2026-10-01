@@ -325,22 +325,6 @@ $notif_count = $notifications ? $notifications->num_rows : 0;
                 </a>
             </div>
 
-            <div class="nav-group-label">Components</div>
-            <div class="nav flex-column">
-                <a href="/cecsms/divisions/add_components.php" class="nav-link <?= ($current_page == 'add_components.php') ? 'active' : '' ?>">
-                    <span><i class="bi bi-plugin me-2"></i> Components & ICs</span>
-                </a>
-                <a href="/cecsms/divisions/tag_component_assets.php" class="nav-link <?= ($current_page == 'tag_component_assets.php') ? 'active' : '' ?>">
-                    <span><i class="bi bi-tags me-2"></i> Tag Component Assets</span>
-                    <?php if ($pending_tags_count > 0): ?>
-                        <span class="badge bg-danger rounded-pill extra-small"><?= $pending_tags_count ?></span>
-                    <?php endif; ?>
-                </a>
-                <a href="/cecsms/divisions/view_components.php" class="nav-link <?= ($current_page == 'view_components.php') ? 'active' : '' ?>">
-                    <span><i class="bi bi-layers-half me-2"></i> Component Stock</span>
-                </a>
-            </div>
-
             <div class="nav-group-label">Asset Management</div>
             <div class="nav flex-column">
                 <a href="/cecsms/divisions/assign_asset.php" class="nav-link <?= ($current_page == 'assign_asset.php') ? 'active' : '' ?>">
@@ -351,6 +335,25 @@ $notif_count = $notifications ? $notifications->num_rows : 0;
                 </a>
                 <a href="/cecsms/divisions/assigned_assets.php" class="nav-link <?= ($current_page == 'assigned_assets.php') ? 'active' : '' ?>">
                     <span><i class="bi bi-check-circle me-2"></i> View My Assets</span>
+                </a>
+            </div>
+
+            <div class="nav-group-label">Components</div>
+            <div class="nav flex-column">
+                <a href="/cecsms/divisions/add_components.php" class="nav-link <?= ($current_page == 'add_components.php') ? 'active' : '' ?>">
+                    <span><i class="bi bi-plugin me-2"></i> Add Components & ICs</span>
+                </a>
+                <a href="/cecsms/divisions/tag_component_assets.php" class="nav-link <?= ($current_page == 'tag_component_assets.php') ? 'active' : '' ?>">
+                    <span><i class="bi bi-tags me-2"></i> Tag Component Assets</span>
+                    <?php if ($pending_tags_count > 0): ?>
+                        <span class="badge bg-danger rounded-pill extra-small"><?= $pending_tags_count ?></span>
+                    <?php endif; ?>
+                </a>
+                <a href="/cecsms/divisions/view_components_assets.php" class="nav-link <?= ($current_page == 'view_components_assets.php') ? 'active' : '' ?>">
+                    <span><i class="bi bi-layers-half me-2"></i> View Component Assets</span>
+                </a>
+                <a href="/cecsms/divisions/view_components.php" class="nav-link <?= ($current_page == 'view_components.php') ? 'active' : '' ?>">
+                    <span><i class="bi bi-layers-half me-2"></i> Component Stock</span>
                 </a>
             </div>
 

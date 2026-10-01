@@ -35,17 +35,48 @@ if (isset($_POST['action']) && $_POST['action'] === 'delete_asset') {
     $response = ['success' => false];
     $asset_id = (int)$_POST['asset_id'];
 
+    // 1. Get the stock_id belonging to this asset before deleting it
     if ($user_role === 'SuperAdmin') {
-        $del_query = "DELETE FROM component_assets WHERE id = $asset_id";
+        $stmt = $conn->prepare("SELECT stock_id FROM component_assets WHERE id = ?");
+        $stmt->bind_param("i", $asset_id);
     } else {
-        $del_query = "DELETE ca FROM component_assets ca 
-                      JOIN component_stock cs ON ca.stock_id = cs.id 
-                      WHERE ca.id = $asset_id AND cs.division_id = $user_division_id";
+        $stmt = $conn->prepare("SELECT ca.stock_id FROM component_assets ca 
+                                JOIN component_stock cs ON ca.stock_id = cs.id 
+                                WHERE ca.id = ? AND cs.division_id = ?");
+        $stmt->bind_param("ii", $asset_id, $user_division_id);
     }
+    $stmt->execute();
+    $res = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
 
-    if ($conn->query($del_query)) {
-        $_SESSION['success'] = "Asset tag successfully removed.";
-        $response['success'] = true;
+    if ($res) {
+        $stock_id = $res['stock_id'];
+
+        // 2. Delete the asset tag
+        if ($user_role === 'SuperAdmin') {
+            $del_stmt = $conn->prepare("DELETE FROM component_assets WHERE id = ?");
+            $del_stmt->bind_param("i", $asset_id);
+        } else {
+            $del_stmt = $conn->prepare("DELETE ca FROM component_assets ca 
+                                  JOIN component_stock cs ON ca.stock_id = cs.id 
+                                  WHERE ca.id = ? AND cs.division_id = ?");
+            $del_stmt->bind_param("ii", $asset_id, $user_division_id);
+        }
+        
+        $del_stmt->execute();
+        
+        if ($del_stmt->affected_rows > 0) {
+            $del_stmt->close();
+
+            // 3. Decrement the total_quantity in component_stock
+            $update_stock = $conn->prepare("UPDATE component_stock SET total_quantity = GREATEST(0, total_quantity - 1) WHERE id = ?");
+            $update_stock->bind_param("i", $stock_id);
+            $update_stock->execute();
+            $update_stock->close();
+
+            $_SESSION['success'] = "Asset tag and stock quantity successfully updated.";
+            $response['success'] = true;
+        }
     }
     echo json_encode($response);
     exit();
@@ -462,7 +493,6 @@ $(document).ready(function(){
     });
 });
 
-// Clean and reliable modal trigger function matching assigned_assets.php approach
 function openEditTagModal(id, tag) {
     document.getElementById('edit_db_id').value = id;
     document.getElementById('edit_asset_tag').value = tag;

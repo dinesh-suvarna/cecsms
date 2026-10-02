@@ -416,9 +416,10 @@ $(document).ready(function() {
         dataTables[tableId] = $(this).DataTable({
             "dom": 'rt<"p-3 d-flex justify-content-between align-items-center extra-small text-muted"ip>',
             "pageLength": 10,
-            "order": [[1, 'asc']],
+            "order": [[0, 'asc']], 
             "columnDefs": [
-                { "orderable": false, "targets": [0, 3] }
+                { "orderable": true, "targets": 0 },  
+                { "orderable": false, "targets": 3 }   
             ]
         });
     });

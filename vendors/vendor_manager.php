@@ -6,6 +6,7 @@ if (!isset($_SESSION["user_id"])) {
 }
 
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../config/crypto.php"; 
 
 $success_msg = "";
 $error_msg = "";
@@ -69,10 +70,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_vendor'])) {
 
 $edit_data = null;
 if(isset($_GET['edit'])){
-    $stmt = $conn->prepare("SELECT * FROM vendors WHERE id = ?");
-    $stmt->bind_param("i", $_GET['edit']);
-    $stmt->execute();
-    $edit_data = $stmt->get_result()->fetch_assoc();
+    // Decrypt the encrypted ID coming from the URL parameter
+    $decrypted_id = decrypt_id($_GET['edit']);
+    
+    if ($decrypted_id) {
+        $stmt = $conn->prepare("SELECT * FROM vendors WHERE id = ?");
+        $stmt->bind_param("i", $decrypted_id);
+        $stmt->execute();
+        $edit_data = $stmt->get_result()->fetch_assoc();
+        
+        // Ensure the hidden form field uses the raw decrypted ID for updating
+        if ($edit_data) {
+            $edit_data['raw_encrypted_id'] = $_GET['edit']; 
+        }
+    }
 }
 
 ob_start();
@@ -97,12 +108,10 @@ ob_start();
         color: var(--erp-text-main);
     }
 
-    /* Container padding to push content slightly right & balance whitespace */
     .page-wrapper {
         padding: 24px 28px 36px;
     }
 
-    /* Header layout & horizontal divider line */
     .inst-header {
         display: flex;
         justify-content: space-between;
@@ -113,14 +122,12 @@ ob_start();
         border-bottom: 1px solid var(--erp-border);
     }
 
-    /* Header left side flex layout */
     .inst-header-left {
         display: flex;
         align-items: center;
         gap: 14px;
     }
 
-    /* Header icon box */
     .inst-header-icon {
         width: 42px;
         height: 42px;
@@ -242,6 +249,7 @@ ob_start();
             <div class="erp-card" id="registryCard">
                 <div class="p-4 p-lg-5">
                     <form method="POST" id="vendorForm" class="needs-validation" novalidate>
+                        <!-- Use the decrypted raw ID value here -->
                         <input type="hidden" name="vendor_id" value="<?= $edit_data['id'] ?? '' ?>">
                         <div class="row g-4">
                             <!-- Left Column: Primary Vendor Information -->

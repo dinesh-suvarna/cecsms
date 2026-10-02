@@ -357,12 +357,6 @@ $notif_count = $notifications ? $notifications->num_rows : 0;
                 </a>
             </div>
 
-            <div class="nav-group-label">Maintenance</div>
-            <div class="nav flex-column">
-                <a href="/cecsms/divisions/asset_logs.php" class="nav-link <?= ($current_page == 'asset_logs.php') ? 'active' : '' ?>">
-                    <span><i class="bi bi-journal-text me-2"></i> Asset Audit Logs</span>
-                </a>
-            </div>
         </div>
 
         <div class="p-3 border-top mt-auto">

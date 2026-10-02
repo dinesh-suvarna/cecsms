@@ -407,8 +407,17 @@ let vendorModal;
 let dataTables = {};
 
 $(document).ready(function() {
-    if(document.getElementById('detailsModal')){
-        vendorModal = new bootstrap.Modal(document.getElementById('detailsModal'));
+
+    const $modal = $('#detailsModal');
+    $modal.appendTo(document.body);
+
+    const modalElement = $modal[0];
+
+    if (modalElement) {
+        vendorModal = bootstrap.Modal.getOrCreateInstance(modalElement, {
+            backdrop: true,
+            keyboard: true
+        });
     }
 
     $('.vendor-table').each(function() {

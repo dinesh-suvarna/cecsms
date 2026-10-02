@@ -283,11 +283,14 @@ if ($role === ROLE_SUPERADMIN) {
                     <i class="bi bi-file-earmark-text"></i> Dispatch Report
                 </a>
             </div>
-            
+
             <div class="nav-group-label">Institution Overview</div>
             <div class="nav flex-column">
                 <a href="../stock/institution_division_registry.php" class="nav-link <?= ($current_page == 'institution_division_registry.php') ? 'active' : '' ?>">
-                    <i class="bi bi-bank"></i> Institution Registry
+                    <i class="bi bi-box-seam"></i> Institution Asset Registry
+                </a>
+                <a href="../stock/institution_component_registry.php" class="nav-link <?= ($current_page == 'institution_component_registry.php') ? 'active' : '' ?>">
+                    <i class="bi bi-motherboard"></i> Institution Component Registry
                 </a>
             </div>
         </div>

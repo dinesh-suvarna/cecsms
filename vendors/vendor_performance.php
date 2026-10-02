@@ -25,7 +25,9 @@ function getVendorAnalyticsByCategory(mysqli $conn, string $category) {
 
             (SELECT COUNT(*) FROM services WHERE vendor_id = v.id) as service_calls,
             COALESCE((SELECT SUM(amount) FROM services WHERE vendor_id = v.id), 0) as service_costs,
-            (SELECT COUNT(*) FROM stock_details WHERE vendor_id = v.id AND status = 'maintenance') as repair_count
+            
+            -- Updated Maintenance Load count from the repairs table
+            (SELECT COUNT(*) FROM repairs r WHERE r.vendor_name = v.vendor_name AND r.status = 'in_progress') as repair_count
         FROM vendors v
         WHERE v.category = ?
         GROUP BY v.id

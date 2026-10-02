@@ -118,13 +118,21 @@ ob_start();
 </style>
 
 <div class="container-fluid p-0 pb-4">
-    <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom">
+    <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom flex-wrap gap-3">
         <div>
             <h4 class="fw-bold mb-1 text-dark" style="font-size: 1.25rem;">
                 <i class="bi bi-bank me-2 text-primary"></i>Institution & Department Asset Registry
             </h4>
             <p class="text-muted mb-0 small">Hierarchical overview of institution inventory and labs/facilities allocations.</p>
         </div>
+        <div style="min-width: 280px; max-width: 350px; flex: 1;">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white text-muted"><i class="bi bi-search"></i></span>
+                <input type="text" id="assetLiveSearch" class="form-control" placeholder="Search item name or serial...">
+                <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn" title="Clear Search"><i class="bi bi-x-lg"></i></button>
+            </div>
+        </div>
+    </div>
     </div>
 
     <!-- SUPERADMIN VIEW: Institution -> Division Accordions -->
@@ -166,6 +174,141 @@ ob_start();
         <?php endforeach; ?>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const searchInput = document.getElementById('assetLiveSearch');
+    const clearBtn = document.getElementById('clearSearchBtn');
+    
+    if (!searchInput) return;
+
+    searchInput.addEventListener('input', function() {
+        let query = this.value.toLowerCase().trim();
+        
+        let institutionItems = document.querySelectorAll('.institution-accordion > .accordion-item');
+
+        institutionItems.forEach(function(instItem) {
+            let instHasMatch = false;
+            let divisionItems = instItem.querySelectorAll('.division-accordion > .accordion-item');
+
+            divisionItems.forEach(function(divItem) {
+                let divHasMatch = false;
+                let unitCards = divItem.querySelectorAll('.asset-group-card');
+
+                unitCards.forEach(function(unitCard) {
+                    let groupCards = unitCard.querySelectorAll('.asset-group-card');
+                    
+                    if (groupCards.length > 0) {
+                        let unitHasMatch = false;
+                        groupCards.forEach(function(groupCard) {
+                            let matchFound = evaluateGroupCard(groupCard, query);
+                            if (matchFound) {
+                                unitHasMatch = true;
+                                divHasMatch = true;
+                                instHasMatch = true;
+                            }
+                        });
+
+                        if (query === '' || unitHasMatch) {
+                            unitCard.style.display = '';
+                        } else {
+                            unitCard.style.display = 'none';
+                        }
+                    } else {
+                        let matchFound = evaluateGroupCard(unitCard, query);
+                        if (matchFound) {
+                            divHasMatch = true;
+                            instHasMatch = true;
+                        }
+                    }
+                });
+
+                // Handle Division Accordion visibility & Collapse state
+                let divCollapseEl = divItem.querySelector('.accordion-collapse');
+                let divButton = divItem.querySelector('.accordion-button');
+                let bsDivCollapse = bootstrap.Collapse.getInstance(divCollapseEl) || new bootstrap.Collapse(divCollapseEl, { toggle: false });
+
+                if (query === '') {
+                    divItem.style.display = '';
+                    bsDivCollapse.hide(); 
+                    divButton.classList.add('collapsed');
+                } else if (divHasMatch) {
+                    divItem.style.display = '';
+                    bsDivCollapse.show(); 
+                    divButton.classList.remove('collapsed');
+                } else {
+                    divItem.style.display = 'none';
+                }
+            });
+
+            // Handle Institution Accordion visibility & Collapse state
+            let instCollapseEl = instItem.querySelector('.accordion-collapse');
+            let instButton = instItem.querySelector('.accordion-button');
+            let bsInstCollapse = bootstrap.Collapse.getInstance(instCollapseEl) || new bootstrap.Collapse(instCollapseEl, { toggle: false });
+
+            if (query === '') {
+                instItem.style.display = '';
+                bsInstCollapse.hide(); 
+                instButton.classList.add('collapsed');
+            } else if (instHasMatch) {
+                instItem.style.display = '';
+                bsInstCollapse.show(); 
+                instButton.classList.remove('collapsed');
+            } else {
+                instItem.style.display = 'none';
+            }
+        });
+    });
+
+    function evaluateGroupCard(groupCard, query) {
+        let groupButton = groupCard.querySelector('.asset-group-button');
+        let tableRows = groupCard.querySelectorAll('tbody tr');
+        let groupCollapseEl = groupCard.querySelector('.accordion-collapse');
+        
+        if (!groupButton) return false;
+
+        let headerText = groupButton.innerText.toLowerCase();
+        let itemHeaderMatch = headerText.includes(query);
+
+        let rowMatchedAny = false;
+        tableRows.forEach(function(row) {
+            let rowText = row.innerText.toLowerCase();
+            
+            if (query === '' || itemHeaderMatch || rowText.includes(query)) {
+                row.style.display = '';
+                rowMatchedAny = true;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        let bsGroupCollapse = groupCollapseEl ? (bootstrap.Collapse.getInstance(groupCollapseEl) || new bootstrap.Collapse(groupCollapseEl, { toggle: false })) : null;
+
+        if (query === '') {
+            groupCard.style.display = '';
+            if (bsGroupCollapse) bsGroupCollapse.hide();
+            if (groupButton) groupButton.classList.add('collapsed');
+            return false;
+        }
+
+        if (itemHeaderMatch || rowMatchedAny) {
+            groupCard.style.display = '';
+            if (bsGroupCollapse) bsGroupCollapse.show(); 
+            if (groupButton) groupButton.classList.remove('collapsed');
+            return true;
+        } else {
+            groupCard.style.display = 'none';
+            return false;
+        }
+    }
+
+    clearBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        searchInput.dispatchEvent(new Event('input'));
+        searchInput.focus();
+    });
+});
+</script>
 
 <?php 
 /* ================= UNITS DATA RENDER FUNCTION ================= */

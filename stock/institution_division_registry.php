@@ -3,7 +3,7 @@ require_once __DIR__ . "/../config/db.php";
 include "../admin/auth.php";
 include "../includes/session.php";
 
-$page_title = "Institution & Division Asset Registry";
+$page_title = "Institution & Department Asset Registry";
 $page_icon  = "bi-bank";
 
 $role = $_SESSION['role'] ?? '';
@@ -121,9 +121,9 @@ ob_start();
     <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom">
         <div>
             <h4 class="fw-bold mb-1 text-dark" style="font-size: 1.25rem;">
-                <i class="bi bi-bank me-2 text-primary"></i>Institution & Division Asset Registry
+                <i class="bi bi-bank me-2 text-primary"></i>Institution & Department Asset Registry
             </h4>
-            <p class="text-muted mb-0 small">Hierarchical overview of institution inventory and unit allocations.</p>
+            <p class="text-muted mb-0 small">Hierarchical overview of institution inventory and labs/facilities allocations.</p>
         </div>
     </div>
 
@@ -145,7 +145,7 @@ ob_start();
                         <div class="accordion-item shadow-sm">
                             <h2 class="accordion-header">
                                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $divCollapse ?>">
-                                    <i class="bi bi-diagram-2 me-2 text-secondary"></i> <?= htmlspecialchars($div_name) ?>
+                                    <i class="bi bi-building fs-5 me-2 text-secondary"></i> <?= htmlspecialchars($div_name) ?>
                                 </button>
                             </h2>
                             <div id="<?= $divCollapse ?>" class="accordion-collapse collapse" data-bs-parent="#divAccordion<?= $i ?>">

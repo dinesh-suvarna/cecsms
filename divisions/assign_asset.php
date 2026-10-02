@@ -140,9 +140,13 @@ if ($role !== 'SuperAdmin' && isset($_POST['assign'])) {
     }
 }
 
+// /* ================= FETCH DISPATCHED ITEMS ================= */
+// $whereClause = ($role === 'SuperAdmin') ? "WHERE sd.status NOT IN ('disposed')" : "WHERE dm.division_id = ? AND sd.status NOT IN ('disposed')";
 /* ================= FETCH DISPATCHED ITEMS ================= */
-$whereClause = ($role === 'SuperAdmin') ? "WHERE sd.status NOT IN ('disposed')" : "WHERE dm.division_id = ? AND sd.status NOT IN ('disposed')";
-
+// Added dm.status = 'active' to match your validation query
+$whereClause = ($role === 'SuperAdmin') 
+    ? "WHERE dm.status = 'active' AND sd.status NOT IN ('disposed')" 
+    : "WHERE dm.division_id = ? AND dm.status = 'active' AND sd.status NOT IN ('disposed')";
 $sql = "
     SELECT
         dd.id AS dispatch_detail_id,
@@ -165,7 +169,7 @@ $sql = "
     JOIN units u ON u.id = dm.unit_id
     JOIN stock_details sd ON sd.id = dd.stock_detail_id
     JOIN items_master im ON sd.stock_item_id = im.id
-    JOIN vendors v ON v.id = sd.vendor_id
+    LEFT JOIN vendors v ON v.id = sd.vendor_id
     LEFT JOIN (
         SELECT
             dispatch_detail_id,
@@ -305,7 +309,7 @@ ob_start();
                                         </div>
                                         <div class="extra-small text-muted">
                                             <strong>Dispatch Date:</strong> <span class="text-dark fw-medium"><?= !empty($first['dispatch_date']) ? date('d M Y', strtotime($first['dispatch_date'])) : '-' ?></span> | 
-                                            <strong>Vendor:</strong> <?= htmlspecialchars($first['vendor_name']) ?> | 
+                                            <strong>Vendor:</strong> <?= htmlspecialchars($first['vendor_name'] ?? 'N/A') ?> | 
                                             <strong>Bill:</strong> <?= htmlspecialchars($first['bill_no']) ?>
                                         </div>
                                     </div>

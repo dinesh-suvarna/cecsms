@@ -264,13 +264,13 @@ if ($role === ROLE_SUPERADMIN) {
             <div class="nav-group-label">Inventory</div>
             <div class="nav flex-column">
                 <a href="../stock/add_stock_details.php" class="nav-link <?= ($current_page == 'add_stock_details.php') ? 'active' : '' ?>">
-                    <i class="bi bi-plus-circle"></i> Add Stock Details
+                    <i class="bi bi-box-seam"></i> Add Stock Details
                 </a>
                 <a href="../stock/view_stock_details.php" class="nav-link <?= ($current_page == 'view_stock_details.php') ? 'active' : '' ?>">
-                    <i class="bi bi-list-ul"></i> View Stock Details
+                    <i class="bi bi-journal-text"></i> View Stock Details
                 </a>
                 <a href="../divisions/view_components.php" class="nav-link <?= ($current_page == 'view_components.php') ? 'active' : '' ?>">
-                    <i class="bi bi-layers-half"></i> Component Stock
+                    <i class="bi bi-motherboard"></i> Component Stock
                 </a>
             </div>
 
@@ -281,6 +281,13 @@ if ($role === ROLE_SUPERADMIN) {
                 </a>
                 <a href="../stock/dispatch_report.php" class="nav-link <?= ($current_page == 'dispatch_report.php') ? 'active' : '' ?>">
                     <i class="bi bi-file-earmark-text"></i> Dispatch Report
+                </a>
+            </div>
+            
+            <div class="nav-group-label">Institution Overview</div>
+            <div class="nav flex-column">
+                <a href="../stock/institution_division_registry.php" class="nav-link <?= ($current_page == 'institution_division_registry.php') ? 'active' : '' ?>">
+                    <i class="bi bi-bank"></i> Institution Registry
                 </a>
             </div>
         </div>

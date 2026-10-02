@@ -74,6 +74,10 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
     
     $notif_res = $conn->query($notif_query);
 }
+
+//Fetch total active repairs count for the sidebar badge
+$sidebar_repair_query = $conn->query("SELECT COUNT(*) as total FROM repairs WHERE status = 'in_progress'");
+$sidebar_repair_count = $sidebar_repair_query ? intval($sidebar_repair_query->fetch_assoc()['total']) : 0
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -293,6 +297,9 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
                     </a>
                     <a href="/cecsms/vendors/vendor_dashboard.php" class="nav-link <?= ($current_page=='vendor_dashboard.php')?'active':'' ?>">
                         <i class="bi bi-person-vcard"></i> Vendor Management
+                        <?php if ($role === 'SuperAdmin' && $sidebar_repair_count > 0): ?>
+                            <span class="badge bg-primary rounded-pill" style="font-size: 0.65rem;"><?= $sidebar_repair_count ?></span>
+                        <?php endif; ?>
                     </a>
                     
                     <?php if($role === ROLE_SUPERADMIN): ?>

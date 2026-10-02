@@ -39,8 +39,12 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
                     JOIN items_master im ON sd.stock_item_id = im.id
                     WHERE da.status IN ('service_requested', 'return_requested', 'repair_requested', 'dispose_requested')
                     ORDER BY da.updated_at DESC LIMIT 10";
-    $notif_res = $conn->query($notif_query);
+    $notif_res = $conn->query($notif_query);   
 }
+
+// Fetch total active repairs count for the sidebar badge
+$sidebar_repair_query = $conn->query("SELECT COUNT(*) as total FROM repairs WHERE status = 'in_progress'");
+$sidebar_repair_count = $sidebar_repair_query ? intval($sidebar_repair_query->fetch_assoc()['total']) : 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -264,6 +268,9 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
                 <div class="nav flex-column">
                     <a href="vendor_performance.php" class="nav-link <?= ($current_page == 'vendor_performance.php') ? 'active' : '' ?>">
                         <i class="bi bi-bar-chart-steps"></i> Supply Performance
+                        <?php if ($sidebar_repair_count > 0): ?>
+                            <span class="badge bg-danger rounded-pill" style="font-size: 0.65rem;"><?= $sidebar_repair_count ?></span>
+                        <?php endif; ?>
                     </a>
                     <a href="purchase_history.php" class="nav-link <?= ($current_page == 'purchase_history.php') ? 'active' : '' ?>">
                         <i class="bi bi-receipt"></i> Global Purchase Ledger

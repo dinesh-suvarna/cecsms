@@ -68,8 +68,10 @@ $stats_query = "SELECT
     COUNT(da.id) as total,
     SUM(CASE WHEN da.status = 'assigned' THEN 1 ELSE 0 END) as active,
     SUM(CASE WHEN da.status LIKE '%_requested' THEN 1 ELSE 0 END) as pending,
-    SUM(CASE WHEN da.status = 'under_repair' THEN 1 ELSE 0 END) as in_repair
+    SUM(CASE WHEN r.id IS NOT NULL AND r.resolution_notes IS NULL THEN 1 ELSE 0 END) as in_repair
     FROM division_assets da
+    LEFT JOIN stock_details sd ON sd.id = da.stock_detail_id
+    LEFT JOIN repairs r ON sd.id = r.stock_detail_id AND r.resolution_notes IS NULL
     LEFT JOIN dispatch_details dd ON dd.id = da.dispatch_detail_id
     LEFT JOIN dispatch_master dm ON dm.id = dd.dispatch_id
     WHERE 1=1 ";
@@ -106,23 +108,23 @@ $recent_requests = $conn->query($req_query);
 // 4. Asset Health Metrics
 $health_query = "SELECT 
     SUM(CASE WHEN da.status = 'assigned' THEN 1 ELSE 0 END) as active,
-    SUM(CASE WHEN da.status = 'under_repair' THEN 1 ELSE 0 END) as repairing,
-    SUM(CASE WHEN da.status IN ('return_requested', 'repair_requested', 'dispose_requested') THEN 1 ELSE 0 END) as outgoing
+    SUM(CASE WHEN r.id IS NOT NULL AND r.resolution_notes IS NULL THEN 1 ELSE 0 END) as repairing,
+    SUM(CASE WHEN da.status IN ('return_requested', 'repair_requested', 'dispose_requested','service_requested') THEN 1 ELSE 0 END) as outgoing
     FROM division_assets da
+    LEFT JOIN stock_details sd ON sd.id = da.stock_detail_id
+    LEFT JOIN repairs r ON sd.id = r.stock_detail_id AND r.resolution_notes IS NULL
     LEFT JOIN dispatch_details dd ON dd.id = da.dispatch_detail_id
     LEFT JOIN dispatch_master dm ON dm.id = dd.dispatch_id
     WHERE 1=1 " . ($role !== 'SuperAdmin' ? " AND dm.division_id = $division_id" : "");
 $health_data = $conn->query($health_query)->fetch_assoc();
 
 // 5. Recent Activity Logs
-$log_query = "SELECT al.action_type, al.created_at, im.item_name, al.notes
+$log_query = "SELECT al.action_type, al.created_at, im.item_name, al.notes, r.vendor_name, r.repair_type, r.resolution_notes
     FROM asset_logs al
     JOIN stock_details sd ON al.asset_id = sd.id
     JOIN items_master im ON sd.stock_item_id = im.id
-    LEFT JOIN division_assets da ON sd.id = da.stock_detail_id
-    LEFT JOIN dispatch_details dd ON dd.id = da.dispatch_detail_id
-    LEFT JOIN dispatch_master dm ON dm.id = dd.dispatch_id
-    WHERE 1=1 " . ($role !== 'SuperAdmin' ? " AND (dm.division_id = $division_id OR al.performed_by = {$user_id})" : "") . "
+    LEFT JOIN repairs r ON sd.id = r.stock_detail_id
+    WHERE 1=1 " . ($role !== 'SuperAdmin' ? " AND al.performed_by = {$user_id}" : "") . "
     ORDER BY al.created_at DESC LIMIT 6";
 $recent_logs = $conn->query($log_query);
 

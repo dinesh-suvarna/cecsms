@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $up_da->bind_param("si", $asset_tag, $stock_detail_id);
                     $up_da->execute();
 
-                    $up_sd = $conn->prepare("UPDATE stock_details SET status = 'assigned' WHERE id = ?");
+                    $up_sd = $conn->prepare("UPDATE stock_details SET status = 'dispatched' WHERE id = ?");
                     $up_sd->bind_param("i", $stock_detail_id);
                     $up_sd->execute();
 

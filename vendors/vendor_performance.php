@@ -39,11 +39,30 @@ function getVendorAnalyticsByCategory(mysqli $conn, string $category) {
     return $stmt->get_result();
 }
 
-// Map the 3 primary sectors to their query parameters
+// Fetch active repair counts grouped by vendor category 
+$counts = [];
+$query = $conn->query("
+    SELECT v.category, COUNT(r.id) as total 
+    FROM repairs r 
+    JOIN vendors v ON r.vendor_name = v.vendor_name 
+    WHERE r.status = 'in_progress' 
+    GROUP BY v.category
+");
+
+if ($query) {
+    while ($row = $query->fetch_assoc()) {
+        $counts[$row['category']] = intval($row['total']);
+    }
+}
+
+$category_repair_count   = $counts['Computer'] ?? 0;
+$furniture_repair_count  = $counts['Furniture'] ?? 0;
+$electrical_repair_count = $counts['Electricals'] ?? 0;
+
 $categories = [
     'Computer'   => getVendorAnalyticsByCategory($conn, 'Computer'),
     'Furniture'  => getVendorAnalyticsByCategory($conn, 'Furniture'),
-    'Electrical' => getVendorAnalyticsByCategory($conn, 'Electricals') // Matches database string
+    'Electrical' => getVendorAnalyticsByCategory($conn, 'Electricals') 
 ];
 
 ob_start();
@@ -64,12 +83,10 @@ ob_start();
 
     body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color: var(--erp-text-main); }
 
-    /* Outer Page Wrapper Padding */
     .page-wrapper {
         padding: 24px 28px 36px;
     }
 
-    /* Page Header Layout & Horizontal Line */
     .inst-header {
         display: flex;
         justify-content: space-between;
@@ -166,7 +183,6 @@ ob_start();
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
-    /* Highlighted state for active Service History inner card */
     .perf-card.perf-card-active-service {
         background-color: #e3e8ee; 
         border-color: #cbd5e1;
@@ -318,19 +334,39 @@ ob_start();
 
     <!-- Category Tabs Filter -->
     <ul class="nav nav-pills erp-tabs mb-4 gap-2" id="vendorCategoryTabs" role="tablist">
+        <!-- Computer Tab -->
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="computer-tab" data-bs-toggle="pill" data-bs-target="#tab-computer" type="button" role="tab">
+            <button class="nav-link active position-relative" id="computer-tab" data-bs-toggle="pill" data-bs-target="#tab-computer" type="button" role="tab">
                 <i class="bi bi-pc-display me-1"></i> Computer
+                <?php if (!empty($category_repair_count) && $category_repair_count > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.60rem;">
+                        <?= $category_repair_count ?>
+                    </span>
+                <?php endif; ?>
             </button>
         </li>
+
+        <!-- Furniture Tab -->
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="furniture-tab" data-bs-toggle="pill" data-bs-target="#tab-furniture" type="button" role="tab">
+            <button class="nav-link position-relative" id="furniture-tab" data-bs-toggle="pill" data-bs-target="#tab-furniture" type="button" role="tab">
                 <i class="bi bi-box-seam me-1"></i> Furniture
+                <?php if (!empty($furniture_repair_count) && $furniture_repair_count > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.60rem;">
+                        <?= $furniture_repair_count ?>
+                    </span>
+                <?php endif; ?>
             </button>
         </li>
+
+        <!-- Electricals Tab -->
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="electrical-tab" data-bs-toggle="pill" data-bs-target="#tab-electrical" type="button" role="tab">
+            <button class="nav-link position-relative" id="electrical-tab" data-bs-toggle="pill" data-bs-target="#tab-electrical" type="button" role="tab">
                 <i class="bi bi-plug-fill me-1"></i> Electricals
+                <?php if (!empty($electrical_repair_count) && $electrical_repair_count > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.60rem;">
+                        <?= $electrical_repair_count ?>
+                    </span>
+                <?php endif; ?>
             </button>
         </li>
     </ul>
@@ -353,7 +389,6 @@ ob_start();
                                         <div class="row w-100 align-items-center g-2">
                                             <div class="col-md-4">
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <!-- Class vendor-title used for specific JS name matching -->
                                                     <span class="vendor-title"><?= htmlspecialchars($v['vendor_name']) ?></span>
                                                     
                                                     <!-- Collapsed Maintenance Warning Indicator -->
@@ -439,7 +474,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Reference to default tab button (Computer tab)
     let defaultTabBtn = document.querySelector('#vendorCategoryTabs button[data-bs-target="#tab-computer"]');
 
-    // Keep track of active tab when manually clicked
     document.querySelectorAll('#vendorCategoryTabs button').forEach(button => {
         button.addEventListener('click', function() {
             if (!document.getElementById('analyticsVendorSearch').value.trim()) {
@@ -461,7 +495,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 let matchCountInPane = 0;
 
                 accordionItems.forEach(item => {
-                    // Filter strictly by the vendor_name element text
                     const vendorTitleEl = item.querySelector('.vendor-title');
                     const vendorName = vendorTitleEl ? vendorTitleEl.innerText.toLowerCase() : '';
 
@@ -469,7 +502,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         item.style.display = '';
                         matchCountInPane++;
 
-                        // Auto-expand item if matching during active search
                         const collapseEl = item.querySelector('.accordion-collapse');
                         if (query !== '' && collapseEl) {
                             bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false }).show();

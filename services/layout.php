@@ -310,9 +310,6 @@ if (isset($conn) && in_array($role, ['SuperAdmin', 'Admin'], true)) {
                         <span class="badge bg-success rounded-pill px-2 py-1" style="font-size: 10px;"><?= ($nav_in_progress_count + $nav_completed_count) ?></span>
                     <?php endif; ?>
                 </a>
-                <a href="repair_logs.php" class="nav-link <?= ($current_page == 'repair_logs.php') ? 'active' : '' ?>">
-                    <i class="bi bi-list-columns-reverse"></i> Repair Logs
-                </a>
             </div>
 
             <div class="nav-group-label">Reports & Analytics</div>

@@ -60,7 +60,7 @@ if (isset($conn) && $notif_division_id > 0) {
         WHERE dm.division_id = ? 
           AND dm.status = 'active' 
           AND da.id IS NULL
-          AND (sd.status IS NULL OR sd.status != 'scrapped')
+          AND (sd.status IS NULL OR sd.status != 'disposed')
     ";
     
     $stmt_d = $conn->prepare($dispatchQuery);
@@ -108,9 +108,11 @@ $notif_query = "
      FROM dispatch_master dm
      INNER JOIN dispatch_details dd ON dm.id = dd.dispatch_id
      LEFT JOIN division_assets da ON dd.id = da.dispatch_detail_id
+     LEFT JOIN stock_details sd ON dd.stock_detail_id = sd.id
      WHERE dm.division_id = $notif_division_id 
      AND dm.status = 'active' 
      AND da.id IS NULL
+     AND (sd.status IS NULL OR sd.status != 'disposed')
      GROUP BY dm.id)
      ORDER BY created_at DESC";
 

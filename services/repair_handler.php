@@ -150,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $update_da->bind_param("i", $division_asset_id);
             $update_da->execute();
 
-            $update_sd = $conn->prepare("UPDATE stock_details SET status = 'in_repair' WHERE id = ?");
+            $update_sd = $conn->prepare("UPDATE stock_details SET status = 'maintenance' WHERE id = ?");
             $update_sd->bind_param("i", $asset['stock_detail_id']);
             $update_sd->execute();
 

@@ -427,14 +427,18 @@ ob_start();
                                             <div class="col-md-4">
                                                 <div class="perf-card <?= $v['service_calls'] > 0 ? 'perf-card-active-service' : '' ?>">
                                                     <div class="stat-label">Service History</div>
-                                                    <div class="metric-header"><?= $v['service_calls'] ?> Calls Logged</div>
+                                                        <a href="../services/view_services.php" class="text-decoration-none">
+                                                            <div class="metric-header"><?= $v['service_calls'] ?> Calls Logged</div>
+                                                        </a>   
                                                     <div class="small text-muted mt-0.5"><?= inr($v['service_costs'], true) ?> cumulative spend</div>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="perf-card">
                                                     <div class="stat-label">Maintenance Load</div>
-                                                    <div class="metric-header <?= $v['repair_count'] > 0 ? 'text-danger' : '' ?>"><?= $v['repair_count'] ?> Active Units</div>
+                                                        <a href="../services/repair_view.php" class="text-decoration-none">
+                                                            <div class="metric-header <?= $v['repair_count'] > 0 ? 'text-danger' : '' ?>"><?= $v['repair_count'] ?> Active Units</div>
+                                                        </a>
                                                     <div class="small text-muted mt-0.5">Assets currently undergoing repair</div>
                                                 </div>
                                             </div>

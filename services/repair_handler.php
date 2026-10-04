@@ -15,12 +15,13 @@ if (($_SESSION['role'] ?? '') !== 'SuperAdmin') {
     exit;
 }
 
-// Fetch asset info securely using the COALESCE remarks logic
+// Fetch asset info securely including warranty status
 $stmt = $conn->prepare("
     SELECT 
         da.id as division_asset_id_pk,
         da.stock_detail_id,
         da.division_asset_id AS asset_tag,
+        da.is_under_warranty,
         im.item_name,
         sd.serial_number,
         dm.division_id,
@@ -87,10 +88,10 @@ $vendors_result = $conn->query("SELECT id, vendor_name FROM vendors WHERE catego
 $vendors = $vendors_result->fetch_all(MYSQLI_ASSOC);
 
 // --- FORM SUBMISSION HANDLER ---
-$repair_type  = $_POST['repair_type'] ?? 'internal';
+$repair_type  = $_POST['repair_type'] ?? (($asset['is_under_warranty'] ?? 0) == 1 ? 'external_warranty' : 'internal');
 $vendor_id    = intval($_POST['vendor_id'] ?? 0);
 $repair_cost  = $_POST['repair_cost'] ?? '0.00';
-$issue_desc   = $_POST['issue_description'] ?? ''; // Set to blank by default for manual entry
+$issue_desc   = $_POST['issue_description'] ?? ''; 
 $error_msg    = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -100,13 +101,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $issue_desc      = trim($_POST['issue_description'] ?? '');
     $admin_id        = $_SESSION['user_id'];
     
-    // --- NEW VALIDATION CHECK ---
+    // --- VALIDATION CHECK ---
     if (empty($issue_desc)) {
         $error_msg = "Diagnosis / Issue Description is required and cannot be blank.";
     } elseif (in_array($repair_type, ['external_warranty', 'external_paid']) && $vendor_id <= 0) {
         $error_msg = "Please select a valid vendor for external repairs.";
     } else {
-        // Safe to proceed with transaction
         $vendor_name = null;
         if (in_array($repair_type, ['external_warranty', 'external_paid']) && $vendor_id > 0) {
             $v_stmt = $conn->prepare("SELECT vendor_name FROM vendors WHERE id = ?");
@@ -265,12 +265,20 @@ ob_start();
             <div class="p-3 bg-white rounded-1 mb-4 border">
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <span class="text-muted extra-small text-uppercase fw-bold" style="font-size:.65rem;">Item /Asset Tag</span>
+                        <span class="text-muted extra-small text-uppercase fw-bold" style="font-size:.65rem;">Item / Asset Tag</span>
                         <div class="fw-bold text-dark" style="font-size:.85rem;"><?= htmlspecialchars($asset['item_name']) ?> — <?= htmlspecialchars($asset['asset_tag']) ?></div>
                     </div>
                     <div class="col-md-6">
                         <span class="text-muted extra-small text-uppercase fw-bold" style="font-size:.65rem;">Serial Number</span>
-                        <div class="fw-semibold text-dark" style="font-size:.85rem;"><?= htmlspecialchars($asset['serial_number'] ?: 'N/A') ?></div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <div class="fw-semibold text-dark" style="font-size:.85rem;"><?= htmlspecialchars($asset['serial_number'] ?: 'N/A') ?></div>
+                            <!-- Warranty Badge Added Here -->
+                            <?php if (!empty($asset['is_under_warranty']) && $asset['is_under_warranty'] == 1): ?>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0.5 fw-semibold" style="font-size: 10px;" title="Submitted under warranty">
+                                    <i class="bi bi-shield-check me-1"></i>Warranty
+                                </span>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <span class="text-muted extra-small text-uppercase fw-bold" style="font-size:.65rem;">Originating Location</span>

@@ -27,12 +27,14 @@ if (isset($_POST['update_asset_id'])) {
 
 /* ================= HANDLE SINGLE LIFECYCLE ACTION REQUEST ================= */
 if (isset($_POST['submit_lifecycle_request'])) {
-    $db_id        = (int)$_POST['asset_id']; // ID from division_assets
-    $user_id     = $_SESSION['user_id'] ?? null;
-    $user_remarks = trim($_POST['remarks'] ?? '');
+    $db_id        = (int)$_POST['asset_id']; 
+    $user_id       =$_SESSION['user_id'] ?? null;
+    $user_remarks  = trim($_POST['remarks'] ?? '');
+    
+    // Capture the warranty status (1 if checked, 0 if unchecked)
+    $is_under_warranty = isset($_POST['is_under_warranty']) ? 1 : 0;
 
-    if (empty($user_remarks)) {
-        $_SESSION['swal_type'] = "error";
+    if (empty($user_remarks)) {$_SESSION['swal_type'] = "error";
         $_SESSION['swal_msg']  = "Please provide a reason or justification for this request.";
         header("Location: " . $_SERVER['PHP_SELF']);
         exit;
@@ -42,24 +44,21 @@ if (isset($_POST['submit_lifecycle_request'])) {
     $status = 'service_requested';
 
     // 1. FETCH THE PERMANENT STOCK_DETAIL_ID FIRST
-    $stmt_fetch = $conn->prepare("SELECT stock_detail_id FROM division_assets WHERE id = ?");
-    $stmt_fetch->bind_param("i", $db_id);
-    $stmt_fetch->execute();
-    $res_fetch = $stmt_fetch->get_result();
-    $asset_data = $res_fetch->fetch_assoc();
+    $stmt_fetch =$conn->prepare("SELECT stock_detail_id FROM division_assets WHERE id = ?");
+    $stmt_fetch->bind_param("i", $db_id);$stmt_fetch->execute();
+    $res_fetch =$stmt_fetch->get_result();
+    $asset_data =$res_fetch->fetch_assoc();
 
     if ($asset_data) {
-        $permanent_stock_id = $asset_data['stock_detail_id'];
+        $permanent_stock_id =$asset_data['stock_detail_id'];
 
         // 2. UPDATE THE ASSET STATUS IN DIVISION_ASSETS TO PENDING REVIEW
-        $stmt = $conn->prepare("UPDATE division_assets SET status = ? WHERE id = ?");
-        $stmt->bind_param("si", $status, $db_id);
-        $stmt->execute();
+        $stmt =$conn->prepare("UPDATE division_assets SET status = ?, is_under_warranty = ? WHERE id = ?");
+        $stmt->bind_param("sii", $status,$is_under_warranty, $db_id);$stmt->execute();
 
         // 3. INSERT INTO ASSET_LOGS WITH THE DIVISION ADMIN'S REASON
-        $log_stmt = $conn->prepare("INSERT INTO asset_logs (asset_id, action_type, performed_by, notes) VALUES (?, ?, ?, ?)");
-        $log_stmt->bind_param("isis", $permanent_stock_id, $status, $user_id, $user_remarks);
-        $log_stmt->execute();
+        $log_stmt =$conn->prepare("INSERT INTO asset_logs (asset_id, action_type, performed_by, notes, is_under_warranty) VALUES (?, ?, ?, ?, ?)");
+        $log_stmt->bind_param("isisi", $permanent_stock_id,$status, $user_id,$user_remarks, $is_under_warranty);$log_stmt->execute();
 
         $_SESSION['swal_type'] = "success";
         $_SESSION['swal_msg']  = "Lifecycle action request submitted to Super Admin for approval.";
@@ -417,6 +416,8 @@ ob_start();
         const assetId = document.getElementById('hidden_asset_id').value;
         const assetTag = document.getElementById('disp_asset_id').innerText;
         const remarks = document.getElementById('action_remarks').value.trim();
+    
+        const isUnderWarranty = document.getElementById('is_under_warranty').checked ? '1' : '0';
 
         if (!remarks) {
             Swal.fire({
@@ -450,7 +451,8 @@ ob_start();
                 const fields = {
                     'asset_id': assetId,
                     'submit_lifecycle_request': '1',
-                    'remarks': remarks
+                    'remarks': remarks,
+                    'is_under_warranty': isUnderWarranty
                 };
 
                 for (const [key, value] of Object.entries(fields)) {
@@ -502,6 +504,17 @@ $modal_html = '
                         <div class="col-6 border-start ps-3">
                             <small class="text-uppercase fw-bold text-muted d-block" style="font-size: 0.65rem;">System Asset Tag</small>
                             <div class="fw-bold text-primary small" id="disp_asset_id"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-check mb-3 p-3 bg-light border border-success-subtle rounded-3 shadow-sm d-flex align-items-start gap-3">
+                    <input class="form-check-input mt-1 flex-shrink-0" type="checkbox" value="1" id="is_under_warranty" name="is_under_warranty" style="width: 1.25rem; height: 1.25rem; cursor: pointer;">
+                    <div>
+                        <label class="form-check-label text-dark fw-bold d-block mb-1" for="is_under_warranty" style="font-size: 0.95rem; cursor: pointer;">
+                            <i class="bi bi-shield-check text-success me-1"></i> Asset is Under Warranty
+                        </label>
+                        <div class="text-primary" style="font-size: 14px;">
+                            Check this if the item is still covered by the manufacturer or vendor warranty.
                         </div>
                     </div>
                 </div>

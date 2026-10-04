@@ -45,6 +45,7 @@ if (!function_exists('getAssetIcon')) {
 $pending_query = "SELECT 
             da.id,
             da.division_asset_id,
+            da.is_under_warranty,
             im.item_name,
             sd.serial_number,
             d.division_name AS department,
@@ -218,8 +219,16 @@ ob_start();
                                     </td>
                                     <td class="ps-4 fw-bold text-dark"><?= $row['division_asset_id'] ?></td>
                                     <td>
-                                        <div class="fw-semibold small"><?= htmlspecialchars($row['item_name']) ?></div>
-                                        <div class="text-muted extra-small">SN: <?= $row['serial_number'] ?: '---' ?></div>
+                                        <div class="fw-semibold small mb-1"><?= htmlspecialchars($row['item_name']) ?></div>
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <div class="text-muted extra-small">SN: <?= $row['serial_number'] ?: '---' ?></div>
+                                            <!-- Warranty Badge Added Here -->
+                                            <?php if (!empty($row['is_under_warranty']) && $row['is_under_warranty'] == 1): ?>
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0.5 fw-semibold" style="font-size: 10px;" title="Submitted under warranty">
+                                                    <i class="bi bi-shield-check me-1"></i>Warranty
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                     <td><div class="small text-secondary"><?= htmlspecialchars($row['department']) ?></div></td>
                                     <td><div class="small"><?= $unit_display ?></div></td>
@@ -246,7 +255,7 @@ ob_start();
                                 <?php 
                                     // 1. Return to Stock Modal
                                     $modal_id_1 = "confirmReturnStockModal" . $row['id'];
-                                    $modals_html = $modals_html ?? '';
+                                    $modals_html =$modals_html ?? '';
                                     ob_start();
                                 ?>
                                 <div class="modal fade" id="<?= $modal_id_1 ?>" tabindex="-1" aria-hidden="true" style="z-index: 1060;">

@@ -177,8 +177,8 @@ ob_start();
                             <div id="<?= $divCollapse ?>" class="accordion-collapse collapse" data-bs-parent="#divAccordion<?= $i ?>">
                                 <div class="accordion-body p-3 bg-white">
                                     
-                                    <!-- CALL UNITS DATA & RENDER TABLES HERE -->
-                                    <?php renderUnitsAccordion($units, "inst_" . $i . "_div_" . $j, $inst_name); ?>
+                                    <!-- CALL UNITS DATA & RENDER TABLES HERE (Passed $div_name) -->
+                                    <?php renderUnitsAccordion($units, "inst_" . $i . "_div_" . $j, $inst_name, $div_name); ?>
 
                                 </div>
                             </div>
@@ -205,10 +205,11 @@ ob_start();
             </div>
             
             <div class="modal-body text-center p-4">
-                <!-- TOP: Institution / Unit Name -->
+                <!-- TOP: Institution / Division / Unit Name -->
                 <div class="mb-3 pb-2 border-bottom">
                     <span id="modalInstName" class="d-block fw-bold text-secondary text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;"></span>
-                    <span id="modalUnitName" class="d-block fw-semibold text-dark" style="font-size: 13px;"></span>
+                    <span id="modalDivName" class="d-block fw-semibold text-dark" style="font-size: 12px;"></span>
+                    <span id="modalUnitName" class="d-block text-muted" style="font-size: 11px;"></span>
                 </div>
 
                 <!-- MIDDLE: The Compact QR Code Graphic Container -->
@@ -389,16 +390,17 @@ document.addEventListener("DOMContentLoaded", function() {
             const serial = this.getAttribute('data-serial');
             const model = this.getAttribute('data-model');
             const instName = this.getAttribute('data-institution');
+            const divName = this.getAttribute('data-division');
             const unitName = this.getAttribute('data-unit');
 
             // Populate Modal Texts
             document.getElementById('modalInstName').innerText = instName;
+            document.getElementById('modalDivName').innerText = divName;
             document.getElementById('modalUnitName').innerText = unitName;
             document.getElementById('modalTextAssetId').innerText = assetId;
             document.getElementById('modalTextSerial').innerText = serial;
             document.getElementById('modalTextModel').innerText = model;
 
-           
             const qrContainer = document.getElementById('qrcodeContainer');
             qrContainer.innerHTML = "";
 
@@ -424,7 +426,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 <?php 
 /* ================= UNITS DATA RENDER FUNCTION ================= */
-function renderUnitsAccordion(array $units, string $prefix, string $inst_name) {
+function renderUnitsAccordion(array $units, string $prefix, string $inst_name, string $div_name) {
     $k = 0; 
     foreach ($units as $unit_label => $assets): 
         $k++; 
@@ -484,6 +486,7 @@ function renderUnitsAccordion(array $units, string $prefix, string $inst_name) {
                                                         data-model="<?= htmlspecialchars($model_name) ?>"
                                                         data-item="<?= htmlspecialchars($item_type) ?>"
                                                         data-institution="<?= htmlspecialchars($inst_name) ?>"
+                                                        data-division="<?= htmlspecialchars($div_name) ?>"
                                                         data-unit="<?= htmlspecialchars($unit_label) ?>"
                                                         title="Generate QR Code">
                                                     <i class="bi bi-qr-code me-1"></i> QR Code

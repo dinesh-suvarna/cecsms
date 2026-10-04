@@ -27,9 +27,12 @@ $notif_query = "
      FROM dispatch_master dm
      INNER JOIN dispatch_details dd ON dm.id = dd.dispatch_id
      LEFT JOIN division_assets da ON dd.id = da.dispatch_detail_id
-     WHERE dm.division_id = $notif_division_id AND dm.status = 'active' AND da.id IS NULL
-     GROUP BY dm.id)
-    ORDER BY created_at DESC";
+     LEFT JOIN stock_details sd ON dd.stock_detail_id = sd.id
+     WHERE dm.division_id = $notif_division_id 
+     AND dm.status = 'active' 
+     AND da.id IS NULL
+     AND sd.status = 'dispatched'
+     GROUP BY dm.id)";
 
 $result = $conn->query($notif_query);
 $count = $result->num_rows;

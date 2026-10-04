@@ -60,7 +60,7 @@ if (isset($conn) && $notif_division_id > 0) {
         WHERE dm.division_id = ? 
           AND dm.status = 'active' 
           AND da.id IS NULL
-          AND (sd.status IS NULL OR sd.status != 'disposed')
+          AND sd.status = 'dispatched'
     ";
     
     $stmt_d = $conn->prepare($dispatchQuery);
@@ -112,7 +112,7 @@ $notif_query = "
      WHERE dm.division_id = $notif_division_id 
      AND dm.status = 'active' 
      AND da.id IS NULL
-     AND (sd.status IS NULL OR sd.status != 'disposed')
+     AND sd.status = 'dispatched'
      GROUP BY dm.id)
      ORDER BY created_at DESC";
 

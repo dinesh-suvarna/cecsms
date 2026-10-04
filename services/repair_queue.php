@@ -10,11 +10,12 @@ if (($_SESSION['role'] ?? '') !== 'SuperAdmin') {
     exit;
 }
 
-// Fetch assets waiting in the queue, ordered by division name
+// Fetch assets waiting in the queue, ordered by division name (Added da.is_under_warranty)
 $query = "
     SELECT 
         da.id as division_asset_id_pk,
         da.division_asset_id AS asset_tag,
+        da.is_under_warranty,
         im.item_name,
         sd.serial_number,
         COALESCE(d.division_name, 'General / Unassigned Division') AS division_name,
@@ -87,7 +88,7 @@ ob_start();
             <?= htmlspecialchars($_SESSION['success_msg']); ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-        <?php unset($_SESSION['success_msg']); // Clear it so it doesn't show again on refresh ?>
+        <?php unset($_SESSION['success_msg']); ?>
     <?php endif; ?>
 
     <div class="card shadow-sm border-0 rounded-4 mb-4">
@@ -130,11 +131,11 @@ ob_start();
                                 <table class="table table-hover align-middle mb-0">
                                     <thead class="table-custom-header text-uppercase fs-7">
                                         <tr>
-                                            <th class="ps-4" style="width: 18%;">Date & Time</th>
+                                            <th class="ps-4" style="width: 16%;">Date & Time</th>
                                             <th style="width: 22%;">Item & Asset Tag</th>
                                             <th style="width: 14%;">Serial Number</th>
-                                            <th style="width: 20%;">Labs / Facilities</th>
-                                            <th style="width: 14%;">Issue / Remarks</th>
+                                            <th style="width: 18%;">Labs / Facilities</th>
+                                            <th style="width: 18%;">Issue / Remarks</th>
                                             <th class="text-end pe-4" style="width: 12%;">Actions</th>
                                         </tr>
                                     </thead>
@@ -151,7 +152,15 @@ ob_start();
                                                 </td>
                                                 <td>
                                                     <div class="fw-bold text-dark mb-1"><?= htmlspecialchars($row['item_name']) ?></div>
-                                                    <div class="text-muted small text-break" style="font-size: 0.8rem;"><?= htmlspecialchars($row['asset_tag']) ?></div>
+                                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                        <span class="text-muted small text-break" style="font-size: 0.8rem;"><?= htmlspecialchars($row['asset_tag']) ?></span>
+                                                        <!-- Warranty Badge Added Here -->
+                                                        <?php if (!empty($row['is_under_warranty']) && $row['is_under_warranty'] == 1): ?>
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0.5 fw-semibold" style="font-size: 10px;" title="Submitted under warranty">
+                                                                <i class="bi bi-shield-check me-1"></i>Warranty
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 </td>
                                                 <td>
                                                     <span class="small text-secondary fw-medium"><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></span>

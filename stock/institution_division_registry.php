@@ -115,6 +115,25 @@ ob_start();
 .table-erp-minimal td { padding: 0.65rem 1rem; font-size: 0.85rem; color: #1e293b; border-bottom: 1px solid #f1f5f9; }
 .btn-erp-outline { font-weight: 600; font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 4px; border: 1px solid #173f63; color: #173f63; background: transparent; }
 .btn-erp-outline:hover { background-color: #173f63; color: #ffffff; }
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #barcodeTagModal, #barcodeTagModal * {
+        visibility: visible;
+    }
+    #barcodeTagModal {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        background: white !important;
+    }
+    .modal-backdrop, .modal-header .btn-close, .modal-footer {
+        display: none !important;
+    }
+}
 </style>
 
 <div class="container-fluid p-0 pb-4">
@@ -132,7 +151,6 @@ ob_start();
                 <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn" title="Clear Search"><i class="bi bi-x-lg"></i></button>
             </div>
         </div>
-    </div>
     </div>
 
     <!-- SUPERADMIN VIEW: Institution -> Division Accordions -->
@@ -160,7 +178,7 @@ ob_start();
                                 <div class="accordion-body p-3 bg-white">
                                     
                                     <!-- CALL UNITS DATA & RENDER TABLES HERE -->
-                                    <?php renderUnitsAccordion($units, "inst_" . $i . "_div_" . $j); ?>
+                                    <?php renderUnitsAccordion($units, "inst_" . $i . "_div_" . $j, $inst_name); ?>
 
                                 </div>
                             </div>
@@ -175,6 +193,55 @@ ob_start();
     </div>
 </div>
 
+<!-- QR Code Tag Modal -->
+<div class="modal fade" id="barcodeTagModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold text-dark" style="font-size: 1rem;">
+                    <i class="bi bi-qr-code-scan text-primary me-2"></i>Asset QR Code Tag
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body text-center p-4">
+                <!-- TOP: Institution / Unit Name -->
+                <div class="mb-3 pb-2 border-bottom">
+                    <span id="modalInstName" class="d-block fw-bold text-secondary text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;"></span>
+                    <span id="modalUnitName" class="d-block fw-semibold text-dark" style="font-size: 13px;"></span>
+                </div>
+
+                <!-- MIDDLE: The Compact QR Code Graphic Container -->
+                <div class="p-3 bg-white border rounded-3 d-inline-block shadow-sm mb-3">
+                    <div id="qrcodeContainer" class="d-flex justify-content-center"></div>
+                </div>
+
+                <div class="bg-light p-2 rounded border border-secondary-subtle text-start mx-auto" style="max-width: 340px; font-size: 12px;">
+                    <div class="d-flex mb-1">
+                        <span class="text-muted me-1">Asset ID: </span>
+                        <span id="modalTextAssetId" class="fw-bold text-primary"></span>
+                    </div>
+                    <div class="d-flex mb-1">
+                        <span class="text-muted me-1">Serial:</span>
+                        <span id="modalTextSerial" class="fw-semibold text-dark"></span>
+                    </div>
+                    <div class="d-flex">
+                        <span class="text-muted me-1">Model:</span>
+                        <span id="modalTextModel" class="fw-semibold text-dark text-truncate" style="max-width: 200px;"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="window.print();">
+                    <i class="bi bi-printer me-1"></i> Print Tag
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const searchInput = document.getElementById('assetLiveSearch');
@@ -184,7 +251,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
     searchInput.addEventListener('input', function() {
         let query = this.value.toLowerCase().trim();
-        
         let institutionItems = document.querySelectorAll('.institution-accordion > .accordion-item');
 
         institutionItems.forEach(function(instItem) {
@@ -223,7 +289,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
                 });
 
-                // Handle Division Accordion visibility & Collapse state
                 let divCollapseEl = divItem.querySelector('.accordion-collapse');
                 let divButton = divItem.querySelector('.accordion-button');
                 let bsDivCollapse = bootstrap.Collapse.getInstance(divCollapseEl) || new bootstrap.Collapse(divCollapseEl, { toggle: false });
@@ -241,7 +306,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             });
 
-            // Handle Institution Accordion visibility & Collapse state
             let instCollapseEl = instItem.querySelector('.accordion-collapse');
             let instButton = instItem.querySelector('.accordion-button');
             let bsInstCollapse = bootstrap.Collapse.getInstance(instCollapseEl) || new bootstrap.Collapse(instCollapseEl, { toggle: false });
@@ -273,7 +337,6 @@ document.addEventListener("DOMContentLoaded", function() {
         let rowMatchedAny = false;
         tableRows.forEach(function(row) {
             let rowText = row.innerText.toLowerCase();
-            
             if (query === '' || itemHeaderMatch || rowText.includes(query)) {
                 row.style.display = '';
                 rowMatchedAny = true;
@@ -310,9 +373,58 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
+<script src="../admin/assets/js/qrcode.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const modalEl = document.getElementById('barcodeTagModal');
+    if (!modalEl) return;
+
+    document.body.appendChild(modalEl);
+    const barcodeModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    let qrCodeInstance = null;
+
+    document.querySelectorAll('.generate-code-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const assetId = this.getAttribute('data-asset-id');
+            const serial = this.getAttribute('data-serial');
+            const model = this.getAttribute('data-model');
+            const instName = this.getAttribute('data-institution');
+            const unitName = this.getAttribute('data-unit');
+
+            // Populate Modal Texts
+            document.getElementById('modalInstName').innerText = instName;
+            document.getElementById('modalUnitName').innerText = unitName;
+            document.getElementById('modalTextAssetId').innerText = assetId;
+            document.getElementById('modalTextSerial').innerText = serial;
+            document.getElementById('modalTextModel').innerText = model;
+
+           
+            const qrContainer = document.getElementById('qrcodeContainer');
+            qrContainer.innerHTML = "";
+
+            // Generate QR code
+            try {
+                qrCodeInstance = new QRCode(qrContainer, {
+                    text: assetId,
+                    width: 140,
+                    height: 140,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            } catch (e) {
+                console.error("QR Code generation error: ", e);
+            }
+
+            barcodeModal.show();
+        });
+    });
+});
+</script>
+
 <?php 
 /* ================= UNITS DATA RENDER FUNCTION ================= */
-function renderUnitsAccordion(array $units, string $prefix) {
+function renderUnitsAccordion(array $units, string $prefix, string $inst_name) {
     $k = 0; 
     foreach ($units as $unit_label => $assets): 
         $k++; 
@@ -356,6 +468,7 @@ function renderUnitsAccordion(array $units, string $prefix) {
                                             <th style="width: 70px;">Sl. No</th>
                                             <th>Serial Number</th>
                                             <th>Asset Tag / ID</th>
+                                            <th class="text-end">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -364,6 +477,18 @@ function renderUnitsAccordion(array $units, string $prefix) {
                                             <td class="text-muted fw-semibold"><?= $category_sl++ ?></td>
                                             <td class="fw-semibold"><i class="bi bi-barcode me-1 text-muted"></i><?= htmlspecialchars($asset['serial_number'] ?: 'N/A') ?></td>
                                             <td><span class="fw-semibold text-primary"><?= htmlspecialchars($asset['division_asset_id']) ?></span></td>
+                                            <td class="text-end">
+                                                <button type="button" class="btn btn-erp-outline btn-sm generate-code-btn" 
+                                                        data-asset-id="<?= htmlspecialchars($asset['division_asset_id']) ?>"
+                                                        data-serial="<?= htmlspecialchars($asset['serial_number'] ?: 'N/A') ?>"
+                                                        data-model="<?= htmlspecialchars($model_name) ?>"
+                                                        data-item="<?= htmlspecialchars($item_type) ?>"
+                                                        data-institution="<?= htmlspecialchars($inst_name) ?>"
+                                                        data-unit="<?= htmlspecialchars($unit_label) ?>"
+                                                        title="Generate QR Code">
+                                                    <i class="bi bi-qr-code me-1"></i> QR Code
+                                                </button>
+                                            </td>
                                         </tr>
                                         <?php endforeach; ?>
                                     </tbody>

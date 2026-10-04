@@ -471,6 +471,17 @@ ob_start();
                                                                         <div class="mb-3 p-3 bg-light rounded-3">
                                                                             <div class="small text-muted">Asset Tag: <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong></div>
                                                                             <div class="small text-muted">Item: <strong><?= htmlspecialchars($row['item_name']) ?></strong></div>
+                                                                            <div class="small text-muted d-flex justify-content-between align-items-center mt-1">
+                                                                                <span>S/N: <strong><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></strong></span>
+                                                                                <?php 
+                                                                                    $badge_bg = 'bg-secondary-subtle text-secondary';
+                                                                                    $type_label = ucfirst(str_replace('_', ' ', $row['repair_type']));
+                                                                                    if ($row['repair_type'] === 'internal') $badge_bg = 'bg-info-subtle text-info';
+                                                                                    elseif ($row['repair_type'] === 'external_warranty') $badge_bg = 'bg-warning-subtle text-warning';
+                                                                                    elseif ($row['repair_type'] === 'external_paid') $badge_bg = 'bg-danger-subtle text-danger';
+                                                                                ?>
+                                                                                <span class="badge <?= $badge_bg ?>" style="font-size: 10px;"><?= $type_label ?></span>
+                                                                            </div>
                                                                         </div>
 
                                                                         <div class="mb-3">
@@ -677,7 +688,12 @@ ob_start();
                         <div class="small text-muted">S/N: <strong><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></strong></div>
                         <div class="small text-muted">Asset Tag: <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong></div>
                     </div>
-                    <p class="text-muted small mb-0">Are you sure you want to return this asset back to its originating department and labs/facilities?</p>
+                    <div class="alert alert-success border-0 d-flex align-items-center mb-0 p-2" role="alert">
+                        <i class="bi bi-check-circle-fill text-success fs-5 me-2 flex-shrink-0"></i>
+                        <div class="small text-dark mb-0">
+                            Are you sure you want to return this asset back to its originating department and labs/facilities?
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
@@ -709,7 +725,13 @@ ob_start();
                         <div class="small text-muted">S/N: <strong><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></strong></div>
                         <div class="small text-muted">Asset Tag: <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong></div>
                     </div>
-                    <p class="text-muted small mb-0">Are you sure you want to return this asset to Main Stock? (Use this only if a replacement item was already given to the department).</p>
+                    <div class="alert alert-warning border-0 d-flex align-items-center mb-0 p-2" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill text-warning fs-5 me-2 flex-shrink-0"></i>
+                        <div class="small text-dark">
+                            Are you sure you want to return this asset to Main Stock? <br>
+                            <span class="text-danger fw-semibold">(Use this only if a replacement item was already given to the department).</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>

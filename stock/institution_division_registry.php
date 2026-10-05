@@ -119,10 +119,10 @@ ob_start();
     body * {
         visibility: hidden;
     }
-    #barcodeTagModal, #barcodeTagModal * {
+    .modal.show, .modal.show * {
         visibility: visible;
     }
-    #barcodeTagModal {
+    .modal.show {
         position: absolute;
         left: 0;
         top: 0;
@@ -194,7 +194,7 @@ ob_start();
 </div>
 
 <!-- QR Code Tag Modal -->
-<div class="modal fade" id="barcodeTagModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="qrTagModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-light">
@@ -229,6 +229,54 @@ ob_start();
                     <div class="d-flex">
                         <span class="text-muted me-1">Model:</span>
                         <span id="modalTextModel" class="fw-semibold text-dark text-truncate" style="max-width: 200px;"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="window.print();">
+                    <i class="bi bi-printer me-1"></i> Print Tag
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Barcode Tag Modal -->
+<div class="modal fade" id="barcodeTagModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold text-dark" style="font-size: 1rem;">
+                    <i class="bi bi-upc-scan text-primary me-2"></i>Asset Barcode Tag
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body text-center p-4">
+                <div class="mb-3 pb-2 border-bottom">
+                    <span id="barcodeModalInstName" class="d-block fw-bold text-secondary text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;"></span>
+                    <span id="barcodeModalDivName" class="d-block fw-semibold text-dark" style="font-size: 12px;"></span>
+                    <span id="barcodeModalUnitName" class="d-block text-muted" style="font-size: 11px;"></span>
+                </div>
+
+                <div class="p-3 bg-white border rounded-3 d-inline-block shadow-sm mb-3" id="barcodeContainer">
+                    <svg id="barcodeSvg"></svg>
+                </div>
+
+                <div class="bg-light p-2 rounded border border-secondary-subtle text-start mx-auto" style="max-width: 340px; font-size: 12px;">
+                    <div class="d-flex mb-1">
+                        <span class="text-muted me-1">Asset ID: </span>
+                        <span id="barcodeModalTextAssetId" class="fw-bold text-primary"></span>
+                    </div>
+                    <div class="d-flex mb-1">
+                        <span class="text-muted me-1">Serial:</span>
+                        <span id="barcodeModalTextSerial" class="fw-semibold text-dark"></span>
+                    </div>
+                    <div class="d-flex">
+                        <span class="text-muted me-1">Model:</span>
+                        <span id="barcodeModalTextModel" class="fw-semibold text-dark text-truncate" style="max-width: 200px;"></span>
                     </div>
                 </div>
             </div>
@@ -377,11 +425,11 @@ document.addEventListener("DOMContentLoaded", function() {
 <script src="../admin/assets/js/qrcode.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    const modalEl = document.getElementById('barcodeTagModal');
+    const modalEl = document.getElementById('qrTagModal');
     if (!modalEl) return;
 
     document.body.appendChild(modalEl);
-    const barcodeModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    const qrModal = bootstrap.Modal.getOrCreateInstance(modalEl);
     let qrCodeInstance = null;
 
     document.querySelectorAll('.generate-code-btn').forEach(button => {
@@ -416,6 +464,60 @@ document.addEventListener("DOMContentLoaded", function() {
                 });
             } catch (e) {
                 console.error("QR Code generation error: ", e);
+            }
+
+            qrModal.show();
+        });
+    });
+});
+</script>
+
+<script src="../admin/assets/js/JsBarcode.all.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const modalEl = document.getElementById('barcodeTagModal');
+    if (!modalEl) return;
+
+    document.body.appendChild(modalEl);
+    const barcodeModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+    document.querySelectorAll('.generate-barcode-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const assetId = this.getAttribute('data-asset-id');
+            const serial = this.getAttribute('data-serial');
+            const model = this.getAttribute('data-model');
+            const instName = this.getAttribute('data-institution');
+            const divName = this.getAttribute('data-division');
+            const unitName = this.getAttribute('data-unit');
+
+            document.getElementById('barcodeModalInstName').innerText = instName;
+            document.getElementById('barcodeModalDivName').innerText = divName;
+            document.getElementById('barcodeModalUnitName').innerText = unitName;
+            document.getElementById('barcodeModalTextAssetId').innerText = assetId;
+            document.getElementById('barcodeModalTextSerial').innerText = serial;
+            document.getElementById('barcodeModalTextModel').innerText = model;
+
+            const barcodeContainer = document.getElementById('barcodeContainer');
+            barcodeContainer.innerHTML = `
+                <div class="text-center overflow-auto">
+                    <svg id="liveBarcodeSvg" style="max-width: 100%; height: auto;"></svg>
+                </div>
+            `;
+
+            try {
+                JsBarcode("#liveBarcodeSvg", assetId, {
+                    format: "CODE128",
+                    lineColor: "#000",
+                    width: 1,
+                    height: 55,
+                    displayValue: true,
+                    fontSize: 15,
+                    fontOptions: "bold",
+                    font: "monospace",
+                    margin: 5
+                });
+            } catch (e) {
+                console.error("Barcode generation error: ", e);
             }
 
             barcodeModal.show();
@@ -490,6 +592,17 @@ function renderUnitsAccordion(array $units, string $prefix, string $inst_name, s
                                                         data-unit="<?= htmlspecialchars($unit_label) ?>"
                                                         title="Generate QR Code">
                                                     <i class="bi bi-qr-code me-1"></i> QR Code
+                                                </button>
+                                                <button type="button" class="btn btn-erp-outline btn-sm generate-barcode-btn" 
+                                                        data-asset-id="<?= htmlspecialchars($asset['division_asset_id']) ?>"
+                                                        data-serial="<?= htmlspecialchars($asset['serial_number'] ?: 'N/A') ?>"
+                                                        data-model="<?= htmlspecialchars($model_name) ?>"
+                                                        data-item="<?= htmlspecialchars($item_type) ?>"
+                                                        data-institution="<?= htmlspecialchars($inst_name) ?>"
+                                                        data-division="<?= htmlspecialchars($div_name) ?>"
+                                                        data-unit="<?= htmlspecialchars($unit_label) ?>"
+                                                        title="Generate Barcode">
+                                                    <i class="bi bi-upc me-1"></i> Barcode
                                                 </button>
                                             </td>
                                         </tr>

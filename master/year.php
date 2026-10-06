@@ -632,7 +632,7 @@ function renderUnitsAccordion(array $units, string $prefix) {$k = 0;
 $content = ob_get_clean(); 
 
 if ($role === 'SuperAdmin') {
-    include "../stock/stocklayout.php"; 
+    include "masterlayout.php"; 
 } else {
     include "../divisions/divisionslayout.php";
 }

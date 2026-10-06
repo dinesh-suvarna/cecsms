@@ -457,5 +457,5 @@ function triggerPrint() {
 
 <?php 
 $content = ob_get_clean(); 
-include "../admin/adminlayout.php"; 
+include "masterlayout.php"; 
 ?>

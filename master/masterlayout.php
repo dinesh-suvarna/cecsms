@@ -253,6 +253,15 @@ if (in_array($role, [ROLE_SUPERADMIN], true)) {
                 <a href="units.php" class="nav-link <?= ($current_page == 'units.php') ? 'active' : '' ?>">
                     <i class="bi bi-collection"></i> Labs & Facilities
                 </a>
+                <a href="year.php" class="text-danger nav-link <?= ($current_page == 'year.php') ? 'active' : '' ?>">
+                    <i class="bi bi-plus"></i> Add Procurement Year
+                </a>
+                <a href="assetid.php" class="text-danger nav-link <?= ($current_page == 'assetid.php') ? 'active' : '' ?>">
+                    <i class="bi bi-plus"></i> View Asset ID Year Wise
+                </a>
+                <a href="year_wise.php" class="text-danger nav-link <?= ($current_page == 'year_wise.php') ? 'active' : '' ?>">
+                    <i class="bi bi-plus"></i> Year Wise Report
+                </a>
             </div>
         </div>
 

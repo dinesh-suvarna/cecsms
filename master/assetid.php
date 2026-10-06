@@ -7,7 +7,7 @@ if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Ad
     exit();
 }
 
-$selected_category = $_GET['category'] ?? 'furniture';
+$selected_category = $_GET['category'] ?? 'computer';
 $selected_year = $_GET['year'] ?? '';
 
 

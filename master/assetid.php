@@ -88,7 +88,7 @@ if ($assets_query) {
         $raw_unit_code = trim($row['unit_code']);
         
         if (!empty($raw_unit_code) && $raw_unit_name !== 'General Stock') {
-            $unit = strtolower($raw_unit_code) . ' - ' . $raw_unit_name;
+            $unit = strtoupper($raw_unit_code) . ' - ' . $raw_unit_name;
         } else {
             $unit = $raw_unit_name;
         }

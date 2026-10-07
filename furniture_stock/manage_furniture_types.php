@@ -85,6 +85,14 @@ ob_start();
     margin: 0 auto;
     padding: 24px 20px 40px;
 }
+.furniture-icon svg {
+    width: 35px;
+    height: 35px;
+}
+.elite-card:hover .icon-wrapper {
+    background: var(--soft-bg, #eef3f7);
+    color: var(--card-accent, var(--brand-primary));
+}
 
 /* Header */
 .inst-header {
@@ -226,7 +234,20 @@ ob_start();
     <div class="inst-header">
         <div class="inst-header-left">
             <div class="inst-header-icon">
-                <i class="bi bi-lamp-fill"></i>
+                <div class="icon-wrapper furniture-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M10 22h40"/>
+                                <path d="M14 22v27"/>
+                                <path d="M46 22v27"/>
+                                <path d="M37 29v13"/>
+                                <path d="M37 29h10"/>
+                                <path d="M47 29v13"/>
+                                <path d="M34 42h16"/>
+                                <path d="M37 42v10"/>
+                                <path d="M47 42v10"/>
+                                <path d="M14 43h32"/>
+                            </svg>
+                        </div>
             </div>
             <div>
                 <h3 class="mb-0"><?= htmlspecialchars($page_title) ?></h3>

@@ -33,19 +33,21 @@ $oldPO = '';
 $oldVendor = '';
 $oldAmount = '';
 $oldWarranty = '';
+$oldProcYear = date('Y'); 
 
 if(isset($_POST['submit'])){
 
-    $category    = trim($_POST['category'] ?? '');
-    $item_id     = (int)($_POST['item_master_id'] ?? 0);
-    $model_id    = !empty($_POST['model_id']) ? (int)$_POST['model_id'] : null;
-    $qty         = (int)($_POST['quantity'] ?? 0);
-    $bill_no     = trim($_POST['bill_no'] ?? '');
-    $bill_dt     = $_POST['bill_date'] ?: null;
-    $po_no       = trim($_POST['po_number'] ?? '');
-    $vendor      = !empty($_POST['vendor_id']) ? (int)$_POST['vendor_id'] : null;
-    $amount      = !empty($_POST['amount']) ? (float)$_POST['amount'] : null;
-    $warranty    = $_POST['warranty_upto'] ?: null;
+    $category         = trim($_POST['category'] ?? '');
+    $item_id          = (int)($_POST['item_master_id'] ?? 0);
+    $model_id         = !empty($_POST['model_id']) ? (int)$_POST['model_id'] : null;
+    $qty              = (int)($_POST['quantity'] ?? 0);
+    $bill_no          = trim($_POST['bill_no'] ?? '');
+    $bill_dt          = $_POST['bill_date'] ?: null;
+    $po_no            = trim($_POST['po_number'] ?? '');
+    $vendor           = !empty($_POST['vendor_id']) ? (int)$_POST['vendor_id'] : null;
+    $amount           = !empty($_POST['amount']) ? (float)$_POST['amount'] : null;
+    $warranty         = $_POST['warranty_upto'] ?: null;
+    $procurement_year = trim($_POST['procurement_year'] ?? '');
 
     // Repopulate form fields in case of validation fallback
     $oldCategory = $category;
@@ -58,6 +60,7 @@ if(isset($_POST['submit'])){
     $oldVendor   = $vendor;
     $oldAmount   = $amount;
     $oldWarranty = $warranty;
+    $oldProcYear = $procurement_year;
     $oldSerials  = $_POST['serial_number'] ?? [];
     $duplicateSerials = [];
 
@@ -71,6 +74,11 @@ if(isset($_POST['submit'])){
 
     if(!empty($bill_dt) && $bill_dt > date('Y-m-d')){
         $errorMsg = "Bill date cannot be future date.";
+    }
+
+    // Validate Procurement Year (Strictly 4 digits if provided)
+    if(!empty($procurement_year) && !preg_match('/^\d{4}$/', $procurement_year)){
+        $errorMsg = "Procurement year must be a valid 4-digit year (e.g., 2026).";
     }
 
     if(empty($errorMsg)){
@@ -147,29 +155,24 @@ if(isset($_POST['submit'])){
         if(empty($errorMsg) && count($filledSerials) !== count(array_unique($filledSerials))){
             $errorMsg = "Duplicate serial numbers entered in the form.";
             $counts = array_count_values($filledSerials);
-            foreach($counts as $val => $count) {
+            foreach($counts as $val =>$count) {
                 if($count > 1) {
-                    $duplicateSerials[] = $val;
+                    $duplicateSerials[] =$val;
                 }
             }
         }
 
-        if(empty($errorMsg) && !empty($filledSerials)){
-            $placeholders = implode(',', array_fill(0, count($filledSerials), '?'));
-            $query = "SELECT serial_number FROM stock_details WHERE stock_item_id = ? AND serial_number IN ($placeholders)";
+        if(empty($errorMsg) && !empty($filledSerials)){$placeholders = implode(',', array_fill(0, count($filledSerials), '?'));$query = "SELECT serial_number FROM stock_details WHERE stock_item_id = ? AND serial_number IN ($placeholders)";
             $stmtCheck = $conn->prepare($query);
 
             $types = 'i' . str_repeat('s', count($filledSerials));
-            $params = array_merge([$item_id], $filledSerials);
-            $stmtCheck->bind_param($types, ...$params);
-            $stmtCheck->execute();
-            $resultCheck = $stmtCheck->get_result();
+            $params = array_merge([$item_id],$filledSerials);
+            $stmtCheck->bind_param($types, ...$params);$stmtCheck->execute();
+            $resultCheck =$stmtCheck->get_result();
 
-            if($resultCheck->num_rows > 0){
-                $errorMsg = "One or more serial numbers already exist for this item.";
-                // Collect exact duplicate values to pass to JavaScript
-                while($row = $resultCheck->fetch_assoc()){
-                    $duplicateSerials[] = $row['serial_number'];
+            if($resultCheck->num_rows > 0){$errorMsg = "One or more serial numbers already exist for this item.";
+                while($row =$resultCheck->fetch_assoc()){
+                    $duplicateSerials[] =$row['serial_number'];
                 }
             }
             $stmtCheck->close();
@@ -177,59 +180,47 @@ if(isset($_POST['submit'])){
     }
 
     // Insert records
-    if(empty($errorMsg)){
-        $conn->begin_transaction();
+    if(empty($errorMsg)){$conn->begin_transaction();
         try {
-            $stmt = $conn->prepare("
+            $stmt =$conn->prepare("
                 INSERT INTO stock_details
-                (stock_item_id, model_id, quantity, serial_number, bill_no, bill_date, po_number, vendor_id, amount, warranty_upto)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (stock_item_id, model_id, quantity, serial_number, bill_no, bill_date, po_number, vendor_id, amount, warranty_upto, procurement_year)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             if($stockType === 'serial'){
-                foreach($filledSerials as $serial){
-                    $singleQty = 1;
+                foreach($filledSerials as $serial){$singleQty = 1;
                     $stmt->bind_param(
-                        "iiissssids",
+                        "iiissssids s",
                         $item_id,
-                        $model_id,
-                        $singleQty,
-                        $serial,
-                        $bill_no,
-                        $bill_dt,
-                        $po_no,
-                        $vendor,
-                        $amount,
-                        $warranty
+                        $model_id,$singleQty,
+                        $serial,$bill_no,
+                        $bill_dt,$po_no,
+                        $vendor,$amount,
+                        $warranty,$procurement_year
                     );
                     $stmt->execute();
                 }
             } else {
                 $nullSerial = null;
                 $stmt->bind_param(
-                    "iiissssids",
+                    "iiissssids s",
                     $item_id,
-                    $model_id,
-                    $qty,
-                    $nullSerial,
-                    $bill_no,
-                    $bill_dt,
-                    $po_no,
-                    $vendor,
-                    $amount,
-                    $warranty
+                    $model_id,$qty,
+                    $nullSerial,$bill_no,
+                    $bill_dt,$po_no,
+                    $vendor,$amount,
+                    $warranty,$procurement_year
                 );
                 $stmt->execute();
             }
 
-            $stmt->close();
-            $conn->commit();
+            $stmt->close();$conn->commit();
             header("Location: add_stock_details.php?success=1");
             exit;
 
         } catch(Exception $e){
-            $conn->rollback();
-            $errorMsg = "Something went wrong. Please try again.";
+            $conn->rollback();$errorMsg = "Something went wrong. Please try again.";
         }
     }
 }
@@ -358,8 +349,8 @@ ob_start();
                                 <label class="form-label form-label-erp">Category <span class="text-danger">*</span></label>
                                 <select name="category" id="categorySelect" class="form-select form-select-erp" required>
                                     <option value="">Select Category</option>
-                                    <?php foreach($categoryEnumValues as $catVal): ?>
-                                        <option value="<?= htmlspecialchars($catVal) ?>" <?= ($catVal === $oldCategory) ? 'selected' : '' ?>>
+                                    <?php foreach($categoryEnumValues as$catVal): ?>
+                                        <option value="<?= htmlspecialchars($catVal) ?>" <?= ($catVal ===$oldCategory) ? 'selected' : '' ?>>
                                             <?= htmlspecialchars($catVal) ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -371,14 +362,13 @@ ob_start();
                                 <select name="item_master_id" id="itemSelect" class="form-select form-select-erp" required disabled>
                                     <option value="">Select Item</option>
                                     <?php 
-                                    if($items):
-                                        $items->data_seek(0); 
-                                        while($row = $items->fetch_assoc()): 
+                                    if($items):$items->data_seek(0); 
+                                        while($row =$items->fetch_assoc()): 
                                     ?>
                                         <option value="<?= $row['id'] ?>"
                                                 data-category="<?= htmlspecialchars($row['category']) ?>"
                                                 data-type="<?= htmlspecialchars($row['stock_type']) ?>"
-                                                <?= ($row['id'] == $oldItem) ? 'selected' : '' ?>>
+                                                <?= ($row['id'] ==$oldItem) ? 'selected' : '' ?>>
                                             <?= htmlspecialchars($row['item_name']) ?>
                                         </option>
                                     <?php 
@@ -393,15 +383,14 @@ ob_start();
                                 <select name="model_id" id="modelSelect" class="form-select form-select-erp" disabled>
                                     <option value="">Select Model</option>
                                     <?php
-                                        $modelQuery = $conn->query("
+                                        $modelQuery =$conn->query("
                                             SELECT id, model_name, item_id
                                             FROM item_models
                                             WHERE status='Active'
                                             ORDER BY model_name
                                         ");
 
-                                        while($model = $modelQuery->fetch_assoc()){
-                                            $selected = ($model['id'] == $oldModel) ? 'selected' : '';
+                                        while($model = $modelQuery->fetch_assoc()){$selected = ($model['id'] ==$oldModel) ? 'selected' : '';
                                             echo "<option value='{$model['id']}' data-item='{$model['item_id']}' {$selected}>
                                             " . htmlspecialchars($model['model_name']) . "
                                             </option>";
@@ -431,30 +420,29 @@ ob_start();
                             </div>
 
                            <div class="col-12 mt-3">
-    <div id="serialContainer" class="row g-3">
-        <?php
-        if(!empty($oldSerials)){
-            foreach($oldSerials as $i => $serial){
-                $isDuplicate = in_array(strtoupper(trim($serial)), $duplicateSerials ?? []);
-                $inputClass  = $isDuplicate ? 'is-invalid' : '';
-        ?>
-            <div class="col-md-4">
-                <label class="form-label form-label-erp">Serial Number <?= $i+1 ?> <span class="text-danger">*</span></label>
-                <input type="text" 
-                       name="serial_number[]" 
-                       class="form-control form-control-erp text-uppercase <?= $inputClass ?>" 
-                       value="<?= htmlspecialchars($serial) ?>" 
-                       required 
-                       autocomplete="off">
-                <?php if($isDuplicate): ?>
-                    <div class="invalid-feedback fw-semibold" style="font-size: 0.75rem;">
-                        Already exists in database!
-                    </div>
-                <?php endif; ?>
-            </div>
-        <?php }} ?>
-    </div>
-</div>
+                                <div id="serialContainer" class="row g-3">
+                                    <?php
+                                    if(!empty($oldSerials)){
+                                        foreach($oldSerials as$i => $serial){$isDuplicate = in_array(strtoupper(trim($serial)),$duplicateSerials ?? []);
+                                            $inputClass  =$isDuplicate ? 'is-invalid' : '';
+                                    ?>
+                                        <div class="col-md-4">
+                                            <label class="form-label form-label-erp">Serial Number <?= $i+1 ?> <span class="text-danger">*</span></label>
+                                            <input type="text" 
+                                                   name="serial_number[]" 
+                                                   class="form-control form-control-erp text-uppercase <?= $inputClass ?>" 
+                                                   value="<?= htmlspecialchars($serial) ?>" 
+                                                   required 
+                                                   autocomplete="off">
+                                            <?php if($isDuplicate): ?>
+                                                <div class="invalid-feedback fw-semibold" style="font-size: 0.75rem;">
+                                                    Already exists in database!
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php }} ?>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -486,11 +474,10 @@ ob_start();
                                 <select name="vendor_id" class="form-select form-select-erp">
                                     <option value="">Select Vendor</option>
                                     <?php 
-                                    if($vendors):
-                                        $vendors->data_seek(0);
-                                        while($row = $vendors->fetch_assoc()): 
+                                    if($vendors):$vendors->data_seek(0);
+                                        while($row =$vendors->fetch_assoc()): 
                                     ?>
-                                        <option value="<?= $row['id'] ?>" <?= ($row['id'] == $oldVendor) ? 'selected' : '' ?>>
+                                        <option value="<?= $row['id'] ?>" <?= ($row['id'] ==$oldVendor) ? 'selected' : '' ?>>
                                             <?= htmlspecialchars($row['vendor_name']) ?>
                                         </option>
                                     <?php 
@@ -511,6 +498,32 @@ ob_start();
                             <div class="col-md-4">
                                 <label class="form-label form-label-erp">Warranty Upto</label>
                                 <input type="date" name="warranty_upto" class="form-control form-control-erp" value="<?= htmlspecialchars($oldWarranty) ?>">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Procurement Year Details -->
+                <div class="card stock-form-card shadow-sm mb-4">
+                    <div class="stock-card-header">
+                        <span class="stock-card-title"><i class="bi bi-calendar-event me-2"></i>4. Procurement Year</span>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label form-label-erp">Procurement Year <span class="text-danger">*</span></label>
+                                <select name="procurement_year" class="form-select form-select-erp" required>
+                                    <option value="">Select Year</option>
+                                    <?php 
+                                    $current_year = (int)date('Y');
+                                    // Loops from current year down to 2000
+                                    for ($y = $current_year; $y >= 2000; $y--) {
+                                        $selected = ($oldProcYear == $y) ? 'selected' : '';
+                                        echo "<option value='{$y}' {$selected}>{$y}</option>";
+                                    }
+                                    ?>
+                                </select>
+                                <div class="form-text text-muted" style="font-size: 0.75rem;">Select the year of procurement.</div>
                             </div>
                         </div>
                     </div>

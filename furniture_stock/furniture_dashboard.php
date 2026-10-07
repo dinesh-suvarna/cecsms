@@ -676,24 +676,6 @@ ob_start();
 <div class="furniture-dashboard">
     <div class="fd-container">
 
-        <!-- PAGE HEADER -->
-        <div class="fd-page-header">
-            <div class="fd-title-wrap">
-                <div class="fd-title-icon">
-                    <i class="bi bi-grid-1x2-fill"></i>
-                </div>
-                <div>
-                    <h1 class="fd-page-title">Furniture Dashboard</h1>
-                    <p class="fd-page-subtitle">Furniture inventory and asset management overview</p>
-                </div>
-            </div>
-
-            <div class="fd-live-status">
-                <span class="fd-live-dot"></span>
-                Inventory data synced
-            </div>
-        </div>
-
         <!-- KPI CARDS -->
         <div class="row g-3 mb-4">
 

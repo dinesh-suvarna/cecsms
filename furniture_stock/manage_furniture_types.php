@@ -68,6 +68,9 @@ $page_title = "Furniture Item Registry";
 ob_start(); 
 ?>
 
+<!-- DataTables CSS CDN -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+
 <style>
 :root {
     --erp-navy: #173f63;
@@ -88,10 +91,6 @@ ob_start();
 .furniture-icon svg {
     width: 35px;
     height: 35px;
-}
-.elite-card:hover .icon-wrapper {
-    background: var(--soft-bg, #eef3f7);
-    color: var(--card-accent, var(--brand-primary));
 }
 
 /* Header */
@@ -166,17 +165,55 @@ ob_start();
     border: 1px solid var(--erp-border);
     border-radius: 8px;
     box-shadow: var(--erp-shadow);
+    padding: 20px;
 }
 
-/* Data Tables */
-.table-erp { font-size: 0.92rem; margin: 0; }
+/* DataTables Custom Styling Adjustments */
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    border: 1px solid var(--erp-border);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 0.88rem;
+    outline: none;
+    box-shadow: none;
+}
+.dataTables_wrapper .dataTables_filter input:focus,
+.dataTables_wrapper .dataTables_length select:focus {
+    border-color: var(--erp-navy);
+    box-shadow: 0 0 0 3px rgba(23, 63, 99, 0.1);
+}
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    font-size: 0.85rem;
+    padding-top: 15px !important;
+}
+.dataTables_wrapper .dataTables_length select.form-select,
+.dataTables_wrapper .dataTables_length select {
+    padding-right: 2rem !important;
+    background-position: right 0.5rem center !important;
+    background-size: 14px 12px !important;
+    text-indent: 0.01px;
+    text-overflow: '';
+}
+.page-item.active .page-link {
+    background-color: var(--erp-navy) !important;
+    border-color: var(--erp-navy) !important;
+}
+.page-link {
+    color: var(--erp-navy);
+    border-radius: 4px;
+    margin: 0 2px;
+}
+
+/* Tables */
+.table-erp { font-size: 0.92rem; margin: 0; width: 100% !important; }
 .table-erp thead th {
     background: #f5f7f9; color: #536575; font-size: 0.75rem; font-weight: 700;
     text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--erp-border);
     padding: 14px 18px;
 }
 .table-erp tbody td { padding: 16px 18px; border-bottom: 1px solid var(--erp-border); vertical-align: middle; }
-.table-erp tbody tr:last-child td { border-bottom: none; }
 
 /* Buttons */
 .btn-erp-primary {
@@ -205,27 +242,6 @@ ob_start();
 .action-btn-erp.danger:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 
 #editModal { z-index: 1056 !important; }
-
-
-[data-bs-theme="dark"] {
-    --erp-bg: #101a24;
-    --erp-white: #172534;
-    --erp-text: #edf3f7;
-    --erp-muted: #9aabb9;
-    --erp-border: #2d3e4e;
-    --erp-navy: #8eafc9;
-    --erp-navy-dark: #dce8f0;
-}
-[data-bs-theme="dark"] .inst-header h3 { color: #edf3f7; }
-[data-bs-theme="dark"] .inst-header-icon { background: #203445; border-color: #33495a; color: #b8d0e2; }
-[data-bs-theme="dark"] .inst-panel,
-[data-bs-theme="dark"] .stat-widget-card,
-[data-bs-theme="dark"] .erp-toolbar { background: #142230 !important; }
-[data-bs-theme="dark"] .table-erp thead th { background: #101a24; border-color: var(--erp-border); color: var(--erp-muted); }
-[data-bs-theme="dark"] .table-erp tbody td { border-color: var(--erp-border); color: var(--erp-text); }
-[data-bs-theme="dark"] .btn-erp-cancel,
-[data-bs-theme="dark"] .action-btn-erp { background: #172534; border-color: var(--erp-border); color: #b8c6d1; }
-[data-bs-theme="dark"] .modal-content { background: #142230; border-color: var(--erp-border); color: #edf3f7; }
 </style>
 
 <div class="erp-page-container">
@@ -235,19 +251,19 @@ ob_start();
         <div class="inst-header-left">
             <div class="inst-header-icon">
                 <div class="icon-wrapper furniture-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M10 22h40"/>
-                                <path d="M14 22v27"/>
-                                <path d="M46 22v27"/>
-                                <path d="M37 29v13"/>
-                                <path d="M37 29h10"/>
-                                <path d="M47 29v13"/>
-                                <path d="M34 42h16"/>
-                                <path d="M37 42v10"/>
-                                <path d="M47 42v10"/>
-                                <path d="M14 43h32"/>
-                            </svg>
-                        </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M10 22h40"/>
+                        <path d="M14 22v27"/>
+                        <path d="M46 22v27"/>
+                        <path d="M37 29v13"/>
+                        <path d="M37 29h10"/>
+                        <path d="M47 29v13"/>
+                        <path d="M34 42h16"/>
+                        <path d="M37 42v10"/>
+                        <path d="M47 42v10"/>
+                        <path d="M14 43h32"/>
+                    </svg>
+                </div>
             </div>
             <div>
                 <h3 class="mb-0"><?= htmlspecialchars($page_title) ?></h3>
@@ -286,7 +302,7 @@ ob_start();
 
     <!-- COLLAPSIBLE ADD FORM -->
     <div class="collapse mb-4" id="addFurnitureCollapse">
-        <div class="inst-panel p-4">
+        <div class="inst-panel">
             <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
                 <div class="fw-bold text-dark">
                     <i class="bi bi-plus-circle me-1.5 text-primary"></i> Register New Furniture Item
@@ -315,25 +331,8 @@ ob_start();
         </div>
     </div>
 
-    <!-- SEARCH TOOLBAR -->
-    <div class="erp-toolbar mb-3 p-2 bg-white rounded-3 border">
-        <div class="row g-2 align-items-center">
-            <div class="col flex-grow-1">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-transparent border-0 pe-1"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="furnitureSearch" class="form-control border-0 bg-transparent shadow-none" placeholder="Filter furniture by name or code...">
-                </div>
-            </div>
-            <div class="col-auto">
-                <button id="resetSearch" class="btn btn-erp-cancel px-2.5" title="Clear Search">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- TABLE PANEL -->
-    <div class="inst-panel overflow-hidden">
+    <!-- TABLE PANEL WITH DATATABLES -->
+    <div class="inst-panel">
         <div class="table-responsive">
             <table class="table table-erp align-middle mb-0" id="furnitureTable">
                 <thead>
@@ -358,7 +357,7 @@ ob_start();
                                 <i class="bi bi-lock-fill text-primary small ms-1" title="Stock records exist."></i>
                             <?php endif; ?>
                         </td>
-                        <td><span class=" text-dark fw-semibold"><?= htmlspecialchars($row['item_code']) ?></span></td>
+                        <td><span class="text-dark fw-semibold"><?= htmlspecialchars($row['item_code']) ?></span></td>
                         <td class="text-center fw-semibold text-dark"><?= $row['total_stock'] ?></td>
                         <td class="text-end pe-3">
                             <div class="d-inline-flex gap-1">
@@ -372,11 +371,7 @@ ob_start();
                             </div>
                         </td>
                     </tr>
-                    <?php endwhile; else: ?>
-                    <tr>
-                        <td colspan="5" class="text-center py-4 text-muted">No furniture items registered.</td>
-                    </tr>
-                    <?php endif; ?>
+                    <?php endwhile; endif; ?>
                 </tbody>
             </table>
         </div>
@@ -414,26 +409,27 @@ ob_start();
     </div>
 </div>
 
+<!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
 $(document).ready(function () {$('#editModal').appendTo('body');
 
-    // Search filter
-    $('#furnitureSearch').on('input', function() {
-        let query = $(this).val().toLowerCase();$('#furnitureTable tbody tr').each(function() {
-            let rowText = $(this).text().toLowerCase();
-            if (rowText.includes(query)) {
-                $(this).show();
-            } else {
-                $(this).hide();
-            }
-        });
-    });
-
-    $('#resetSearch').click(function() { 
-        $('#furnitureSearch').val('').trigger('input'); 
+    // Initialize DataTables with 10 entries per page default
+    $('#furnitureTable').DataTable({
+        "pageLength": 10,
+        "lengthMenu": [ [10, 25, 50, -1], [10, 25, 50, "All"] ],
+        "language": {
+            "search": "_INPUT_",
+            "searchPlaceholder": "Search items...",
+            "lengthMenu": "Show _MENU_ entries"
+        },
+        "columnDefs": [
+            { "orderable": false, "targets": 4 } // Disable sorting on Actions column
+        ]
     });
 
     // Delete handler

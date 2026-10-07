@@ -122,6 +122,7 @@ SELECT
     sd.amount,
     sd.status,
     im.stock_type,
+    sd.procurement_year,
     IFNULL((SELECT SUM(quantity - IFNULL(returned_quantity,0)) 
             FROM dispatch_details 
             WHERE stock_detail_id = sd.id), 0) AS dispatched_qty,
@@ -636,6 +637,7 @@ ob_start();
                                                                     <tr>
                                                                         <th style="width: 50px;">#</th>
                                                                         <th>Serial Number / Tracking</th>
+                                                                        <th class="text-center">Proc. Year</th> <!-- <-- Added Column Header -->
                                                                         <th class="text-center">Total Qty</th>
                                                                         <th class="text-center">Dispatched</th>
                                                                         <th class="text-center">Remaining</th>
@@ -650,7 +652,6 @@ ob_start();
                                                                         foreach ($items as $row): 
                                                                             $stockId = (int)$row['id'];
                                                                             
-                                                                            // 2. ENCRYPT IDs FOR LINKS
                                                                             $enc_stock_id = encrypt_id($stockId);
                                                                             $enc_dispatch_id = !empty($row['last_dispatch_id']) ? encrypt_id($row['last_dispatch_id']) : '';
 
@@ -697,13 +698,17 @@ ob_start();
                                                                                     <span class="text-muted fst-italic" style="font-size: 0.85rem;">Non-Serialized (Bulk)</span>
                                                                                 <?php endif; ?>
                                                                             </td>
+                                                                            <td class="text-center">
+                                                                                <span class="text-dark fw-normal" style="font-size: 0.78rem;">
+                                                                                    <?= !empty($row['procurement_year']) ? htmlspecialchars($row['procurement_year']) : 'N/A' ?>
+                                                                                </span>
+                                                                            </td>
                                                                             <td class="text-center fw-semibold"><?= inr($row['total_quantity']) ?></td>
                                                                             <td class="text-center text-danger fw-semibold"><?= inr($row['dispatched_qty']) ?></td>
                                                                             <td class="text-center text-success fw-semibold"><?= inr($remainingQty) ?></td>
                                                                             <td class="text-end fw-semibold">₹<?= number_format((float)$row['amount'], 2) ?></td>
                                                                             <td class="text-center">
                                                                                 <?php if ($dynamicStatus === 'dispatched'): ?>
-                                                                                    <!-- Encrypted Dispatch & Stock Parameters -->
                                                                                     <a href="dispatch_report.php?stock_id=<?= urlencode($enc_stock_id) ?>&dispatch_id=<?= urlencode($enc_dispatch_id) ?>" class="badge badge-erp bg-danger text-decoration-none">
                                                                                         <i class="bi bi-truck me-1"></i> Dispatched
                                                                                     </a>
@@ -721,7 +726,6 @@ ob_start();
                                                                             </td>
                                                                             <td class="text-end pe-3">
                                                                                 <div class="d-inline-flex gap-1">
-                                                                                    <!-- Encrypted Edit Link -->
                                                                                     <a href="edit_stock.php?id=<?= urlencode($enc_stock_id) ?>" class="action-btn-erp" title="Edit Record">
                                                                                         <i class="bi bi-pencil-square"></i>
                                                                                     </a>

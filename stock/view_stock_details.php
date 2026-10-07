@@ -377,25 +377,33 @@ ob_start();
 /* Tables & Action Buttons */
 .erp-subtable {
     margin-bottom: 0;
-    font-size: 0.88rem;
+    font-size: 0.84rem; /* Slightly optimized font size */
+    width: 100%;
+    table-layout: auto;
 }
 
 .erp-subtable thead th {
     background-color: #ffffff;
     color: var(--erp-text-muted);
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
     border-bottom: 1px solid var(--erp-border);
-    padding: 0.6rem 0.9rem;
+    padding: 0.5rem 0.6rem; /* Tighter padding to prevent overflow */
+    white-space: nowrap;     /* Prevent column header text wrapping */
 }
 
 .erp-subtable td {
-    padding: 0.65rem 0.9rem;
+    padding: 0.5rem 0.6rem;  /* Tighter padding to match headers */
     vertical-align: middle;
-    border-bottom: 1px solid #f1f5f9;
 }
+
+.erp-subtable th:nth-child(1), .erp-subtable td:nth-child(1) { width: 35px; text-align: center; } /* # */
+.erp-subtable th:nth-child(3), .erp-subtable td:nth-child(3) { white-space: nowrap; } /* Proc. Year */
+.erp-subtable th:nth-child(4), .erp-subtable td:nth-child(4),
+.erp-subtable th:nth-child(5), .erp-subtable td:nth-child(5),
+.erp-subtable th:nth-child(6), .erp-subtable td:nth-child(6) { white-space: nowrap; } /* Qtys */
 
 .action-btn-erp {
     width: 30px;
@@ -631,7 +639,7 @@ ob_start();
                                                         </div>
 
                                                         <!-- SUB-TABLE -->
-                                                        <div class="table-responsive">
+                                                        <div class="table-responsive" style="overflow-x: visible;">
                                                             <table class="table erp-subtable align-middle">
                                                                 <thead>
                                                                     <tr>
@@ -725,17 +733,30 @@ ob_start();
                                                                                 <?php endif; ?>
                                                                             </td>
                                                                             <td class="text-end pe-3">
-                                                                                <div class="d-inline-flex gap-1">
-                                                                                    <a href="edit_stock.php?id=<?= urlencode($enc_stock_id) ?>" class="action-btn-erp" title="Edit Record">
-                                                                                        <i class="bi bi-pencil-square"></i>
+                                                                            <div class="d-inline-flex gap-1">
+                                                                                <!-- Edit Button -->
+                                                                                <a href="edit_stock.php?id=<?= urlencode($enc_stock_id) ?>" class="action-btn-erp" title="Edit Record">
+                                                                                    <i class="bi bi-pencil-square"></i>
+                                                                                </a>
+
+                                                                                <?php if ($dynamicStatus === 'available' && (int)$row['dispatched_qty'] === 0): ?>
+                                                                                    <!-- Delete Button -->
+                                                                                    <a href="delete_stock.php?id=<?= urlencode($enc_stock_id) ?>" 
+                                                                                        class="action-btn-erp text-danger delete-stock-trigger" 
+                                                                                        data-delete-url="delete_stock.php?id=<?= urlencode($enc_stock_id) ?>"
+                                                                                        data-identifier="<?= htmlspecialchars($row['serial_number'] ?? 'Non-Serialized Batch (Bill: ' .$meta['bill_no'] . ')') ?>"
+                                                                                        title="Delete Record">
+                                                                                            <i class="bi bi-trash"></i>
                                                                                     </a>
-                                                                                    <?php if ($dynamicStatus === 'dispatched'): ?>
-                                                                                        <a href="#" class="action-btn-erp text-success" title="Move to E-Waste">
-                                                                                            <i class="bi bi-recycle"></i>
-                                                                                        </a>
-                                                                                    <?php endif; ?>
-                                                                                </div>
-                                                                            </td>
+                                                                                <?php endif; ?>
+
+                                                                                <?php if ($dynamicStatus === 'dispatched'): ?>
+                                                                                    <a href="#" class="action-btn-erp text-success" title="Move to E-Waste">
+                                                                                        <i class="bi bi-recycle"></i>
+                                                                                    </a>
+                                                                                <?php endif; ?>
+                                                                            </div>
+                                                                        </td>
                                                                         </tr>
                                                                     <?php endforeach; ?>
                                                                 </tbody>
@@ -762,6 +783,36 @@ ob_start();
         <?php endif; ?>
     </div>
 </div>
+
+<?php
+$content = ob_get_clean();
+ob_start();
+?>
+
+<!--  Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 pb-0 pt-4 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="text-danger fs-5"><i class="bi bi-trash3"></i></div>
+                    <h5 class="modal-title fw-bold text-dark fs-6" id="deleteConfirmModalLabel">Confirm Stock Deletion</h5>
+                </div>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <p class="text-muted mb-0" id="deleteModalBodyText" style="font-size: 0.88rem; line-height: 1.5;">
+                    Are you sure you want to delete this stock entry? This action cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
+                <button type="button" class="btn btn-light border px-4 py-2 text-secondary fw-semibold rounded-2" data-bs-dismiss="modal" style="font-size: 0.84rem;">Cancel</button>
+                <a id="confirmDeleteBtn" href="#" class="btn btn-danger px-4 py-2 fw-semibold rounded-2 text-white" style="font-size: 0.84rem; background-color: #dc3545; border-color: #dc3545;">Yes, Proceed</a>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
@@ -906,9 +957,21 @@ $(document).ready(function() {
         }, 300);
     }
 });
-</script>
 
+$(document).on('click', '.delete-stock-trigger', function(e) {
+    e.preventDefault();
+    const deleteUrl = $(this).attr('data-delete-url');
+    const identifier = $(this).attr('data-identifier');
+
+    $('#deleteModalBodyText').html(`Are you sure you want to delete stock entry <strong>${identifier}</strong>?`);
+  
+    $('#confirmDeleteBtn').attr('href', deleteUrl);
+
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    deleteModal.show();
+});
+</script>
 <?php
-$content = ob_get_clean();
+$modal_html = ob_get_clean();
 include "stocklayout.php";
 ?>

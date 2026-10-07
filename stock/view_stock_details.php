@@ -740,13 +740,14 @@ ob_start();
                                                                                 </a>
 
                                                                                 <?php if ($dynamicStatus === 'available' && (int)$row['dispatched_qty'] === 0): ?>
-                                                                                    <!-- Delete Button -->
                                                                                     <a href="delete_stock.php?id=<?= urlencode($enc_stock_id) ?>" 
-                                                                                        class="action-btn-erp text-danger delete-stock-trigger" 
-                                                                                        data-delete-url="delete_stock.php?id=<?= urlencode($enc_stock_id) ?>"
-                                                                                        data-identifier="<?= htmlspecialchars($row['serial_number'] ?? 'Non-Serialized Batch (Bill: ' .$meta['bill_no'] . ')') ?>"
-                                                                                        title="Delete Record">
-                                                                                            <i class="bi bi-trash"></i>
+                                                                                    class="action-btn-erp text-danger delete-stock-trigger" 
+                                                                                    data-delete-url="delete_stock.php?id=<?= urlencode($enc_stock_id) ?>"
+                                                                                    data-stock-type="<?= $row['stock_type'] ?>"
+                                                                                    data-quantity="<?= $row['total_quantity'] ?>"
+                                                                                    data-identifier="<?= htmlspecialchars($row['serial_number'] ?? 'Bulk Batch (Bill: ' . $meta['bill_no'] . ')') ?>"
+                                                                                    title="Delete Record">
+                                                                                        <i class="bi bi-trash"></i>
                                                                                     </a>
                                                                                 <?php endif; ?>
 
@@ -961,12 +962,29 @@ $(document).ready(function() {
 $(document).on('click', '.delete-stock-trigger', function(e) {
     e.preventDefault();
     const deleteUrl = $(this).attr('data-delete-url');
+    const stockType = $(this).attr('data-stock-type');
+    const quantity = $(this).attr('data-quantity');
     const identifier = $(this).attr('data-identifier');
 
-    $('#deleteModalBodyText').html(`Are you sure you want to delete stock entry <strong>${identifier}</strong>?`);
-  
+    if (stockType === 'non_serial') {
+        // Bulk batch warning explaining quantity wipeout and suggesting Edit for typos
+        $('#deleteModalBodyText').html(`
+            <div class="alert alert-warning border-0 bg-warning-subtle text-warning-emphasis p-2.5 mb-2 rounded-2" style="font-size: 0.84rem;">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> <strong>Bulk Batch Warning:</strong> This record contains <strong>${quantity} units</strong>. Deleting will remove the entire batch of ${quantity} items.
+            </div>
+            <p class="mb-0 text-muted" style="font-size: 0.86rem;">
+                If you only need to adjust the quantity (e.g., from 52 to 50), please use the <strong>Edit</strong> button instead. Proceed with full batch deletion?
+            </p>
+        `);
+    } else {
+        // Standard message for serialized single items
+        $('#deleteModalBodyText').html(`
+            Are you sure you want to delete serialized entry <strong>${identifier}</strong>? This action cannot be undone.
+        `);
+    }
+    
+    // Set the action URL and show modal
     $('#confirmDeleteBtn').attr('href', deleteUrl);
-
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
     deleteModal.show();
 });

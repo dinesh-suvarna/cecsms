@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_stock'])) {
 
 // --- 5. DATA FETCHING ---
 $items = $conn->query("SELECT * FROM furniture_items ORDER BY item_name");
-$divisions=null;
+$divisions = null;
 
 // Logic: Show all Furniture vendors PLUS the one currently saved in the record (if editing)
 $current_v_id = ($is_edit) ? (int)$edit_data['vendor_id'] : 0;
@@ -92,6 +92,7 @@ if ($user_role === 'SuperAdmin') {
 }
 
 $page_title = $is_edit ? "Edit Furniture Stock" : "Add Furniture Stock"; 
+$page_icon  = $is_edit ? "bi-pencil-square" : "bi-box-seam";
 ob_start();
 ?>
 
@@ -99,237 +100,222 @@ ob_start();
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
 
 <style>
-    
-    .content-wrapper-full {
-        width: 100%;
-        padding: 0; 
-    }
-
-    .main-card {
-        border-radius: 15px;
-        border: 1px solid #eef0f2;
-        background: #fff;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.02) !important;
-        margin-bottom: 2rem;
-    }
-
-    .form-section-header {
-        display: flex;
-        align-items: center;
-        margin: 25px 0 15px 0;
-    }
-    .form-section-header .line {
-        flex: 1;
-        height: 1px;
-        background: #f1f3f5;
-    }
-    .form-section-header .text {
-        padding: 0 15px;
-        font-weight: 800;
-        font-size: 0.85rem;
-        color: blue;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .field-wrapper {
-        background: #f8f9fa;
-        border: 1px solid #e9ecef;
-        border-radius: 10px;
-        padding: 8px 12px;
-        transition: all 0.2s ease;
-    }
-    .field-wrapper:focus-within {
-        border-color: #4361ee;
-        background: #fff;
-        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.05);
-    }
-    .field-wrapper label {
-        display: block;
-        font-size: 0.65rem;
-        font-weight: 700;
-        color: #6c757d;
-        text-transform: uppercase;
-        margin-bottom: 2px;
-    }
-    .field-wrapper .form-control, 
-    .field-wrapper .form-select {
-        border: none !important;
-        padding: 0 !important;
-        background: transparent !important;
-        font-weight: 500;
-        font-size: 0.95rem;
-        color: #333;
-        min-height: auto;
-    }
-    .field-wrapper .form-control:focus { box-shadow: none !important; }
-
-    .select2-container--bootstrap-5.select2-container--focus .select2-selection {
-    border-color: #198754 !important; 
-    box-shadow: none;
+/* Enterprise UI Local Overrides & Scaled Font Sizing */
+.stock-form-card {
+    border: 1px solid var(--erp-border, #dce3e9) !important;
+    background: #ffffff;
+    border-radius: 6px !important;
 }
-    .select2-container--bootstrap-5 .select2-selection {
-        border: none !important;
-        background: transparent !important;
-        font-weight: 500 !important;
-        padding: 0 !important;
-        height: auto !important;
-    }
 
-    .btn-save-stock {
-        background: #4361ee;
-        color: #fff;
-        border: none;
-        padding: 12px 30px;
-        border-radius: 10px;
-        font-weight: 600;
-        transition: all 0.2s ease;
-    }
-    .btn-save-stock:hover {
-        background: #3751d5;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(67, 97, 238, 0.2);
-    }
+.stock-card-header {
+    background: #f8fafc;
+    border-bottom: 1px solid var(--erp-border, #dce3e9);
+    padding: 0.85rem 1.25rem;
+}
 
-    
-    <?php if($is_edit): ?>
-    .main-card { border-top: 4px solid #e33e4d; }
-    .edit-indicator { color: #e33e4d; font-weight: 800; font-size: 0.8rem; }
-    <?php endif; ?>
+.stock-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--erp-navy-dark, #102f4a);
+}
+
+.form-label-erp {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.35rem;
+}
+
+.form-control-erp, .form-select-erp {
+    font-size: 0.9rem !important;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    color: #1e293b;
+    transition: all 0.15s ease-in-out;
+}
+
+.form-control-erp:focus, .form-select-erp:focus {
+    border-color: var(--erp-navy, #173f63) !important;
+    box-shadow: 0 0 0 3px rgba(23, 63, 99, 0.1) !important;
+}
+
+.input-group-text-erp {
+    font-size: 0.9rem;
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.btn-erp-primary {
+    background-color: var(--erp-navy, #173f63);
+    border-color: var(--erp-navy, #173f63);
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.6rem 2rem;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.btn-erp-primary:hover {
+    background-color: var(--erp-navy-dark, #102f4a);
+    border-color: var(--erp-navy-dark, #102f4a);
+    color: #ffffff;
+}
+
+.select2-container--bootstrap-5.select2-container--focus .select2-selection,
+.select2-container--bootstrap-5.select2-container--open .select2-selection {
+    border-color: var(--erp-navy, #173f63) !important;
+    box-shadow: 0 0 0 3px rgba(23, 63, 99, 0.1) !important;
+}
+
+.select2-container--bootstrap-5 .select2-search__field:focus {
+    border-color: var(--erp-navy, #173f63) !important;
+    box-shadow: none !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected] {
+    background-color: var(--erp-navy, #173f63) !important;
+    color: #ffffff !important;
+}
+
+<?php if($is_edit): ?>
+.stock-form-card { border-top: 4px solid #e33e4d !important; }
+.edit-indicator { color: #e33e4d; font-weight: 800; font-size: 0.8rem; }
+<?php endif; ?>
 </style>
 
-<div class="container-fluid p-0 mt-3 content-wrapper-full">
-    <div class="card main-card">
-        <div class="card-body p-4 p-md-5">
-            
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h4 class="fw-bold mb-1">
-                        <i class="bi <?= $is_edit ? 'bi-pencil-square text-danger' : 'bi-plus-circle text-primary' ?> me-2"></i>
-                        <?= $is_edit ? "Modify Stock Record" : "Furniture Stock Entry" ?>
-                    </h4>
-                    <p class="text-muted small mb-0">Formalize stock entry and facility assignment.</p>
-                </div>
-                <?php if($is_edit): ?>
-                    <span class="edit-indicator"><i class="bi bi-shield-exclamation me-1"></i> EDITING RECORD #<?= $edit_data['id'] ?></span>
-                <?php endif; ?>
-            </div>
+<div class="container-fluid mt-4 px-4">
 
-            <form method="POST" id="furnitureForm">
-                <input type="hidden" name="edit_id" value="<?= $edit_data['id'] ?? '' ?>">
-                
-                <div class="form-section-header">
-                    <span class="text">Item Identity & Logistics</span>
-                    <div class="line"></div>
-                </div>
+    <!-- Page Header -->
+    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark" style="font-size: 1.25rem;">
+                <i class="bi <?= $is_edit ? 'bi-pencil-square text-danger' : 'bi-box-seam me-2' ?>" style="<?= !$is_edit ? 'color: var(--erp-navy, #173f63);' : '' ?>"></i>
+                <?= $is_edit ? "Modify Furniture Stock Record" : "Add Furniture Stock Entry" ?>
+            </h4>
+            <p class="text-muted mb-0" style="font-size: 0.85rem;">Record incoming furniture stock items, quantities, pricing, and facility assignment.</p>
+        </div>
+        <?php if($is_edit): ?>
+            <span class="edit-indicator"><i class="bi bi-shield-exclamation me-1"></i> EDITING RECORD #<?= $edit_data['id'] ?></span>
+        <?php endif; ?>
+    </div>
+
+    <form method="POST" id="furnitureForm" autocomplete="off">
+        <input type="hidden" name="edit_id" value="<?= $edit_data['id'] ?? '' ?>">
+        
+        <!-- Section 1: Item Identity & Logistics -->
+        <div class="card stock-form-card shadow-sm mb-4">
+            <div class="stock-card-header">
+                <span class="stock-card-title"><i class="bi bi-tags me-2"></i>1. Item Identity & Logistics</span>
+            </div>
+            <div class="card-body p-4">
                 <div class="row g-3">
                     <div class="col-md-8">
-                        <div class="field-wrapper">
-                            <label>Furniture Item Type</label>
-                            <select name="furniture_item_id" class="form-select searchable-select" required>
-                                <option value="" disabled <?= !$is_edit ? 'selected' : '' ?>>Search or select item...</option>
-                                <?php while($row = $items->fetch_assoc()): ?>
-                                    <option value="<?= $row['id'] ?>" <?= ($is_edit && $edit_data['furniture_item_id'] == $row['id']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($row['item_name']) ?>
-                                    </option>
-                                <?php endwhile; ?>
-                            </select>
-                        </div>
+                        <label class="form-label form-label-erp">Furniture Item Type <span class="text-danger">*</span></label>
+                        <select name="furniture_item_id" class="form-select form-select-erp searchable-select" required>
+                            <option value="" disabled <?= !$is_edit ? 'selected' : '' ?>>Search or select item...</option>
+                            <?php while($row = $items->fetch_assoc()): ?>
+                                <option value="<?= $row['id'] ?>" <?= ($is_edit && $edit_data['furniture_item_id'] == $row['id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($row['item_name']) ?>
+                                </option>
+                            <?php endwhile; ?>
+                        </select>
                     </div>
                     <div class="col-md-4">
-                        <div class="field-wrapper">
-                            <label>Invoice / Bill Number</label>
-                            <input type="text" name="bill_no" class="form-control" value="<?= $edit_data['bill_no'] ?? '' ?>" required>
-                        </div>
+                        <label class="form-label form-label-erp">Invoice / Bill Number <span class="text-danger">*</span></label>
+                        <input type="text" name="bill_no" class="form-control form-control-erp" value="<?= htmlspecialchars($edit_data['bill_no'] ?? '') ?>" required>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <div class="form-section-header">
-                    <span class="text">Quantity & Pricing</span>
-                    <div class="line"></div>
-                </div>
+        <!-- Section 2: Quantity & Pricing -->
+        <div class="card stock-form-card shadow-sm mb-4">
+            <div class="stock-card-header">
+                <span class="stock-card-title"><i class="bi bi-cash-stack me-2"></i>2. Quantity & Pricing</span>
+            </div>
+            <div class="card-body p-4">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <div class="field-wrapper">
-                            <label>Total Quantity</label>
-                            <input type="number" name="quantity" class="form-control" value="<?= $edit_data['total_qty'] ?? '' ?>" min="1" required>
+                        <label class="form-label form-label-erp">Total Quantity <span class="text-danger">*</span></label>
+                        <input type="number" name="quantity" class="form-control form-control-erp" value="<?= htmlspecialchars($edit_data['total_qty'] ?? '') ?>" min="1" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label form-label-erp">Unit Price (₹) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text input-group-text-erp">₹</span>
+                            <input type="number" step="0.01" name="unit_price" class="form-control form-control-erp border-start-0" value="<?= htmlspecialchars($edit_data['unit_price'] ?? '') ?>" min="0.01" required>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="field-wrapper">
-                            <label>Unit Price (₹)</label>
-                            <input type="number" name="unit_price" class="form-control" value="<?= $edit_data['unit_price'] ?? '' ?>" step="0.01" min="0.01" required>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="field-wrapper">
-                            <label>Purchase Date</label>
-                            <input type="date" name="bill_date" class="form-control" value="<?= $edit_data['bill_date'] ?? date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" required>
-                        </div>
+                        <label class="form-label form-label-erp">Purchase Date <span class="text-danger">*</span></label>
+                        <input type="date" name="bill_date" class="form-control form-control-erp" value="<?= htmlspecialchars($edit_data['bill_date'] ?? date('Y-m-d')) ?>" max="<?= date('Y-m-d') ?>" required>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <div class="form-section-header">
-                    <span class="text">Unit & Vendor Attribution</span>
-                    <div class="line"></div>
-                </div>
+        <!-- Section 3: Unit & Vendor Attribution -->
+        <div class="card stock-form-card shadow-sm mb-4">
+            <div class="stock-card-header">
+                <span class="stock-card-title"><i class="bi bi-building me-2"></i>3. Unit & Vendor Attribution</span>
+            </div>
+            <div class="card-body p-4">
                 <div class="row g-3">
                     <?php if ($user_role === 'SuperAdmin'): ?>
                         <div class="col-md-6">
-                            <div class="field-wrapper">
-                                <label>Filter by Division</label>
-                                <select id="division_filter" class="form-select searchable-select">
-                                    <option value="">All Divisions</option>
-                                    <?php while($d = $divisions->fetch_assoc()): ?>
-                                        <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['division_name']) ?></option>
-                                    <?php endwhile; ?>
-                                </select>
-                            </div>
+                            <label class="form-label form-label-erp">Filter by Division</label>
+                            <select id="division_filter" class="form-select form-select-erp searchable-select">
+                                <option value="">All Divisions</option>
+                                <?php while($d = $divisions->fetch_assoc()): ?>
+                                    <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['division_name']) ?></option>
+                                <?php endwhile; ?>
+                            </select>
                         </div>
                     <?php endif; ?>
 
                     <div class="<?= ($user_role === 'SuperAdmin') ? 'col-md-6' : 'col-md-12' ?>">
-                        <div class="field-wrapper">
-                            <label>Receiving Unit</label>
-                            <select name="unit_id" id="unit_select" class="form-select searchable-select" required>
-                                <option value="" disabled <?= !$is_edit ? 'selected' : '' ?>>Assign to unit...</option>
-                                <?php while($u = $units_res->fetch_assoc()): 
-                                    $unit_label = (!empty($u['unit_code'])) ? strtoupper($u['unit_code']) . " - " . $u['unit_name'] : $u['unit_name'];
-                                ?>
-                                    <option value="<?= $u['id'] ?>" data-division="<?= $u['division_id'] ?>" <?= ($is_edit && $edit_data['unit_id'] == $u['id']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($unit_label) ?>
-                                    </option>
-                                <?php endwhile; ?>
-                            </select>
-                        </div>
+                        <label class="form-label form-label-erp">Receiving Unit <span class="text-danger">*</span></label>
+                        <select name="unit_id" id="unit_select" class="form-select form-select-erp searchable-select" required>
+                            <option value="" disabled <?= !$is_edit ? 'selected' : '' ?>>Assign to unit...</option>
+                            <?php while($u = $units_res->fetch_assoc()): 
+                                $unit_label = (!empty($u['unit_code'])) ? strtoupper($u['unit_code']) . " - " . $u['unit_name'] : $u['unit_name'];
+                            ?>
+                                <option value="<?= $u['id'] ?>" data-division="<?= $u['division_id'] ?>" <?= ($is_edit && $edit_data['unit_id'] == $u['id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($unit_label) ?>
+                                </option>
+                            <?php endwhile; ?>
+                        </select>
                     </div>
 
                     <div class="col-md-12">
-                        <div class="field-wrapper">
-                            <label>Supplier / Vendor</label>
-                            <select name="vendor_id" class="form-select searchable-select" required>
-                                <option value="" disabled <?= !$is_edit ? 'selected' : '' ?>>Select vendor...</option>
-                                <?php $vendors->data_seek(0); while($v = $vendors->fetch_assoc()): ?>
-                                    <option value="<?= $v['id'] ?>" <?= ($is_edit && $edit_data['vendor_id'] == $v['id']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($v['vendor_name']) ?>
-                                    </option>
-                                <?php endwhile; ?>
-                            </select>
-                        </div>
+                        <label class="form-label form-label-erp">Supplier / Vendor <span class="text-danger">*</span></label>
+                        <select name="vendor_id" class="form-select form-select-erp searchable-select" required>
+                            <option value="" disabled <?= !$is_edit ? 'selected' : '' ?>>Select vendor...</option>
+                            <?php $vendors->data_seek(0); while($v = $vendors->fetch_assoc()): ?>
+                                <option value="<?= $v['id'] ?>" <?= ($is_edit && $edit_data['vendor_id'] == $v['id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($v['vendor_name']) ?>
+                                </option>
+                            <?php endwhile; ?>
+                        </select>
                     </div>
                 </div>
-
-                <div class="d-flex justify-content-end gap-3 mt-5 pt-3 border-top">
-                    <a href="view_furniture.php" class="btn btn-light px-4 text-muted discard-btn" style="border-radius:10px;">
-                        <i class="bi bi-arrow-left me-1"></i> Back
-                    </a>
-                    <button type="submit" name="save_stock" class="btn btn-save-stock">
-                        <i class="bi bi-check2-circle me-1"></i> <?= $is_edit ? "Update Changes" : "Save Stock Entry" ?>
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
-    </div>
+
+        <!-- Submit Button Area -->
+        <div class="d-flex justify-content-end gap-3 mb-5">
+            <a href="view_furniture.php" class="btn btn-light px-4 text-muted discard-btn border" style="border-radius:4px; font-size: 0.9rem; font-weight: 600;">
+                <i class="bi bi-arrow-left me-1"></i> Back
+            </a>
+            <button type="submit" name="save_stock" class="btn btn-erp-primary shadow-sm">
+                <i class="bi bi-check2-circle me-1.5"></i> <?= $is_edit ? "Update Changes" : "Save Stock Entry" ?>
+            </button>
+        </div>
+    </form>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -372,7 +358,7 @@ $(document).ready(function() {
 
     // 3. Confirm Back Logic
     $('.discard-btn').on('click', function(e) {
-        if($('#furnitureForm').serialize().length > 50) { // Simple check if form was touched
+        if($('#furnitureForm').serialize().length > 50) { 
             e.preventDefault();
             const url = $(this).attr('href');
             Swal.fire({
@@ -380,7 +366,7 @@ $(document).ready(function() {
                 text: "Discard current input?",
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: '#4361ee',
+                confirmButtonColor: 'var(--erp-navy, #173f63)',
                 confirmButtonText: 'Yes, Back'
             }).then((result) => { if (result.isConfirmed) window.location.href = url; });
         }

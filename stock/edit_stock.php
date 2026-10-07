@@ -46,19 +46,25 @@ if(isset($_POST['update'])){
 
     $user_id  = $_SESSION['user_id'] ?? 0;
 
-    $serial = trim($_POST['serial_number'] ?? '');
+    $serial   = trim($_POST['serial_number'] ?? '');
     if($data['stock_type'] === 'non_serial'){
         $serial = NULL;
     }
-    $bill_no  = trim($_POST['bill_no']);
-    $bill_date = $_POST['bill_date'] ?: NULL;
-    $po       = trim($_POST['po_number']);
-    $amount   = !empty($_POST['amount']) ? (float)$_POST['amount'] : NULL;
-    $warranty = $_POST['warranty_upto'] ?: NULL;
-    $vendor   = !empty($_POST['vendor_id']) ? (int)$_POST['vendor_id'] : NULL;
+    $bill_no          = trim($_POST['bill_no']);
+    $bill_date        = $_POST['bill_date'] ?: NULL;
+    $po               = trim($_POST['po_number']);
+    $amount           = !empty($_POST['amount']) ? (float)$_POST['amount'] : NULL;
+    $warranty         = $_POST['warranty_upto'] ?: NULL;
+    $vendor           = !empty($_POST['vendor_id']) ? (int)$_POST['vendor_id'] : NULL;
+    $procurement_year = trim($_POST['procurement_year'] ?? '');
+
+    // Validate Procurement Year (Strictly 4 digits if provided)
+    if(!empty($procurement_year) && !preg_match('/^\d{4}$/', $procurement_year)){
+        $errorMsg = "Procurement year must be a valid 4-digit year (e.g., 2026).";
+    }
 
     /* Duplicate serial check */
-    if($data['stock_type'] === 'serial' && !empty($serial)){
+    if(empty($errorMsg) && $data['stock_type'] === 'serial' && !empty($serial)){
         $check = $conn->prepare("
             SELECT id FROM stock_details 
             WHERE stock_item_id = ? 
@@ -92,12 +98,13 @@ if(isset($_POST['update'])){
                     po_number = ?,
                     vendor_id = ?,
                     amount = ?,
-                    warranty_upto = ?
+                    warranty_upto = ?,
+                    procurement_year = ?
                 WHERE id = ?
             ");
 
             $update->bind_param(
-                "ssssidsi",
+                "ssssidssi",
                 $serial,
                 $bill_no,
                 $bill_date,
@@ -105,6 +112,7 @@ if(isset($_POST['update'])){
                 $vendor,
                 $amount,
                 $warranty,
+                $procurement_year,
                 $id
             );
 
@@ -134,13 +142,14 @@ if(isset($_POST['update'])){
             $conn->commit();
 
             /* Refresh updated data */
-            $data['serial_number'] = $serial;
-            $data['bill_no'] = $bill_no;
-            $data['bill_date'] = $bill_date;
-            $data['po_number'] = $po;
-            $data['vendor_id'] = $vendor;
-            $data['amount'] = $amount;
-            $data['warranty_upto'] = $warranty;
+            $data['serial_number']    = $serial;
+            $data['bill_no']          = $bill_no;
+            $data['bill_date']        = $bill_date;
+            $data['po_number']        = $po;
+            $data['vendor_id']        = $vendor;
+            $data['amount']           = $amount;
+            $data['warranty_upto']    = $warranty;
+            $data['procurement_year'] = $procurement_year;
 
             $successMsg = "Stock entry updated successfully.";
 
@@ -373,7 +382,7 @@ ob_start();
                     </div>
                 </div>
 
-                <div class="row g-3 mb-4">
+                <div class="row g-3 mb-3">
                     <!-- Amount -->
                     <div class="col-md-6">
                         <label class="form-label">Unit Cost (₹)</label>
@@ -391,6 +400,23 @@ ob_start();
                                name="warranty_upto"
                                class="form-control"
                                value="<?= htmlspecialchars($data['warranty_upto'] ?? '') ?>">
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Procurement Year <span class="text-danger">*</span></label>
+                        <select name="procurement_year" class="form-select" required>
+                            <option value="">Select Year</option>
+                            <?php 
+                            $current_year = (int)date('Y');
+                            $selected_year = $data['procurement_year'] ?? '';
+                            for ($y = $current_year; $y >= 2000; $y--) {
+                                $selected = ($selected_year == $y) ? 'selected' : '';
+                                echo "<option value='{$y}' {$selected}>{$y}</option>";
+                            }
+                            ?>
+                        </select>
                     </div>
                 </div>
 

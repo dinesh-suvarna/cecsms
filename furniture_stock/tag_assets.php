@@ -111,34 +111,113 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_tags']) && $s
 }
 
 $page_title = "Asset Tagging Queue";
+$page_icon  = "bi-tags";
 ob_start();
 ?>
 
-<div class="container-fluid py-4 px-4">
-    <div class="row g-4">
+<style>
+
+.stock-form-card {
+    border: 1px solid var(--erp-border, #dce3e9) !important;
+    background: #ffffff;
+    border-radius: 6px !important;
+}
+
+.stock-card-header {
+    background: #f8fafc;
+    border-bottom: 1px solid var(--erp-border, #dce3e9);
+    padding: 0.85rem 1.25rem;
+}
+
+.stock-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--erp-navy-dark, #102f4a);
+}
+
+.form-label-erp {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.35rem;
+}
+
+.form-control-erp, .form-select-erp {
+    font-size: 0.9rem !important;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    color: #1e293b;
+    transition: all 0.15s ease-in-out;
+}
+
+.form-control-erp:focus, .form-select-erp:focus {
+    border-color: var(--erp-navy, #173f63) !important;
+    box-shadow: 0 0 0 3px rgba(23, 63, 99, 0.1) !important;
+}
+
+.btn-erp-primary {
+    background-color: var(--erp-navy, #173f63);
+    border-color: var(--erp-navy, #173f63);
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.6rem 2rem;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.btn-erp-primary:hover {
+    background-color: var(--erp-navy-dark, #102f4a);
+    border-color: var(--erp-navy-dark, #102f4a);
+    color: #ffffff;
+}
+
+.extra-small { font-size: 0.75rem; }
+.min-vh-50 { min-height: 60vh; }
+.list-group-item { transition: all 0.2s; border-bottom: 1px solid #f8f9fa !important; }
+.list-group-item:hover { background-color: #f8fafc; }
+.font-monospace { font-family: 'Monaco', 'Consolas', monospace; letter-spacing: 1px; }
+</style>
+
+<div class="container-fluid mt-4 px-4">
+
+    <!-- Page Header -->
+    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark" style="font-size: 1.25rem;">
+                <i class="bi bi-tags me-2" style="color: var(--erp-navy, #173f63);"></i>Asset Tagging Queue
+            </h4>
+            <p class="text-muted mb-0" style="font-size: 0.85rem;">Assign unique Asset ID prefixes and generate tracking tags for pending furniture inventory.</p>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <!-- Left Column: Pending Queue List -->
         <div class="col-lg-4">
-            <div class="card border-0 shadow-sm rounded-4 h-100">
-                <div class="card-header bg-white border-0 py-3">
-                    <h6 class="fw-bold m-0"><i class="bi bi-layers-half me-2 text-primary"></i>Pending Queue</h6>
+            <div class="card stock-form-card shadow-sm h-100">
+                <div class="stock-card-header">
+                    <span class="stock-card-title"><i class="bi bi-layers-half me-2"></i>Pending Queue</span>
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush">
                         <?php if (empty($pending_list)): ?>
                             <div class="p-4 text-center text-muted small">
-                                <i class="bi bi-check2-all d-block fs-2 mb-2"></i>
+                                <i class="bi bi-check2-all d-block fs-2 mb-2 text-success"></i>
                                 No pending items to tag.
                             </div>
                         <?php else: ?>
                             <?php foreach ($pending_list as $p): ?>
                                 <a href="tag_assets.php?stock_id=<?= $p['id'] ?>" 
-                                   class="list-group-item list-group-item-action p-3 border-0 <?= ($stock_id == $p['id']) ? 'bg-primary-subtle border-start border-primary border-4' : '' ?>">
+                                   class="list-group-item list-group-item-action p-3 border-0 <?= ($stock_id == $p['id']) ? 'border-start border-4' : '' ?>"
+                                   style="<?= ($stock_id == $p['id']) ? 'background-color: rgba(23, 63, 99, 0.06); border-left-color: var(--erp-navy, #173f63) !important;' : '' ?>">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div class="text-truncate">
                                             <div class="fw-bold text-dark small text-uppercase"><?= htmlspecialchars($p['item_name']) ?></div>
                                             <div class="text-muted extra-small">Bill: #<?= htmlspecialchars($p['bill_no']) ?> </div>
                                             <div class="text-muted extra-small">Location: <?= htmlspecialchars($p['unit_code']) ?> </div>
                                         </div>
-                                        <span class="badge rounded-pill bg-white text-primary border border-primary-subtle">
+                                        <span class="badge rounded-pill bg-light text-dark border" style="font-size: 0.75rem;">
                                             <?= $p['total_qty'] - $p['assigned_count'] ?> Left
                                         </span>
                                     </div>
@@ -150,67 +229,68 @@ ob_start();
             </div>
         </div>
 
+        <!-- Right Column: Tag Generation Form -->
         <div class="col-lg-8">
-            <div class="card border-0 shadow-sm rounded-4 min-vh-50">
-                <div class="card-body p-5">
+            <div class="card stock-form-card shadow-sm min-vh-50">
+                <div class="card-body p-4 p-md-5">
                     <?php if (!$stock || ($current_assets >= (int)$stock['total_qty'])): ?>
                         <div class="text-center py-5">
-                            <div class="mb-4">
-                                <div class="bg-success bg-opacity-10 d-inline-flex p-4 rounded-circle">
-                                    <i class="bi bi-check-lg text-success display-4"></i>
-                                </div>
+                            <div class="mb-4"> 
+                                    <i class="bi bi-check2-circle text-success display-4 d-block mb-3 opacity-75"></i>  
                             </div>
                             <h4 class="fw-bold text-dark">Queue Cleared</h4>
                             <p class="text-muted mb-4">All furniture stocks have been assigned unique Asset IDs.</p>
-                            <a href="view_assets.php" class="btn btn-outline-dark rounded-pill px-4">Go to Registry</a>
+                            <a href="view_assets.php" class="btn btn-outline-dark px-4" style="border-radius: 4px; font-size: 0.9rem;">Go to Registry</a>
                         </div>
                     <?php else: ?>
-                        <div class="d-flex align-items-center mb-4">
-                            <i class="bi bi-tag-fill text-primary fs-3 me-3"></i>
+                        <div class="d-flex align-items-center mb-4 pb-2 border-bottom">
+                            <i class="bi bi-tag-fill fs-4 me-3" style="color: var(--erp-navy, #173f63);"></i>
                             <div>
-                                <h5 class="fw-bold m-0">Assign Asset ID</h5>
-                                <p class="text-muted small m-0">Finalizing stock entry for auditing</p>
+                                <h5 class="fw-bold m-0 text-dark" style="font-size: 1.05rem;">Assign Asset ID</h5>
+                                <p class="text-muted small m-0">Finalizing stock entry for auditing and barcode tracking</p>
                             </div>
                         </div>
 
-                        <div class="alert bg-light border-0 rounded-4 p-4 mb-4">
+                        <div class="alert bg-light border rounded-2 p-3 mb-4">
                             <div class="row align-items-center">
                                 <div class="col-sm-8">
                                     <div class="small text-muted text-uppercase fw-bold mb-1">Active Item</div>
-                                    <h5 class="fw-bold mb-0 text-primary"><?= htmlspecialchars($stock['item_name']) ?> (<?= htmlspecialchars($stock['item_code']) ?>)</h5>
-                                    <div class="small mt-1">Bill Reference: <strong><?= htmlspecialchars($stock['bill_no']) ?></strong></div>
-                                    <div class="small mt-1">Location: <strong> <?= htmlspecialchars($stock['unit_code']) ?> </strong></div>
+                                    <h6 class="fw-bold mb-1" style="color: var(--erp-navy, #173f63);"><?= htmlspecialchars($stock['item_name']) ?> (<?= htmlspecialchars($stock['item_code']) ?>)</h6>
+                                    <div class="small text-muted mt-1">Bill Reference: <strong class="text-dark"><?= htmlspecialchars($stock['bill_no']) ?></strong></div>
+                                    <div class="small text-muted mt-1">Location: <strong class="text-dark"><?= htmlspecialchars($stock['unit_code']) ?></strong></div>
                                 </div>
                                 <div class="col-sm-4 text-sm-end mt-3 mt-sm-0">
-                                    <div class="display-6 fw-bold text-dark"><?= (int)$stock['total_qty'] - $current_assets ?></div>
+                                    <div class="h3 fw-bold text-dark mb-0"><?= (int)$stock['total_qty'] - $current_assets ?></div>
                                     <div class="small text-muted text-uppercase">To Be Tagged</div>
                                 </div>
                             </div>
                         </div>
 
-                        <form method="POST">
+                        <form method="POST" autocomplete="off">
                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                             
-                            <div class="row g-4">
-                               <div class="col-md-8">
-                                    <label class="form-label small fw-bold text-muted text-uppercase">ID Prefix Pattern</label>
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label class="form-label form-label-erp">ID Prefix Pattern <span class="text-danger">*</span></label>
                                     <input type="text" id="prefixInput" name="prefix" 
-                                           class="form-control form-control-lg rounded-3 border-light-subtle bg-light fw-bold" 
+                                           class="form-control form-control-erp text-uppercase fw-bold" 
                                            placeholder="e.g. CEC/CSE/2021-22/CT6-1S/" required>
                                     <div class="mt-2 d-flex align-items-center gap-2">
                                         <span class="text-muted small">Live Preview:</span>
-                                        <span id="prefixPreview" class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-2 font-monospace" style="display:none;"></span>
+                                        <span id="prefixPreview" class="badge bg-light text-dark border px-2 py-1 rounded-1 font-monospace" style="display:none; font-size: 0.8rem;"></span>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-muted text-uppercase">Starting No.</label>
-                                    <input type="number" name="start_no" class="form-control form-control-lg rounded-3 border-light-subtle bg-light" value="1" min="1" required>
+                                    <label class="form-label form-label-erp">Starting No. <span class="text-danger">*</span></label>
+                                    <input type="number" name="start_no" class="form-control form-control-erp" value="1" min="1" required>
                                 </div>
                             </div>
 
-                            <button type="submit" name="generate_tags" class="btn btn-primary btn-lg rounded-pill px-5 shadow-sm mt-5">
-                                <i class="bi bi-cpu-fill me-2"></i> Generate & Finalize
-                            </button>
+                            <div class="d-flex justify-content-end mt-5">
+                                <button type="submit" name="generate_tags" class="btn btn-erp-primary shadow-sm">
+                                    <i class="bi bi-cpu-fill me-1.5"></i> Generate & Finalize
+                                </button>
+                            </div>
                         </form>
                     <?php endif; ?>
                 </div>
@@ -218,15 +298,6 @@ ob_start();
         </div>
     </div>
 </div>
-
-<style>
-    .extra-small { font-size: 0.75rem; }
-    .min-vh-50 { min-height: 60vh; }
-    .list-group-item { transition: all 0.2s; border-bottom: 1px solid #f8f9fa !important; }
-    .list-group-item:hover { background-color: #f8f9fa; }
-    .bg-primary-subtle { background-color: #eef2ff !important; }
-    .font-monospace { font-family: 'Monaco', 'Consolas', monospace; letter-spacing: 1px; }
-</style>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -250,7 +321,7 @@ if (urlParams.get('msg') === 'success') {
 }
 
 <?php if (!empty($error_message)): ?>
-    Swal.fire({ icon: 'error', title: 'Duplicate Detected', text: '<?= addslashes($error_message) ?>', confirmButtonColor: '#3085d6' });
+    Swal.fire({ icon: 'error', title: 'Duplicate Detected', text: '<?= addslashes($error_message) ?>', confirmButtonColor: 'var(--erp-navy, #173f63)' });
 <?php endif; ?>
 </script>
 

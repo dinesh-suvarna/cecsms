@@ -752,10 +752,10 @@ ob_start();
         </div>
 
         <!-- INVENTORY + ACTIVITY -->
-        <div class="row g-3">
+        <div class="row g-3 align-items-stretch">
 
             <div class="col-lg-8">
-                <div class="fd-panel">
+                <div class="fd-panel h-100">
                     <div class="fd-panel-header">
                         <div>
                             <h5 class="fd-panel-title">Inventory Breakdown</h5>
@@ -800,115 +800,62 @@ ob_start();
                 </div>
             </div>
 
-            <!-- RECENT ACTIVITY -->
+            <!-- QUICK ACTIONS (VERTICAL) -->
             <div class="col-lg-4">
-                <div class="fd-panel fd-activity-panel">
+                <div class="fd-panel h-100 d-flex flex-column">
                     <div class="fd-panel-header">
                         <div>
-                            <h5 class="fd-panel-title">Recent Deployments</h5>
-                            <p class="fd-panel-subtitle">Latest tagged furniture activity</p>
+                            <h5 class="fd-panel-title">Quick Actions</h5>
+                            <p class="fd-panel-subtitle">Frequent operational shortcuts</p>
                         </div>
-
-                        <span class="fd-activity-live">
-                            <span class="fd-live-dot"></span>
-                            Live
-                        </span>
                     </div>
 
-                    <div class="fd-activity-list">
-                        <?php if ($recent_activities && $recent_activities->num_rows > 0): ?>
-                            <?php while($log = $recent_activities->fetch_assoc()): ?>
-                                <div class="fd-activity-item">
-                                    <div class="fd-activity-marker">
-                                        <i class="bi bi-upc-scan"></i>
-                                    </div>
-
-                                    <div class="fd-activity-content">
-                                        <div class="fd-activity-tag">
-                                            #<?= htmlspecialchars($log['asset_tag']) ?>
-                                        </div>
-
-                                        <div class="fd-activity-item-name">
-                                            <?= htmlspecialchars($log['item_name']) ?>
-                                        </div>
-
-                                        <div class="fd-activity-time">
-                                            <i class="bi bi-clock me-1"></i>
-                                            <?= date('d M Y, H:i', strtotime($log['created_at'])) ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endwhile; ?>
-                        <?php else: ?>
-                            <div class="fd-no-activity">
-                                <i class="bi bi-clock-history d-block mb-2" style="font-size:1.35rem;"></i>
-                                No recent deployments found.
+                    <div class="p-3 d-flex flex-column gap-2">
+                        <a href="add_furniture.php" class="fd-action-card m-0">
+                            <div class="fd-action-icon fd-icon-blue">
+                                <i class="bi bi-plus-lg"></i>
                             </div>
-                        <?php endif; ?>
+                            <div>
+                                <p class="fd-action-title">Add Stock</p>
+                                <p class="fd-action-desc">Add inbound furniture stock and quantities.</p>
+                            </div>
+                            <i class="bi bi-chevron-right fd-arrow"></i>
+                        </a>
+
+                        <a href="tag_assets.php" class="fd-action-card m-0">
+                            <div class="fd-action-icon fd-icon-indigo">
+                                <i class="bi bi-qr-code"></i>
+                            </div>
+                            <div>
+                                <p class="fd-action-title">Asset Tagging</p>
+                                <p class="fd-action-desc">Generate and assign unique asset IDs.</p>
+                            </div>
+                            <i class="bi bi-chevron-right fd-arrow"></i>
+                        </a>
+
+                        <a href="view_furniture.php" class="fd-action-card m-0">
+                            <div class="fd-action-icon" style="background:#ecfeff;color:#0891b2;">
+                                <i class="bi bi-box-seam"></i>
+                            </div>
+                            <div>
+                                <p class="fd-action-title">Stock Registry</p>
+                                <p class="fd-action-desc">View available furniture stock records.</p>
+                            </div>
+                            <i class="bi bi-chevron-right fd-arrow"></i>
+                        </a>
+
+                        <a href="view_assets.php" class="fd-action-card m-0">
+                            <div class="fd-action-icon" style="background:#f1f5f9;color:#334155;">
+                                <i class="bi bi-search"></i>
+                            </div>
+                            <div>
+                                <p class="fd-action-title">Audit Assets</p>
+                                <p class="fd-action-desc">Track location and status of tagged assets.</p>
+                            </div>
+                            <i class="bi bi-chevron-right fd-arrow"></i>
+                        </a>
                     </div>
                 </div>
-            </div>
-
-        </div>
-
-        <!-- QUICK ACTIONS -->
-        <div class="fd-section-heading">
-            <h5>Quick Actions</h5>
-            <div class="fd-section-line"></div>
-        </div>
-
-        <div class="row g-3">
-
-            <div class="col-sm-6 col-lg-3">
-                <a href="add_furniture.php" class="fd-action-card">
-                    <div class="fd-action-icon fd-icon-blue">
-                        <i class="bi bi-plus-lg"></i>
-                    </div>
-                    <div>
-                        <p class="fd-action-title">Add Stock</p>
-                        <p class="fd-action-desc">Add inbound furniture stock and quantities.</p>
-                    </div>
-                    <i class="bi bi-chevron-right fd-arrow"></i>
-                </a>
-            </div>
-
-            <div class="col-sm-6 col-lg-3">
-                <a href="tag_assets.php" class="fd-action-card">
-                    <div class="fd-action-icon fd-icon-indigo">
-                        <i class="bi bi-qr-code"></i>
-                    </div>
-                    <div>
-                        <p class="fd-action-title">Asset Tagging</p>
-                        <p class="fd-action-desc">Generate and assign unique asset IDs.</p>
-                    </div>
-                    <i class="bi bi-chevron-right fd-arrow"></i>
-                </a>
-            </div>
-
-            <div class="col-sm-6 col-lg-3">
-                <a href="view_furniture.php" class="fd-action-card">
-                    <div class="fd-action-icon" style="background:#ecfeff;color:#0891b2;">
-                        <i class="bi bi-box-seam"></i>
-                    </div>
-                    <div>
-                        <p class="fd-action-title">Stock Registry</p>
-                        <p class="fd-action-desc">View available furniture stock records.</p>
-                    </div>
-                    <i class="bi bi-chevron-right fd-arrow"></i>
-                </a>
-            </div>
-
-            <div class="col-sm-6 col-lg-3">
-                <a href="view_assets.php" class="fd-action-card">
-                    <div class="fd-action-icon" style="background:#f1f5f9;color:#334155;">
-                        <i class="bi bi-search"></i>
-                    </div>
-                    <div>
-                        <p class="fd-action-title">Audit Assets</p>
-                        <p class="fd-action-desc">Track location and status of tagged assets.</p>
-                    </div>
-                    <i class="bi bi-chevron-right fd-arrow"></i>
-                </a>
             </div>
 
         </div>

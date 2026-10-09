@@ -148,13 +148,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $up_sd->bind_param("i", $stock_detail_id);
                     $up_sd->execute();
 
-                    // 4. Insert audit log entry for returning to main stock
+                    // 4. FIX: Fully close out/return the active dispatch record so dispatched_qty drops to 0
+                    $stmt_clear_dispatch = $conn->prepare("
+                        UPDATE dispatch_details 
+                        SET returned_quantity = quantity 
+                        WHERE stock_detail_id = ? AND (returned_quantity IS NULL OR returned_quantity < quantity)
+                    ");
+                    $stmt_clear_dispatch->bind_param("i", $stock_detail_id);
+                    $stmt_clear_dispatch->execute();
+
+                    // 5. Insert audit log entry for returning to main stock
                     $log_notes = "Asset returned to main stock after repair (replacement already provided to department)";
                     $log_stmt = $conn->prepare("INSERT INTO asset_logs (asset_id, asset_tag, action_type, performed_by, notes) VALUES (?, ?, 'repair_returned_to_main_stock', ?, ?)");
                     $log_stmt->bind_param("isis", $stock_detail_id, $asset_tag, $admin_id, $log_notes);
                     $log_stmt->execute();
 
-                     $_SESSION['success_msg'] = "Asset successfully returned to Main Stock inventory.";
+                    $_SESSION['success_msg'] = "Asset successfully returned to Main Stock inventory.";
 
                 } elseif ($action === 'e_waste') {
                     // 1. Capture the disposal reason submitted from the modal input

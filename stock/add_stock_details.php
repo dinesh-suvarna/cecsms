@@ -191,7 +191,7 @@ if(isset($_POST['submit'])){
             if($stockType === 'serial'){
                 foreach($filledSerials as $serial){$singleQty = 1;
                     $stmt->bind_param(
-                        "iiissssids s",
+                        "iiissssidss",
                         $item_id,
                         $model_id,$singleQty,
                         $serial,$bill_no,

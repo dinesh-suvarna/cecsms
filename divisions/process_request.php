@@ -13,10 +13,11 @@ $redirect = "returned_assets.php";
 $status_type = 'success';
 $status_message = 'Initializing request.';
 
-if (isset($_GET['id']) && isset($_GET['action'])) {
-    $id          = intval($_GET['id']);
-    $action      = $_GET['action']; 
-    $deny_reason = isset($_GET['reason']) ? trim($_GET['reason']) : '';
+$id          = intval($_GET['id'] ?? $_POST['id'] ?? 0);
+$action      = $_GET['action'] ?? $_POST['action'] ?? '';
+$deny_reason = trim($_GET['reason'] ?? $_POST['reason'] ?? '');
+
+if ($id > 0 && !empty($action)) {
 
     // Fetch asset, asset_tag, dispatch info AND unit name BEFORE deletion
     $stmt = $conn->prepare("
@@ -118,13 +119,11 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
                 $redirect = "returned_assets.php"; 
 
             } elseif ($action === 'dispose_requested') {
-                $remark_stmt = $conn->prepare("SELECT notes FROM asset_logs WHERE asset_id = ? AND action_type = 'dispose_requested' ORDER BY id DESC LIMIT 1");
-                $remark_stmt->bind_param("i", $stock_id);
-                $remark_stmt->execute();
-                $remark_res      = $remark_stmt->get_result()->fetch_assoc();
-                $disposal_reason = $remark_res['notes'] ?? 'Decommissioned by Admin';
+                // Support both modal sources: 'disposal_reason' (from service requests) 
+                // or 'resolution_notes' (from repair view)
+                $disposal_reason = trim($_POST['disposal_reason'] ?? ($_POST['resolution_notes'] ?? 'Decommissioned by Admin'));
 
-                $log_notes = $ref_prefix . "Asset decommissioned and sent to E-Waste.";
+                $log_notes = $ref_prefix . "Asset decommissioned and sent to E-Waste. Reason: " . $disposal_reason;
                 $log_stmt  = $conn->prepare("
                     INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
                     VALUES (?, ?, ?, 'disposal_approved', ?, ?)

@@ -3,10 +3,6 @@ require_once __DIR__ . "/../config/db.php";
 include "../admin/auth.php";
 include "../includes/session.php";
 
-/**
- * 1. MANDATORY SECURITY LOCKDOWN
- * Permit SuperAdmin and division-scoped Admin accounts to view the page.
- */
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Admin'])) {
     $_SESSION['error_msg'] = "Access Denied: You do not have permissions to view the E-Waste registry.";
     header("Location: ../dashboard.php"); 
@@ -16,7 +12,6 @@ if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['SuperAdmin', 'Ad
 $page_title = "E-Waste Management Panel";
 $page_icon  = "bi-trash3-fill";
 
-// Build division scope filter if the user is a division-scoped Admin
 $division_filter_sql = "";
 $division_id = null;
 
@@ -27,7 +22,6 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'Admin' && !empty($_SESSIO
 
 /* ================= HANDLE STATUS UPDATE ================= */
 if (isset($_POST['update_ewaste_status'])) {
-    // Restrict processing capabilities strictly to SuperAdmin
     if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'SuperAdmin') {
         $_SESSION['swal_type'] = "error";
         $_SESSION['swal_msg'] = "Access Denied: Only SuperAdmins can process e-waste updates.";
@@ -141,7 +135,6 @@ if (!empty($division_filter_sql)) {
     $result = $conn->query($query);
 }
 
-// Start capturing the main content
 ob_start();
 ?>
 
@@ -174,7 +167,6 @@ ob_start();
         color: #64748b;
     }
 
-    /* ===== E-WASTE HEADER - MATCH REFERENCE UI ===== */
     .ewaste-header {
         padding: 0 0 14px 0;
         margin-bottom: 22px;
@@ -312,10 +304,7 @@ ob_start();
 </div>
 
 <?php 
-// Save main content layout variable
 $content = ob_get_clean(); 
-
-// Start capturing the modal layout separately so layout.php can handle structural placement (Only for SuperAdmin)
 ob_start();
 if (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin'):
 ?>
@@ -350,10 +339,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'SuperAdmin'):
 </div>
 <?php 
 endif;
-// Pass modal content to layout injection hook variable
 $modal_html = ob_get_clean(); 
-
-// Append Javascript to main content string variable safely
 ob_start();
 ?>
 <script>

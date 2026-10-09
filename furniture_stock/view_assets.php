@@ -152,7 +152,6 @@ $isSuperAdmin = (($_SESSION['role'] ?? '') === 'SuperAdmin');
                 <div class="accordion-body p-3 bg-light">
         <?php endif; ?>
 
-        <!-- UNIT ACCORDION: KEEP YOUR EXISTING UNIT AND ASSET MARKUP HERE -->
                                             <!-- UNIT ACCORDION -->
                                             <div class="accordion unit-accordion" id="level3_unit_<?= $idx1 ?>_<?= $idx2 ?>">
                                                 <?php $idx3 = 0; ?>
@@ -348,30 +347,28 @@ $isSuperAdmin = (($_SESSION['role'] ?? '') === 'SuperAdmin');
                                                     </div>
                                                 <?php endforeach; ?>
                                             </div>
-                                                <!-- END UNIT ACCORDION -->
 
         <?php if ($isSuperAdmin): ?>
-                </div><!-- End division accordion body -->
-            </div><!-- End division collapse -->
-        </div><!-- End division accordion item -->
+                </div>
+            </div>
+        </div>
         <?php endif; ?>
 
     <?php endforeach; ?>
 
     <?php if ($isSuperAdmin): ?>
-    </div><!-- End division accordion -->
-            </div><!-- End institution accordion body -->
-        </div><!-- End institution collapse -->
-    </div><!-- End institution accordion item -->
+    </div>
+            </div>
+        </div>
+    </div>
     <?php endif; ?>
 
 <?php endforeach; ?>
 
 <?php if ($isSuperAdmin): ?>
-</div><!-- End institution accordion -->
+</div>
 <?php endif; ?>
 
-<!-- UI STYLES -->
 <style>
 .unit-accordion .accordion-item {
     border: 1px solid var(--erp-border, #cbd5e1) !important;
@@ -400,7 +397,6 @@ $isSuperAdmin = (($_SESSION['role'] ?? '') === 'SuperAdmin');
     box-shadow: none;
 }
 
-/* ITEM GROUP */
 .asset-group-card {
     border: 1px solid #e2e8f0;
     border-radius: 6px;
@@ -448,7 +444,6 @@ $isSuperAdmin = (($_SESSION['role'] ?? '') === 'SuperAdmin');
     transform: rotate(-180deg);
 }
 
-/* BILL INFORMATION */
 .bill-group-card {
     border: 1px solid #e2e8f0;
     border-radius: 5px;
@@ -472,7 +467,6 @@ $isSuperAdmin = (($_SESSION['role'] ?? '') === 'SuperAdmin');
     color: #64748b;
 }
 
-/* TABLE */
 .table-erp-minimal {
     margin-bottom: 0;
 }
@@ -508,15 +502,12 @@ $isSuperAdmin = (($_SESSION['role'] ?? '') === 'SuperAdmin');
     background-color: #e2e8f0 !important;
 }
 
-/* ASSET TAG */
 .asset-tag-text {
-    font-family: 'Monaco', 'Consolas', monospace;
     font-weight: 700;
     font-size: 0.88rem;
     color: var(--erp-navy, #173f63);
 }
 
-/* STATUS */
 .status-badge {
     font-size: 0.7rem;
     font-weight: 700;
@@ -524,7 +515,6 @@ $isSuperAdmin = (($_SESSION['role'] ?? '') === 'SuperAdmin');
     border-radius: 4px;
 }
 
-/* ACTION BUTTONS */
 .btn-action {
     width: 30px;
     height: 30px;
@@ -582,7 +572,6 @@ $isSuperAdmin = (($_SESSION['role'] ?? '') === 'SuperAdmin');
     color: #b02a37;
 }
 
-/* VERIFY ALL */
 .btn-verify-all {
     display: inline-flex;
     align-items: center;
@@ -602,7 +591,6 @@ $isSuperAdmin = (($_SESSION['role'] ?? '') === 'SuperAdmin');
     color: #ffffff;
 }
 
-/* ERP OUTLINE BUTTON */
 .btn-erp-outline {
     font-weight: 600;
     font-size: 0.75rem;
@@ -619,12 +607,10 @@ $isSuperAdmin = (($_SESSION['role'] ?? '') === 'SuperAdmin');
     color: #ffffff;
 }
 
-/* CURSOR */
 .cursor-pointer {
     cursor: pointer;
 }
 
-/* MOBILE */
 @media (max-width: 768px) {
     .unit-accordion .accordion-button {
         padding: 0.75rem 0.9rem;
@@ -656,11 +642,25 @@ $isSuperAdmin = (($_SESSION['role'] ?? '') === 'SuperAdmin');
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<?php if (isset($_SESSION['swal_msg'])): ?>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        Swal.fire({
+            icon: '<?= $_SESSION['swal_type'] ?? "success" ?>',
+            title: '<?= ($_SESSION['swal_type'] ?? "success") === "success" ? "Success" : "Error" ?>',
+            text: '<?= $_SESSION['swal_msg'] ?>',
+            timer: 3000,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        });
+    });
+</script>
+<?php unset($_SESSION['swal_type'], $_SESSION['swal_msg']); endif; ?>
 <script>
 let manageModal;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Modal Instance safely after DOM loads
     manageModal = new bootstrap.Modal(document.getElementById('manageModal'));
 });
 
@@ -722,7 +722,6 @@ window.handleAssetAction = function(actionType, assetId, assetTag, remarks) {
                 }
             });
 
-            // Send via AJAX to update_asset.php
             fetch('update_asset.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -742,6 +741,50 @@ window.handleAssetAction = function(actionType, assetId, assetTag, remarks) {
         }
     });
 };
+
+function submitModalEdit() {
+    const id = document.getElementById('edit_db_id').value;
+    const newTag = document.getElementById('edit_asset_tag').value.toUpperCase().trim();
+
+    if (!newTag) {
+        Swal.fire('Required', 'Tag ID cannot be empty', 'warning');
+        return;
+    }
+
+    fetch('update_asset.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=edit_tag&id=${id}&tag=${encodeURIComponent(newTag)}`
+    })
+    .then(res => res.json())
+    .then(data => {
+        const modalEl = document.getElementById('editIdModal');
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
+
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: 'Asset Tag updated successfully.',
+                timer: 2000,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            }).then(() => location.reload());
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.message || 'Failed to update Asset Tag',
+                toast: true,
+                position: 'top-end',
+                timer: 3000,
+                showConfirmButton: false
+            });
+        }
+    });
+}
 
 function openEditModal(id, tag) {
     document.getElementById('edit_db_id').value = id;
@@ -938,8 +981,8 @@ $modal_html = '
             </div>
         </div>
     </div>
-</div>
-
+</div>';
+$modal_html .= '
 <div class="modal fade" id="editIdModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-md modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-3">
@@ -947,16 +990,14 @@ $modal_html = '
                 <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-pencil-square me-2"></i>Update Asset Tag ID</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST">
-                <div class="modal-body p-4">
-                    <input type="hidden" name="db_id" id="edit_db_id">
-                    <label class="form-label small fw-bold text-secondary">Asset Tag / ID</label>
-                    <input type="text" name="new_asset_tag" id="edit_asset_tag" class="form-control fw-bold form-control-lg fs-6" required>
-                </div>
-                <div class="modal-footer border-0 p-3 pt-0">
-                    <button type="submit" name="update_asset_tag" class="btn btn-primary w-100 fw-bold" style="background-color: var(--erp-navy, #173f63); border-color: var(--erp-navy, #173f63);">Save Changes</button>
-                </div>
-            </form>
+            <div class="modal-body p-4">
+                <input type="hidden" id="edit_db_id">
+                <label class="form-label small fw-bold text-secondary">Asset Tag / ID</label>
+                <input type="text" id="edit_asset_tag" class="form-control fw-bold form-control-lg fs-6" required>
+            </div>
+            <div class="modal-footer border-0 p-3 pt-0">
+                <button type="button" onclick="submitModalEdit()" class="btn btn-primary w-100 fw-bold" style="background-color: var(--erp-navy, #173f63); border-color: var(--erp-navy, #173f63);">Save Changes</button>
+            </div>
         </div>
     </div>
 </div>';

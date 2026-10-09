@@ -32,7 +32,7 @@ if (isset($_POST['submit_lifecycle_request'])) {
     $user_remarks  = trim($_POST['remarks'] ?? '');
     
     // Capture the warranty status (1 if checked, 0 if unchecked)
-    $is_under_warranty = isset($_POST['is_under_warranty']) ? 1 : 0;
+    $is_under_warranty = (isset($_POST['is_under_warranty']) && $_POST['is_under_warranty'] == '1') ? 1 : 0;
 
     if (empty($user_remarks)) {$_SESSION['swal_type'] = "error";
         $_SESSION['swal_msg']  = "Please provide a reason or justification for this request.";
@@ -405,6 +405,8 @@ ob_start();
         document.getElementById('disp_model_name').innerText = model;
         document.getElementById('disp_serial_number').innerText = serial;
         document.getElementById('action_remarks').value = '';
+        
+        document.getElementById('is_under_warranty').checked = false;
         
         const iconElement = document.getElementById('disp_item_icon');
         iconElement.className = 'bi fs-4 text-primary ' + iconClass;

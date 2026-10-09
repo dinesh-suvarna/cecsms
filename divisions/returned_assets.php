@@ -299,30 +299,46 @@ ob_start();
                                         </div>
                                     </div>
                                 </div>
-                                <?php 
-                                    $modals_html .= ob_get_clean();
+                                <?php
+    // 3. Scrap / Dispose Modal with Remarks Input
+    $modal_id_3 = "confirmDisposeModal" . $row['id'];
+    ob_start();
+?>
+<div class="modal fade" id="<?= $modal_id_3 ?>" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <form method="POST" action="process_request.php">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold text-dark"><i class="bi bi-trash3 text-danger me-2"></i>Confirm Scrap / Dispose</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-start">
+                    <!-- Pass the request ID and action type -->
+                    <input type="hidden" name="id" value="<?= $row['id'] ?>">
+                    <input type="hidden" name="action" value="dispose_requested">
 
-                                    // 3. Scrap / Dispose Modal
-                                    $modal_id_3 = "confirmDisposeModal" . $row['id'];
-                                    ob_start();
-                                ?>
-                                <div class="modal fade" id="<?= $modal_id_3 ?>" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
-                                    <div class="modal-dialog modal-dialog-centered">
-                                        <div class="modal-content border-0 shadow rounded-4">
-                                            <div class="modal-header border-0 pb-0">
-                                                <h5 class="fw-bold text-dark"><i class="bi bi-trash3 text-danger me-2"></i>Confirm Scrap / Dispose</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body text-start">
-                                                <p class="text-muted mb-0">Are you sure you want to decommission asset <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong> and log it to the E-Waste registry?</p>
-                                            </div>
-                                            <div class="modal-footer border-0 pt-0">
-                                                <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
-                                                <a href="process_request.php?id=<?= $row['id'] ?>&action=dispose_requested" class="btn btn-danger fw-bold px-4">Yes, Decommission</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                    <p class="text-muted small mb-3">
+                        You are about to decommission asset <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong> and route it to the E-Waste registry.
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Disposal / Scrap Reason <span class="text-danger">*</span></label>
+                        <textarea name="disposal_reason" class="form-control" rows="3" placeholder="Provide a reason for decommissioning (e.g., unrepairable motherboard failure, physical damage)..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4">Yes, Decommission</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php 
+    $modals_html .= ob_get_clean();
+?>
+
+                                    
                                 <?php 
                                     $modals_html .= ob_get_clean();
                                 ?>

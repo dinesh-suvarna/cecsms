@@ -36,7 +36,7 @@ if (isset($_POST['update_ewaste_status'])) {
     $conn->begin_transaction();
     try {
         // 1. Update the status inside the E-Waste tracking table
-        $stmt = $conn->prepare("UPDATE ewaste_items SET status = ? WHERE ewaste_id = ?");
+        $stmt = $conn->prepare("UPDATE ewaste_items SET status = ?, processed_at = NOW() WHERE ewaste_id = ?");
         $stmt->bind_param("si", $new_status, $ewaste_id);
         $stmt->execute();
         
@@ -63,6 +63,15 @@ if (isset($_POST['update_ewaste_status'])) {
             $stmt_clear_alloc = $conn->prepare("DELETE FROM division_assets WHERE stock_detail_id = ?");
             $stmt_clear_alloc->bind_param("i", $stock_id);
             $stmt_clear_alloc->execute();
+
+            // 3. FIX: Fully close out/return the active dispatch record so dispatched_qty drops to 0
+            $stmt_clear_dispatch = $conn->prepare("
+                UPDATE dispatch_details 
+                SET returned_quantity = quantity 
+                WHERE stock_detail_id = ? AND (returned_quantity IS NULL OR returned_quantity < quantity)
+            ");
+            $stmt_clear_dispatch->bind_param("i", $stock_id);
+            $stmt_clear_dispatch->execute();
         }
     } else {
         throw new Exception("Linked stock detail record not found.");

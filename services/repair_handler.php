@@ -128,22 +128,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception("This asset has already been processed.");
             }
 
-            $insert_repair = $conn->prepare("
-                INSERT INTO repairs (stock_detail_id, division_asset_id, origin_division_id, origin_unit_id, repair_type, vendor_name, issue_description, repair_cost, status, performed_by, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'in_progress', ?, NOW())
-            ");
-            $insert_repair->bind_param(
-                "isiisssdi", 
-                $asset['stock_detail_id'], 
-                $asset['asset_tag'], 
-                $asset['division_id'], 
-                $asset['unit_id'], 
-                $repair_type, 
-                $vendor_name, 
-                $issue_desc, 
-                $repair_cost, 
-                $admin_id
-            );
+            // Determine status based on repair type
+            if ($repair_type === 'internal') {
+                $resolution_notes = $issue_desc;
+                $success_message  = "Internal repair resolved and closed successfully!";
+
+                $insert_repair = $conn->prepare("
+                    INSERT INTO repairs (stock_detail_id, division_asset_id, origin_division_id, origin_unit_id, repair_type, vendor_name, issue_description, repair_cost, status, completed_at, resolution_notes, performed_by, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed', NOW(), ?, ?, NOW())
+                ");
+                // 10 parameters to bind
+                $insert_repair->bind_param(
+                    "isiisssdsi", 
+                    $asset['stock_detail_id'], 
+                    $asset['asset_tag'], 
+                    $asset['division_id'], 
+                    $asset['unit_id'], 
+                    $repair_type, 
+                    $vendor_name, 
+                    $issue_desc, 
+                    $repair_cost, 
+                    $resolution_notes,
+                    $admin_id
+                );
+            } else {
+                $success_message = "Repair ticket successfully logged and assigned to external vendor.";
+
+                $insert_repair = $conn->prepare("
+                    INSERT INTO repairs (stock_detail_id, division_asset_id, origin_division_id, origin_unit_id, repair_type, vendor_name, issue_description, repair_cost, status, completed_at, resolution_notes, performed_by, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'in_progress', NULL, NULL, ?, NOW())
+                ");
+                // 9 parameters to bind
+                $insert_repair->bind_param(
+                    "isiisssdi", 
+                    $asset['stock_detail_id'], 
+                    $asset['asset_tag'], 
+                    $asset['division_id'], 
+                    $asset['unit_id'], 
+                    $repair_type, 
+                    $vendor_name, 
+                    $issue_desc, 
+                    $repair_cost, 
+                    $admin_id
+                );
+            }
             $insert_repair->execute();
 
             $update_da = $conn->prepare("UPDATE division_assets SET status = 'in_repair' WHERE id = ?");
@@ -156,8 +184,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $conn->commit();
 
-            $_SESSION['success_msg'] = "Repair ticket successfully logged and assigned.";
-            header("Location: repair_queue.php"); 
+            $_SESSION['success_msg'] = $success_message;
+            // Redirect straight to repair view (or queue depending on your preference)
+            header("Location: repair_view.php"); 
             exit;
         } catch (Exception $e) {
             $conn->rollback();
@@ -358,7 +387,7 @@ ob_start();
                             <a href="repair_queue.php" class="btn btn-erp-cancel px-3">
                                 <i class="bi bi-arrow-left me-1"></i> Cancel
                             </a>
-                            <button type="submit" class="btn btn-erp-primary px-4">
+                            <button type="submit" id="submitBtn" class="btn btn-erp-primary px-4">
                                 <i class="bi bi-check-lg me-1"></i> Save & Dispatch to Repair
                             </button>
                         </div>
@@ -374,12 +403,17 @@ function toggleVendorField() {
     const type = document.getElementById('repairType').value;
     const vendorWrapper = document.getElementById('vendorFieldWrapper');
     const costWrapper = document.getElementById('costFieldWrapper');
+    const submitBtn = document.getElementById('submitBtn');
 
     if (type === 'external_warranty' || type === 'external_paid') {
         vendorWrapper.style.display = 'block';
+        submitBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save & Dispatch to Repair';
+        submitBtn.className = 'btn btn-erp-primary px-4';
     } else {
         vendorWrapper.style.display = 'none';
         document.getElementById('vendorSelect').value = '';
+        submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Resolve & Close';
+        submitBtn.className = 'btn btn-success px-4 fw-bold';
     }
 
     if (type === 'external_paid') {
@@ -389,6 +423,8 @@ function toggleVendorField() {
         document.querySelector('input[name="repair_cost"]').value = '0.00';
     }
 }
+// Run once on load to set initial state correctly
+document.addEventListener("DOMContentLoaded", toggleVendorField);
 </script>
 
 <?php

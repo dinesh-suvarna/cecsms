@@ -95,11 +95,12 @@ $issue_desc   = $_POST['issue_description'] ?? '';
 $error_msg    = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $repair_type     = $_POST['repair_type'];
-    $vendor_id       = intval($_POST['vendor_id'] ?? 0);
-    $repair_cost     = floatval($_POST['repair_cost'] ?? 0);
-    $issue_desc      = trim($_POST['issue_description'] ?? '');
-    $admin_id        = $_SESSION['user_id'];
+    $repair_type        = $_POST['repair_type'];
+    $vendor_id          = intval($_POST['vendor_id'] ?? 0);
+    $repair_cost        = floatval($_POST['repair_cost'] ?? 0);
+    $issue_desc         = trim($_POST['issue_description'] ?? '');
+    $scrapped_component = trim($_POST['scrapped_component'] ?? ''); // Captured from the new dropdown
+    $admin_id           = $_SESSION['user_id'];
     
     // --- VALIDATION CHECK ---
     if (empty($issue_desc)) {
@@ -131,6 +132,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Determine status based on repair type
             if ($repair_type === 'internal') {
                 $resolution_notes = $issue_desc;
+                if (!empty($scrapped_component)) {
+                    $resolution_notes .= " | Scrapped Part: " . $scrapped_component;
+                }
                 $success_message  = "Internal repair resolved and closed successfully!";
 
                 $insert_repair = $conn->prepare("
@@ -151,6 +155,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $resolution_notes,
                     $admin_id
                 );
+                $insert_repair->execute();
+                $insert_repair->close();
+
+                // --- NEW: Automatically log component to e-waste if selected ---
+                if (!empty($scrapped_component)) {
+                    $ewaste_reason = "Internal replacement scrap: " . $issue_desc;
+                    $ewaste_stmt = $conn->prepare("
+                        INSERT INTO ewaste_items (stock_detail_id, division_asset_id, affected_component, disposal_reason, status) 
+                        VALUES (?, ?, ?, ?, 'Pending_Verification')
+                    ");
+                    $ewaste_stmt->bind_param("isss", $asset['stock_detail_id'], $asset['asset_tag'], $scrapped_component, $ewaste_reason);
+                    $ewaste_stmt->execute();
+                    $ewaste_stmt->close();
+                }
+
             } else {
                 $success_message = "Repair ticket successfully logged and assigned to external vendor.";
 
@@ -171,21 +190,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $repair_cost, 
                     $admin_id
                 );
+                $insert_repair->execute();
+                $insert_repair->close();
             }
-            $insert_repair->execute();
 
             $update_da = $conn->prepare("UPDATE division_assets SET status = 'in_repair' WHERE id = ?");
             $update_da->bind_param("i", $division_asset_id);
             $update_da->execute();
+            $update_da->close();
 
             $update_sd = $conn->prepare("UPDATE stock_details SET status = 'maintenance' WHERE id = ?");
             $update_sd->bind_param("i", $asset['stock_detail_id']);
             $update_sd->execute();
+            $update_sd->close();
 
             $conn->commit();
 
             $_SESSION['success_msg'] = $success_message;
-            // Redirect straight to repair view (or queue depending on your preference)
             header("Location: repair_view.php"); 
             exit;
         } catch (Exception $e) {
@@ -381,6 +402,30 @@ ob_start();
                         <label class="form-label">Diagnosis / Issue Description <span class="text-danger">*</span></label>
                         <textarea name="issue_description" class="form-control" rows="3" style="height: auto;" placeholder="Describe the fault or maintenance requirements..." required><?= htmlspecialchars($issue_desc) ?></textarea>
                     </div>
+        
+                    <div class="col-12" id="componentScrapWrapper" style="display: <?= $repair_type === 'internal' ? 'block' : 'none' ?>;">
+                        <div class="p-3 bg-light rounded-1 border">
+                            <label class="form-label text-dark fw-bold mb-2">
+                                <i class="bi bi-recycle text-danger me-1"></i> Component Replacement &amp; E-Waste Routing
+                            </label>
+                            <div class="row g-2 align-items-center">
+                                <div class="col-md-6">
+                                    <select name="scrapped_component" class="form-select">
+                                        <option value="General Fix">-- No Component Scrapped (General Fix) --</option>
+                                        <option value="RAM (Memory)">RAM (Memory Stick)</option>
+                                        <option value="SSD / Hard Drive">SSD / Hard Drive (Storage)</option>
+                                        <option value="Motherboard">Motherboard</option>
+                                        <option value="SMPS (Power Supply)">SMPS (Power Supply)</option>
+                                        <option value="Processor (CPU)">Processor (CPU)</option>
+                                        <option value="Other Internal Part">Other Internal Part</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">If a faulty part was replaced and cannot be repaired, select it here to automatically log it into the E-Waste registry.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="col-12 mt-4 pt-3 border-top">
                         <div class="d-flex justify-content-between align-items-center">
@@ -403,14 +448,17 @@ function toggleVendorField() {
     const type = document.getElementById('repairType').value;
     const vendorWrapper = document.getElementById('vendorFieldWrapper');
     const costWrapper = document.getElementById('costFieldWrapper');
+    const componentScrapWrapper = document.getElementById('componentScrapWrapper');
     const submitBtn = document.getElementById('submitBtn');
 
     if (type === 'external_warranty' || type === 'external_paid') {
         vendorWrapper.style.display = 'block';
+        if (componentScrapWrapper) componentScrapWrapper.style.display = 'none';
         submitBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save & Dispatch to Repair';
         submitBtn.className = 'btn btn-erp-primary px-4';
     } else {
         vendorWrapper.style.display = 'none';
+        if (componentScrapWrapper) componentScrapWrapper.style.display = 'block';
         document.getElementById('vendorSelect').value = '';
         submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Resolve & Close';
         submitBtn.className = 'btn btn-success px-4 fw-bold';

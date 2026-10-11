@@ -606,15 +606,21 @@ ob_start();
         $grouped_logs = [];
         $global_log_to_transaction = [];
 
-        if ($global_logs_res && $global_logs_res->num_rows > 0) {
+        // 1. Fetch ALL global logs unfiltered from the database to establish a permanent, system-wide sequence
+        $master_seq_query = "
+            SELECT al.id as log_id, al.asset_id, al.created_at, al.action_type
+            FROM asset_logs al
+            JOIN stock_details sd ON al.asset_id = sd.id
+            GROUP BY al.id 
+            ORDER BY al.created_at ASC, al.id ASC
+        ";
+        $master_res = $conn->query($master_seq_query);
+
+        if ($master_res && $master_res->num_rows > 0) {
             $global_rows = [];
-            while ($row = $global_logs_res->fetch_assoc()) {
+            while ($row = $master_res->fetch_assoc()) {
                 $global_rows[] = $row;
             }
-
-            usort($global_rows, function($a, $b) {
-                return strtotime($a['created_at']) - strtotime($b['created_at']) ?: ($a['log_id'] - $b['log_id']);
-            });
 
             $asset_active_session = [];
             $sessions = [];
@@ -643,11 +649,11 @@ ob_start();
                 if (!isset($sessions[$current_session_key])) {
                     $sessions[$current_session_key] = [
                         'min_time' => $row['created_at'],
-                        'rows' => []
+                        'log_ids' => []
                     ];
                 }
 
-                $sessions[$current_session_key]['rows'][] = $row;
+                $sessions[$current_session_key]['log_ids'][] = (int)$log_id;
 
                 if ($is_end_action) {
                     unset($asset_active_session[$asset_id]);
@@ -664,8 +670,9 @@ ob_start();
                 $formatted_num = ($seq < 100) ? str_pad($seq, 2, '0', STR_PAD_LEFT) : $seq;
                 $trx_id = "CECSID" . $formatted_num;
 
-                foreach ($s_data['rows'] as $row) {
-                    $global_log_to_transaction[(int)$row['log_id']] = $trx_id;
+                // Map every global log ID to its permanent global CECSID
+                foreach ($s_data['log_ids'] as $l_id) {
+                    $global_log_to_transaction[$l_id] = $trx_id;
                 }
             }
         }

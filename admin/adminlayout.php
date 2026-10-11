@@ -332,6 +332,15 @@ $sidebar_repair_count = $sidebar_repair_query ? intval($sidebar_repair_query->fe
             <div class="nav-group-label">Service & Requests</div>
                 <div class="nav flex-column">    
                     <?php if($role === ROLE_SUPERADMIN): ?>
+
+                        <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'returned_assets.php') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">
+                            <span><i class="bi bi-arrow-down-left-square me-2"></i> Service Requests</span>
+                            <?php if (!empty($pending_count) && $pending_count > 0): ?>
+                                <span id="sidebarPendingBadge" class="badge rounded-pill bg-warning text-dark ms-auto extra-small"><?= $pending_count ?></span>
+                            <?php else: ?>
+                                <span id="sidebarPendingBadge" class="badge rounded-pill bg-warning text-dark ms-auto extra-small" style="display: none;">0</span>
+                            <?php endif; ?>
+                        </a>
                         <a href="/cecsms/services/index.php" class="nav-link d-flex justify-content-between align-items-center <?= (strpos($_SERVER['PHP_SELF'],'services') !== false)?'active':'' ?>">
                             <span class="d-flex align-items-center gap-2">
                                 <i class="bi bi-tools"></i> Services
@@ -341,14 +350,6 @@ $sidebar_repair_count = $sidebar_repair_query ? intval($sidebar_repair_query->fe
                             <?php endif; ?>
                         </a>
                         
-                        <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'returned_assets.php') ? 'active' : '' ?>" href="/cecsms/divisions/returned_assets.php">
-                            <span><i class="bi bi-arrow-down-left-square me-2"></i> Service Requests</span>
-                            <?php if (!empty($pending_count) && $pending_count > 0): ?>
-                                <span id="sidebarPendingBadge" class="badge rounded-pill bg-warning text-dark ms-auto extra-small"><?= $pending_count ?></span>
-                            <?php else: ?>
-                                <span id="sidebarPendingBadge" class="badge rounded-pill bg-warning text-dark ms-auto extra-small" style="display: none;">0</span>
-                            <?php endif; ?>
-                        </a>
                     <?php endif; ?>
                     <a href="/cecsms/divisions/audit_logs.php" class="nav-link d-flex justify-content-between align-items-center <?= (strpos($_SERVER['PHP_SELF'],'audit_logs.php') !== false)?'active':'' ?>">
                         <span class="d-flex align-items-center gap-2">
@@ -430,7 +431,7 @@ $sidebar_repair_count = $sidebar_repair_query ? intval($sidebar_repair_query->fe
                     <i class="bi bi-house-door"></i>
                 </a>
 
-                <!-- Professional System Header -->
+                <!-- System Header -->
                 <div class="d-flex flex-column ms-1">
                     <h5 class="mb-0 fw-bold text-dark lh-1" style="font-size: 1.15rem; letter-spacing: -0.01em;">
                         Computer Equipment & Consumables Stock Management System
@@ -591,7 +592,7 @@ $sidebar_repair_count = $sidebar_repair_query ? intval($sidebar_repair_query->fe
                             // 2. Update Dropdown Header Badge Text
                             $('#dropdownPendingBadge').text(response.count + ' Pending');
 
-                            // 3. Update Sidebar Service Requests Badge (Using the same count logic)
+                            // 3. Update Sidebar Service Requests Badge 
                             sidebarBadge.text(response.count).show();
                         } else {
                             // Hide/Remove badges if count drops to 0

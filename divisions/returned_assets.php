@@ -390,8 +390,11 @@ function processItem(id, assetTag, itemName, serial, notes, iconClass, unitName,
 
                 <div class="mb-3">
                     <label class="extra-small text-uppercase fw-bold text-muted mb-1">Department Admin Reason / Justification</label>
-                    <div class="p-5.5 border bg-white fst-italic small text-secondary shadow-sm">
-                        ${displayNotes}
+                    <div class="p-3 rounded-2 border border-start-4 d-flex align-items-start gap-2" style="background: #FFFDF4; border-color: #F3D38A !important; border-left-color: #E6A23C !important; font-size: 0.85rem;">
+                        <i class="bi bi-chat-quote-fill text-danger fs-5 lh-1 mt-0"></i>
+                        <div class="text-dark lh-sm">
+                            <span>${displayNotes}</span>
+                        </div>
                     </div>
                 </div>
 

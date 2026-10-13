@@ -329,9 +329,9 @@ $logs_query = "
         im.item_name, 
         im.category,
         sd.serial_number,
-        r.vendor_name,
-        r.repair_type,
-        r.resolution_notes,
+        (SELECT r.vendor_name FROM repairs r WHERE r.stock_detail_id = sd.id ORDER BY ABS(TIMESTAMPDIFF(SECOND, r.created_at, al.created_at)) ASC LIMIT 1) AS vendor_name,
+        (SELECT r.repair_type FROM repairs r WHERE r.stock_detail_id = sd.id ORDER BY ABS(TIMESTAMPDIFF(SECOND, r.created_at, al.created_at)) ASC LIMIT 1) AS repair_type,
+        (SELECT r.resolution_notes FROM repairs r WHERE r.stock_detail_id = sd.id ORDER BY ABS(TIMESTAMPDIFF(SECOND, r.created_at, al.created_at)) ASC LIMIT 1) AS resolution_notes,
         COALESCE(
             al.asset_tag, 
             da.division_asset_id, 
@@ -366,7 +366,6 @@ $logs_query = "
     LEFT JOIN units un_history ON dm_history.unit_id = un_history.id
     LEFT JOIN divisions d_history ON dm_history.division_id = d_history.id
     LEFT JOIN institutions i_history ON d_history.institution_id = i_history.id
-    LEFT JOIN repairs r ON sd.id = r.stock_detail_id
     WHERE 1=1
 ";
 

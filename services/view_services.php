@@ -153,9 +153,9 @@ body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color:
     height: 6px;
     background-color: #f43f5e;
     border-radius: 50%;
-
+}
 .status-warranty {
-    background-color: rgba(243, 185, 25, 0.1) !important;
+    background-color: rgba(59, 130, 246, 0.1) !important;
     color: #2563eb !important;
     border-color: rgba(59, 130, 246, 0.25) !important;
 }
@@ -164,7 +164,6 @@ body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color:
     height: 6px;
     background-color: #3b82f6;
     border-radius: 50%;
-}
 }
 </style>
 
@@ -384,7 +383,7 @@ body { background-color: var(--erp-bg); font-family: 'Inter', sans-serif; color:
                                             $status = trim($row['bill_status'] ?? '');
                                             if (empty($status)): 
                                             ?>
-                                                <span class="badge bg-light text-secondary border fw-semibold px-2 py-1" style="font-size: 0.68rem;">
+                                                <span class="badge bg-success secondary border fw-semibold px-2 py-1" style="font-size: 0.68rem;">
                                                     <i class="bi bi-shield-check me-1"></i> WARRANTY
                                                 </span>
                                             <?php else: 

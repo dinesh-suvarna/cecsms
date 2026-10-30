@@ -15,7 +15,7 @@ if (($_SESSION['role'] ?? '') !== 'SuperAdmin') {
     exit;
 }
 
-// Fetch asset info securely including warranty status
+// Fetch asset info securely including warranty status and original remarks
 $stmt = $conn->prepare("
     SELECT 
         da.id as division_asset_id_pk,
@@ -30,10 +30,10 @@ $stmt = $conn->prepare("
         un.unit_code,
         un.unit_name,
         COALESCE(
-            NULLIF((SELECT al.notes FROM asset_logs al WHERE al.asset_id = sd.id AND al.action_type IN ('service_requested', 'repair_requested') ORDER BY al.id DESC LIMIT 1), ''),
-            NULLIF(dm.remarks, ''),
-            'No remarks provided'
-        ) AS original_notes
+        NULLIF((SELECT al.notes FROM asset_logs al WHERE al.asset_id = sd.id AND al.action_type IN ('service_requested', 'repair_requested') ORDER BY al.id ASC LIMIT 1), ''),
+        NULLIF(dm.remarks, ''),
+        'No remarks provided'
+    ) AS original_notes
     FROM division_assets da
     JOIN stock_details sd ON da.stock_detail_id = sd.id
     JOIN items_master im ON sd.stock_item_id = im.id
@@ -41,7 +41,7 @@ $stmt = $conn->prepare("
     LEFT JOIN dispatch_master dm ON dd.dispatch_id = dm.id
     LEFT JOIN divisions d ON dm.division_id = d.id
     LEFT JOIN units un ON dm.unit_id = un.id
-    WHERE da.id = ? AND da.status IN ('assigned', 'under_repair', 'returned', 'pending_repair')
+    WHERE da.id = ? AND da.status IN ('assigned', 'under_repair', 'returned', 'pending_repair', 'service_requested')
 ");
 $stmt->bind_param("i", $division_asset_id);
 $stmt->execute();
@@ -70,7 +70,7 @@ if (!$asset) {
                 <div>
                     <h4 class="fw-bold text-dark mb-1" style="font-size: 1.1rem;">Asset Not Found</h4>
                     <p class="text-muted small mb-3">The requested asset could not be found, or it has already been processed and moved out of the pending repair queue.</p>
-                    <a href="returned_assets.php" class="btn btn-erp-cancel px-3">
+                    <a href="../divisions/returned_assets.php" class="btn btn-erp-cancel px-3">
                         <i class="bi bi-arrow-left me-1"></i>Back to Repair Assets
                     </a>
                 </div>
@@ -91,33 +91,18 @@ $vendors = $vendors_result->fetch_all(MYSQLI_ASSOC);
 $repair_type  = $_POST['repair_type'] ?? (($asset['is_under_warranty'] ?? 0) == 1 ? 'external_warranty' : 'internal');
 $vendor_id    = intval($_POST['vendor_id'] ?? 0);
 $repair_cost  = $_POST['repair_cost'] ?? '0.00';
-$issue_desc   = $_POST['issue_description'] ?? ''; 
 $error_msg    = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $repair_type        = $_POST['repair_type'];
     $vendor_id          = intval($_POST['vendor_id'] ?? 0);
     $repair_cost        = floatval($_POST['repair_cost'] ?? 0);
-    $issue_desc         = trim($_POST['issue_description'] ?? '');
-    
-    // Safely capture and sanitize the array of scrapped components
-    $raw_components     = $_POST['scrapped_component'] ?? [];
-    $scrapped_components = [];
-    if (is_array($raw_components)) {
-        foreach ($raw_components as $comp) {
-            $trimmed = trim($comp);
-            if (!empty($trimmed)) {
-                $scrapped_components[] = $trimmed;
-            }
-        }
-    }
-    
+    // Automatically inherit issue description from department original notes/remarks
+    $issue_desc         = $asset['original_notes'];
     $admin_id           = $_SESSION['user_id'];
     
     // --- VALIDATION CHECK ---
-    if (empty($issue_desc)) {
-        $error_msg = "Diagnosis / Issue Description is required and cannot be blank.";
-    } elseif (in_array($repair_type, ['external_warranty', 'external_paid']) && $vendor_id <= 0) {
+    if (in_array($repair_type, ['external_warranty', 'external_paid']) && $vendor_id <= 0) {
         $error_msg = "Please select a valid vendor for external repairs.";
     } else {
         $vendor_name = null;
@@ -131,87 +116,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $conn->begin_transaction();
 
+        // Check if the asset is already under repair/in repair
+        $check_status = $conn->prepare("SELECT status FROM division_assets WHERE id = ?");
+        $check_status->bind_param("i", $division_asset_id);
+        $check_status->execute();
+        $current_db_status = $check_status->get_result()->fetch_assoc()['status'] ?? '';
+        $check_status->close();
+
+        if ($current_db_status === 'in_repair') {
+            $_SESSION['error_msg'] = "This asset has already been sent to repair.";
+            header("Location: repair_view.php");
+            exit;
+        }
+
         try {
             $lock_stmt = $conn->prepare("SELECT status FROM division_assets WHERE id = ? FOR UPDATE");
             $lock_stmt->bind_param("i", $division_asset_id);
             $lock_stmt->execute();
             $current_status = $lock_stmt->get_result()->fetch_assoc()['status'] ?? '';
 
-            if (!in_array($current_status, ['assigned', 'under_repair'])) {
+            if (!in_array($current_status, ['assigned', 'under_repair', 'service_requested'])) {
                 throw new Exception("This asset has already been processed.");
             }
 
-            // Determine status based on repair type
-            if ($repair_type === 'internal') {
-                $resolution_notes = $issue_desc;
-                if (!empty($scrapped_components)) {
-                    $resolution_notes .= " | Scrapped Parts: " . implode(', ', $scrapped_components);
-                }
-                $success_message  = "Internal repair resolved and closed successfully!";
+            $success_message = "Repair ticket successfully logged and sent to repair.";
 
-                $insert_repair = $conn->prepare("
-                    INSERT INTO repairs (stock_detail_id, division_asset_id, origin_division_id, origin_unit_id, repair_type, vendor_name, issue_description, repair_cost, status, completed_at, resolution_notes, performed_by, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed', NOW(), ?, ?, NOW())
-                ");
-                $insert_repair->bind_param(
-                    "isiisssdsi", 
-                    $asset['stock_detail_id'], 
-                    $asset['asset_tag'], 
-                    $asset['division_id'], 
-                    $asset['unit_id'], 
-                    $repair_type, 
-                    $vendor_name, 
-                    $issue_desc,$repair_cost, 
-                    $resolution_notes,$admin_id
-                );
-                $insert_repair->execute();$insert_repair->close();
+            $insert_repair = $conn->prepare("
+                INSERT INTO repairs (stock_detail_id, division_asset_id, origin_division_id, origin_unit_id, repair_type, vendor_name, issue_description, repair_cost, status, completed_at, resolution_notes, performed_by, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'in_progress', NULL, NULL, ?, NOW())
+            ");
+            $insert_repair->bind_param(
+                "isiisssdi", 
+                $asset['stock_detail_id'], 
+                $asset['asset_tag'], 
+                $asset['division_id'], 
+                $asset['unit_id'], 
+                $repair_type, 
+                $vendor_name, 
+                $issue_desc, 
+                $repair_cost, 
+                $admin_id
+            );
+            $insert_repair->execute();
+            $insert_repair->close();
 
-                // --- Automatically loop and log each component to e-waste ---
-                if (!empty($scrapped_components)) {
-                    $ewaste_stmt =$conn->prepare("
-                        INSERT INTO ewaste_items (stock_detail_id, division_asset_id, affected_component, disposal_reason, status) 
-                        VALUES (?, ?, ?, ?, 'Pending_Verification')
-                    ");
-                    
-                    foreach ($scrapped_components as $comp) {$ewaste_reason = "Internal replacement scrap: " . $issue_desc;
-                        $ewaste_stmt->bind_param("isss", $asset['stock_detail_id'], $asset['asset_tag'],$comp, $ewaste_reason);$ewaste_stmt->execute();
-                    }
-                    $ewaste_stmt->close();
-                }
-
-            } else {
-                $success_message = "Repair ticket successfully logged and assigned to external vendor.";
-
-                $insert_repair =$conn->prepare("
-                    INSERT INTO repairs (stock_detail_id, division_asset_id, origin_division_id, origin_unit_id, repair_type, vendor_name, issue_description, repair_cost, status, completed_at, resolution_notes, performed_by, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'in_progress', NULL, NULL, ?, NOW())
-                ");
-                $insert_repair->bind_param(
-                    "isiisssdi", 
-                    $asset['stock_detail_id'], 
-                    $asset['asset_tag'],$asset['division_id'], 
-                    $asset['unit_id'],$repair_type, 
-                    $vendor_name,$issue_desc, 
-                    $repair_cost,$admin_id
-                );
-                $insert_repair->execute();$insert_repair->close();
-            }
-
-            $update_da =$conn->prepare("UPDATE division_assets SET status = 'in_repair' WHERE id = ?");
+            $update_da = $conn->prepare("UPDATE division_assets SET status = 'in_repair' WHERE id = ?");
             $update_da->bind_param("i", $division_asset_id);
-            $update_da->execute();$update_da->close();
+            $update_da->execute();
+            $update_da->close();
 
-            $update_sd =$conn->prepare("UPDATE stock_details SET status = 'maintenance' WHERE id = ?");
+            $update_sd = $conn->prepare("UPDATE stock_details SET status = 'maintenance' WHERE id = ?");
             $update_sd->bind_param("i", $asset['stock_detail_id']);
-            $update_sd->execute();$update_sd->close();
+            $update_sd->execute();
+            $update_sd->close();
+
+            //Log the repair request action ---
+            $log_notes = "Repair authorized by System Admin. Asset sent to repair";
+            
+            $log_stmt = $conn->prepare("
+                INSERT INTO asset_logs (asset_id, asset_tag, action_type, performed_by, notes) 
+                VALUES (?, ?, 'repair_requested', ?, ?)
+            ");
+            $log_stmt->bind_param("isis", $asset['stock_detail_id'], $asset['asset_tag'], $admin_id, $log_notes);
+            $log_stmt->execute();
+            $log_stmt->close();
 
             $conn->commit();
 
-            $_SESSION['success_msg'] =$success_message;
+            $_SESSION['success_msg'] = $success_message;
             header("Location: repair_view.php"); 
             exit;
         } catch (Exception $e) {
-            $conn->rollback();$error_msg = "Error processing repair: " . $e->getMessage();
+            $conn->rollback();
+            $error_msg = "Error processing repair: " . $e->getMessage();
         }
     }
 }
@@ -292,8 +269,8 @@ ob_start();
                 <p>Configure repair routing, vendor assignment and warranty tracking for this asset.</p>
             </div>
         </div>
-        <a href="repair_queue.php" class="btn btn-erp-cancel px-3">
-            <i class="bi bi-arrow-left me-1"></i> Back to Repair Process
+        <a href="returned_assets.php" class="btn btn-erp-cancel px-3">
+            <i class="bi bi-arrow-left me-1"></i> Back to Repair Assets
         </a>
     </div>
 
@@ -322,7 +299,7 @@ ob_start();
                         <span class="text-muted extra-small text-uppercase fw-bold" style="font-size:.65rem;">Serial Number</span>
                         <div class="d-flex align-items-center gap-2 flex-wrap">
                             <div class="fw-semibold text-dark" style="font-size:.85rem;"><?= htmlspecialchars($asset['serial_number'] ?: 'N/A') ?></div>
-                            <?php if (!empty($asset['is_under_warranty']) &&$asset['is_under_warranty'] == 1): ?>
+                            <?php if (!empty($asset['is_under_warranty']) && $asset['is_under_warranty'] == 1): ?>
                                 <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0.5 fw-semibold" style="font-size: 10px;" title="Submitted under warranty">
                                     <i class="bi bi-shield-check me-1"></i>Warranty
                                 </span>
@@ -338,7 +315,7 @@ ob_start();
                                 $unit_display = 'General Unit';
                                 if (!empty($asset['unit_name'])) {
                                     $unit_display = !empty($asset['unit_code']) 
-                                        ? $asset['unit_code'] . ' - ' .$asset['unit_name'] 
+                                        ? $asset['unit_code'] . ' - ' . $asset['unit_name'] 
                                         : $asset['unit_name'];
                                 }
                                 echo htmlspecialchars($unit_display);
@@ -381,8 +358,8 @@ ob_start();
                         </label>
                         <select name="vendor_id" id="vendorSelect" class="form-select">
                             <option value="">-- Select Vendor --</option>
-                            <?php foreach ($vendors as$v): ?>
-                                <option value="<?= $v['id'] ?>" <?= $vendor_id ==$v['id'] ? 'selected' : '' ?>>
+                            <?php foreach ($vendors as $v): ?>
+                                <option value="<?= $v['id'] ?>" <?= $vendor_id == $v['id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($v['vendor_name']) ?>
                                 </option>
                             <?php endforeach; ?>
@@ -397,73 +374,13 @@ ob_start();
                         </div>
                     </div>
 
-                    <div class="col-12">
-                        <label class="form-label">Diagnosis / Issue Description <span class="text-danger">*</span></label>
-                        <textarea name="issue_description" class="form-control" rows="3" style="height: auto;" placeholder="Describe the fault or maintenance requirements..." required><?= htmlspecialchars($issue_desc) ?></textarea>
-                    </div>
-        
-                    <!-- Toggle Button for E-Waste Routing -->
-                    <div class="col-12" id="ewasteTriggerWrapper" style="display: <?= $repair_type === 'internal' ? 'block' : 'none' ?>;">
-                        <button type="button" class="btn btn-outline-secondary btn-sm border-dashed d-flex align-items-center gap-2" id="toggleEwasteBtn" onclick="toggleEwasteSection()">
-                            <i class="bi bi-recycle text-danger"></i> + Scrap Component(s) / Log to E-Waste
-                        </button>
-                    </div>
-
-                    <!-- Hidden E-Waste Container -->
-                    <div class="col-12" id="componentScrapWrapper" style="display: none;">
-                        <div class="p-3 bg-light rounded-1 border position-relative">
-                            <button type="button" class="btn-close position-absolute top-0 end-0 m-2" aria-label="Close" onclick="toggleEwasteSection()"></button>
-                            <label class="form-label text-dark fw-bold mb-2">
-                                <i class="bi bi-recycle text-danger me-1"></i> Component Replacement &amp; E-Waste Routing
-                            </label>
-                            
-                            <!-- Dynamic Rows Container -->
-                            <div id="scrapRowsContainer" class="d-flex flex-column gap-2 mb-2">
-                                <div class="row g-2 align-items-center scrap-row">
-                                    <div class="col-md-9">
-                                        <input type="text" name="scrapped_component[]" class="form-control" list="commonComponents" placeholder="Type or select component (e.g. RAM, SSD)..." autocomplete="off">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeScrapRow(this)" disabled style="font-size: .75rem;">
-                                            <i class="bi bi-trash"></i> Remove
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Add Another Component Button -->
-                            <button type="button" class="btn btn-outline-primary btn-sm mt-1" onclick="addScrapRow()" style="font-size: .75rem;">
-                                <i class="bi bi-plus-circle me-1"></i> Add Another Component
-                            </button>
-                            <small class="text-muted d-block mt-2">Select from suggestions or type any custom part name. This will automatically route items to the E-Waste registry.</small>
-                        </div>
-                    </div>
-
-                    <!-- Shared Datalist -->
-                    <datalist id="commonComponents">
-                        <option value="RAM">
-                        <option value="SSD / Hard Drive">
-                        <option value="Motherboard">
-                        <option value="SMPS (Power Supply)">
-                        <option value="Processor (CPU)">
-                        <option value="Cabinet">
-                        <option value="Monitor">
-                        <option value="Keyboard">
-                        <option value="Mouse">
-                        <option value="Printer">
-                        <option value="Projector Lamp Bulb">
-                        <option value="Projector">
-                        <option value="Power Cord">
-                        <option value="UPS (Uninterruptible Power Supply)">
-                    </datalist>
-
                     <div class="col-12 mt-4 pt-3 border-top">
                         <div class="d-flex justify-content-between align-items-center">
-                            <a href="repair_queue.php" class="btn btn-erp-cancel px-3">
+                            <a href="returned_assets.php" class="btn btn-erp-cancel px-3">
                                 <i class="bi bi-arrow-left me-1"></i> Cancel
                             </a>
-                            <button type="submit" id="submitBtn" class="btn btn-success px-4 fw-bold">
-                                <i class="bi bi-check-circle me-1"></i> Resolve & Close
+                            <button type="submit" id="submitBtn" class="btn btn-primary px-4 fw-bold" style="background-color: #173f63; border-color: #173f63;">
+                                <i class="bi bi-tools me-1"></i> Send to Repair
                             </button>
                         </div>
                     </div>
@@ -474,86 +391,16 @@ ob_start();
 </div>
 
 <script>
-function toggleEwasteSection() {
-    const scrapWrapper = document.getElementById('componentScrapWrapper');
-    const triggerWrapper = document.getElementById('ewasteTriggerWrapper');
-
-    if (scrapWrapper.style.display === 'none') {
-        scrapWrapper.style.display = 'block';
-        triggerWrapper.style.display = 'none';
-    } else {
-        scrapWrapper.style.display = 'none';
-        triggerWrapper.style.display = 'block';
-        // Reset back to a single clean row when closed
-        document.getElementById('scrapRowsContainer').innerHTML = `
-            <div class="row g-2 align-items-center scrap-row">
-                <div class="col-md-9">
-                    <input type="text" name="scrapped_component[]" class="form-control" list="commonComponents" placeholder="Type or select component (e.g. RAM, SSD)..." autocomplete="off">
-                </div>
-                <div class="col-md-3">
-                    <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeScrapRow(this)" disabled style="font-size: .75rem;">
-                        <i class="bi bi-trash"></i> Remove
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-}
-
-function addScrapRow() {
-    const container = document.getElementById('scrapRowsContainer');
-    const newRow = document.createElement('div');
-    newRow.className = 'row g-2 align-items-center scrap-row';
-    newRow.innerHTML = `
-        <div class="col-md-9">
-            <input type="text" name="scrapped_component[]" class="form-control" list="commonComponents" placeholder="Type or select component..." autocomplete="off">
-        </div>
-        <div class="col-md-3">
-            <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeScrapRow(this)" style="font-size: .75rem;">
-                <i class="bi bi-trash"></i> Remove
-            </button>
-        </div>
-    `;
-    container.appendChild(newRow);
-    updateRemoveButtons();
-}
-
-function removeScrapRow(button) {
-    const row = button.closest('.scrap-row');
-    row.remove();
-    updateRemoveButtons();
-}
-
-function updateRemoveButtons() {
-    const rows = document.querySelectorAll('.scrap-row');
-    rows.forEach((row) => {
-        const removeBtn = row.querySelector('button.btn-outline-danger');
-        if (removeBtn) {
-            removeBtn.disabled = (rows.length === 1); // Keep at least one input row available
-        }
-    });
-}
-
 function toggleVendorField() {
     const type = document.getElementById('repairType').value;
     const vendorWrapper = document.getElementById('vendorFieldWrapper');
     const costWrapper = document.getElementById('costFieldWrapper');
-    const ewasteTrigger = document.getElementById('ewasteTriggerWrapper');
-    const componentScrapWrapper = document.getElementById('componentScrapWrapper');
-    const submitBtn = document.getElementById('submitBtn');
 
     if (type === 'external_warranty' || type === 'external_paid') {
         vendorWrapper.style.display = 'block';
-        if (ewasteTrigger) ewasteTrigger.style.display = 'none';
-        if (componentScrapWrapper) componentScrapWrapper.style.display = 'none';
-        submitBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save & Dispatch to Repair';
-        submitBtn.className = 'btn btn-erp-primary px-4';
     } else {
         vendorWrapper.style.display = 'none';
-        if (ewasteTrigger) ewasteTrigger.style.display = 'block';
         document.getElementById('vendorSelect').value = '';
-        submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Resolve & Close';
-        submitBtn.className = 'btn btn-success px-4 fw-bold';
     }
 
     if (type === 'external_paid') {
@@ -564,7 +411,6 @@ function toggleVendorField() {
     }
 }
 
-// Run once on load to set initial state correctly
 document.addEventListener("DOMContentLoaded", toggleVendorField);
 </script>
 

@@ -61,7 +61,7 @@ if (isset($_POST['submit_lifecycle_request'])) {
         $log_stmt->bind_param("isisi", $permanent_stock_id,$status, $user_id,$user_remarks, $is_under_warranty);$log_stmt->execute();
 
         $_SESSION['swal_type'] = "success";
-        $_SESSION['swal_msg']  = "Lifecycle action request submitted to Super Admin for approval.";
+        $_SESSION['swal_msg']  = "Service request submitted to maintenance for approval.";
     } else {
         $_SESSION['swal_type'] = "error";
         $_SESSION['swal_msg']  = "Asset not found in registry.";

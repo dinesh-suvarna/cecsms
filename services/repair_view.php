@@ -28,10 +28,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $asset_tag          = $repair['division_asset_id'];
                 $origin_division_id = $repair['origin_division_id'];
 
-               if ($action === 'complete') {
+                if ($action === 'complete') {
                     $final_cost       = floatval($_POST['final_cost'] ?? 0);
                     $resolution_notes = trim($_POST['resolution_notes'] ?? 'Repair completed.');
                     $bill_number      = trim($_POST['bill_number'] ?? ''); 
+
+                    // Capture scrapped components if provided during resolution
+                    $raw_components      = $_POST['scrapped_component'] ?? [];
+                    $scrapped_components = [];
+                    if (is_array($raw_components)) {
+                        foreach ($raw_components as $comp) {
+                            $trimmed = trim($comp);
+                            if (!empty($trimmed)) {
+                                $scrapped_components[] = $trimmed;
+                            }
+                        }
+                    }
+
+                    if (!empty($scrapped_components)) {
+                        $resolution_notes .= " | Scrapped Parts: " . implode(', ', $scrapped_components);
+                    }
 
                     // 1. Update the repair ticket to completed status
                     $up_rep = $conn->prepare("
@@ -55,6 +71,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $get_details->execute();
                     $repair_info = $get_details->get_result()->fetch_assoc();
                     $get_details->close();
+
+                    // 3. Automatically loop and log each scrapped component to e-waste registry
+                    if (!empty($scrapped_components) && $repair_info) {
+                        $ewaste_stmt = $conn->prepare("
+                            INSERT INTO ewaste_items (stock_detail_id, division_asset_id, affected_component, disposal_reason, status) 
+                            VALUES (?, ?, ?, ?, 'Pending_Verification')
+                        ");
+                        foreach ($scrapped_components as $comp) {
+                            $ewaste_reason = "Repair component scrap: " . $resolution_notes;
+                            $ewaste_stmt->bind_param("isss", $repair_info['stock_detail_id'], $asset_tag, $comp, $ewaste_reason);
+                            $ewaste_stmt->execute();
+                        }
+                        $ewaste_stmt->close();
+                    }
 
                     if ($repair_info && in_array($repair_info['repair_type'], ['external_paid', 'external_warranty'])) {
                         $item_name    = $repair_info['item_name']; 
@@ -96,7 +126,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     }
 
                     $_SESSION['success_msg'] = "Repair completed and successfully logged into service records!";
-
 
                 } elseif ($action === 'return_origin') {
                     // 1. Update repair status to returned
@@ -166,53 +195,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $_SESSION['success_msg'] = "Asset successfully returned to Main Stock inventory.";
 
                 } elseif ($action === 'e_waste' || $action === 'whole_asset_swap') {
-                // 1. Capture disposal reason from whichever modal was submitted
+                $disposal_scope = $_POST['disposal_scope'] ?? 'whole_asset';
                 $default_reason = ($action === 'whole_asset_swap') ? 'Whole asset replaced from buffer / E-Waste' : 'Unrepairable / Scrapped from Repair Queue';
                 $disposal_reason = trim($_POST['resolution_notes'] ?? $_POST['swap_notes'] ?? $default_reason);
 
-                // 2. Update repair ticket status AND save the disposal reason into the repairs table
-                $up_rep = $conn->prepare("UPDATE repairs SET status = 'e_waste', resolution_notes = ? WHERE id = ?");
-                $up_rep->bind_param("si", $disposal_reason, $repair_id);
-                $up_rep->execute();
-                $up_rep->close();
+                if ($disposal_scope === 'component_only') {
+                    // Capture components array
+                    $raw_components = $_POST['scrapped_component'] ?? ['General Component'];
+                    $scrapped_components = [];
+                    foreach ($raw_components as $c) {
+                        $trimmed = trim($c);
+                        if (!empty($trimmed)) {
+                            $scrapped_components[] = $trimmed;
+                        }
+                    }
+                    if (empty($scrapped_components)) {
+                        $scrapped_components[] = 'General Component';
+                    }
 
-                // 3. Update stock details status to 'disposed'
-                $up_sd = $conn->prepare("UPDATE stock_details SET status = 'disposed' WHERE id = ?");
-                $up_sd->bind_param("i", $stock_detail_id);
-                $up_sd->execute();
-                $up_sd->close();
+                    // 1. Update repair ticket status directly to 'returned' (since asset is restored immediately)
+                    $up_rep = $conn->prepare("UPDATE repairs SET status = 'returned', resolution_notes = ?, completed_at = NOW() WHERE id = ?");
+                    $resolution_summary = $disposal_reason . " | Scrapped Parts: " . implode(', ', $scrapped_components);
+                    $up_rep->bind_param("si", $resolution_summary, $repair_id);
+                    $up_rep->execute();
+                    $up_rep->close();
 
-                // 4. Insert directly into the e-waste registry table with 'Pending_Verification' status
-                $ewaste_stmt = $conn->prepare("
-                    INSERT INTO ewaste_items (stock_detail_id, division_asset_id, disposal_reason, status) 
-                    VALUES (?, ?, ?, 'Pending_Verification')
-                ");
-                $ewaste_stmt->bind_param("iss", $stock_detail_id, $asset_tag, $disposal_reason);
-                $ewaste_stmt->execute();
-                $ewaste_stmt->close();
+                    // 2. Insert each scrapped component into ewaste_items table
+                    $ewaste_stmt = $conn->prepare("
+                        INSERT INTO ewaste_items (stock_detail_id, division_asset_id, affected_component, disposal_reason, status) 
+                        VALUES (?, ?, ?, ?, 'Pending_Verification')
+                    ");
+                    foreach ($scrapped_components as $comp) {
+                        $ewaste_stmt->bind_param("isss", $stock_detail_id, $asset_tag, $comp, $disposal_reason);
+                        $ewaste_stmt->execute();
+                    }
+                    $ewaste_stmt->close();
 
-                // 5. Remove from active division assets
-                $del_da = $conn->prepare("DELETE FROM division_assets WHERE division_asset_id = ? AND stock_detail_id = ?");
-                $del_da->bind_param("si", $asset_tag, $stock_detail_id);
-                $del_da->execute();
-                $del_da->close();
+                    // 3. Keep the PC active and restore its status to dispatched/assigned
+                    $up_sd = $conn->prepare("UPDATE stock_details SET status = 'dispatched' WHERE id = ?");
+                    $up_sd->bind_param("i", $stock_detail_id);
+                    $up_sd->execute();
+                    $up_sd->close();
 
-                // 6. Insert audit log entry with disposal reason
-                $unit_name = 'Repair Center / Main Stock';
-                $log_notes = ($action === 'whole_asset_swap') 
-                    ? "Whole asset replaced and and old asset routed to E-Waste. Reason: " . $disposal_reason 
-                    : "Asset decommissioned as it is not repairable and sent to E-Waste. Reason: " . $disposal_reason;
+                    $up_da = $conn->prepare("UPDATE division_assets SET status = 'assigned' WHERE division_asset_id = ? AND stock_detail_id = ?");
+                    $up_da->bind_param("si", $asset_tag, $stock_detail_id);
+                    $up_da->execute();
+                    $up_da->close();
+
+                    // 4. Insert audit log entry noting component e-waste and return to origin
+                    $unit_name = 'Repair Center / Main Stock';
+                    $log_notes = "Failed components (" . implode(', ', $scrapped_components) . ") routed to E-Waste. Asset restored and returned to origin. Reason: " . $disposal_reason;
                     
-                $log_stmt = $conn->prepare("
-                    INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
-                    VALUES (?, ?, ?, 'disposal_approved', ?, ?)
-                ");
-                $log_stmt->bind_param("isiss", $stock_detail_id, $asset_tag, $unit_name, $admin_id, $log_notes);
-                $log_stmt->execute();
-                $log_stmt->close();
+                    $log_stmt = $conn->prepare("
+                        INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
+                        VALUES (?, ?, ?, 'repair_returned_to_origin', ?, ?)
+                    ");
+                    $log_stmt->bind_param("isiss", $stock_detail_id, $asset_tag, $unit_name, $admin_id, $log_notes);
+                    $log_stmt->execute();
+                    $log_stmt->close();
 
-                $_SESSION['success_msg'] = "Asset successfully moved to the E-Waste management registry!";  
+                    $_SESSION['success_msg'] = "Component(s) successfully routed to E-Waste and asset restored to service!";
+
+                } else {
+                    // SCENARIO: Whole asset is scrapped (existing logic)
+                    $up_rep = $conn->prepare("UPDATE repairs SET status = 'e_waste', resolution_notes = ? WHERE id = ?");
+                    $up_rep->bind_param("si", $disposal_reason, $repair_id);
+                    $up_rep->execute();
+                    $up_rep->close();
+
+                    $up_sd = $conn->prepare("UPDATE stock_details SET status = 'disposed' WHERE id = ?");
+                    $up_sd->bind_param("i", $stock_detail_id);
+                    $up_sd->execute();
+                    $up_sd->close();
+
+                    $ewaste_stmt = $conn->prepare("
+                        INSERT INTO ewaste_items (stock_detail_id, division_asset_id, affected_component, disposal_reason, status) 
+                        VALUES (?, ?, 'Whole Asset', ?, 'Pending_Verification')
+                    ");
+                    $ewaste_stmt->bind_param("iss", $stock_detail_id, $asset_tag, $disposal_reason);
+                    $ewaste_stmt->execute();
+                    $ewaste_stmt->close();
+
+                    $del_da = $conn->prepare("DELETE FROM division_assets WHERE division_asset_id = ? AND stock_detail_id = ?");
+                    $del_da->bind_param("si", $asset_tag, $stock_detail_id);
+                    $del_da->execute();
+                    $del_da->close();
+
+                    $unit_name = 'Repair Center / Main Stock';
+                    $log_notes = ($action === 'whole_asset_swap') 
+                        ? "Whole asset replaced and old asset routed to E-Waste. Reason: " . $disposal_reason 
+                        : "Asset decommissioned as it is not repairable and sent to E-Waste. Reason: " . $disposal_reason;
+                        
+                    $log_stmt = $conn->prepare("
+                        INSERT INTO asset_logs (asset_id, asset_tag, unit_name, action_type, performed_by, notes) 
+                        VALUES (?, ?, ?, 'disposal_approved', ?, ?)
+                    ");
+                    $log_stmt->bind_param("isiss", $stock_detail_id, $asset_tag, $unit_name, $admin_id, $log_notes);
+                    $log_stmt->execute();
+                    $log_stmt->close();
+
+                    $_SESSION['success_msg'] = "Asset successfully moved to the E-Waste management registry!";  
                 }
+            }
             }
             $conn->commit();
         } catch (Exception $e) {
@@ -236,7 +320,7 @@ $query = "
         u.username as technician_name,
         r.issue_description AS repair_issue_desc,
         COALESCE(
-            NULLIF((SELECT al.notes FROM asset_logs al WHERE al.asset_id = sd.id AND al.action_type IN ('service_requested', 'repair_requested') ORDER BY al.id DESC LIMIT 1), ''),
+            NULLIF((SELECT al.notes FROM asset_logs al WHERE al.asset_id = sd.id AND al.action_type = 'service_requested' ORDER BY al.id ASC LIMIT 1), ''),
             NULLIF(dm.remarks, ''),
             'No remarks provided'
         ) AS original_notes
@@ -390,7 +474,7 @@ ob_start();
                                                     <th style="width: 20%;">Item &amp; Asset Tag</th>
                                                     <th style="width: 16%;">Origin Location</th>
                                                     <th style="width: 14%;">Type &amp; Vendor</th>
-                                                    <th style="width: 16%;">Issue & Diagnosis</th>
+                                                    <th style="width: 16%;">Issue</th>
                                                     <th style="width: 8%;">Cost</th>
                                                     <th style="width: 8%;">Status</th>
                                                     <th class="text-end pe-4" style="width: 12%;">Actions</th>
@@ -431,16 +515,12 @@ ob_start();
                                                                 elseif ($row['repair_type'] === 'external_paid') $badge_bg = 'bg-danger-subtle text-danger';
                                                             ?>
                                                             <span class="badge <?= $badge_bg ?> mb-1"><?= $type_label ?></span>
-                                                            <div class="small fw-medium text-secondary"><?= htmlspecialchars($row['vendor_name'] ?: 'Internal Tech') ?></div>
+                                                            <div class="small fw-medium text-secondary"><?= htmlspecialchars($row['vendor_name'] ?: 'Internal Maintenance') ?></div>
                                                         </td>
                                                         <td class="small text-muted" style="max-width: 200px;">
-                                                            <div class="mb-1">
+                                                            <div class="mb-1">     
                                                                 <span class="fw-bold text-dark" style="font-size: 0.7rem; text-transform: uppercase;">Issue:</span>
-                                                                <div class="text-secondary"><?= htmlspecialchars($row['original_notes'] ?? 'No remarks') ?></div>
-                                                            </div>
-                                                            <div>
-                                                                <span class="fw-bold text-dark" style="font-size: 0.7rem; text-transform: uppercase;">Diagnosis:</span>
-                                                                <div class="text-primary fw-semibold"><?= htmlspecialchars($row['repair_issue_desc'] ?? 'N/A') ?></div>
+                                                                <div class="text-primary fw-semibold"><?= htmlspecialchars($row['original_notes'] ?? 'N/A') ?></div>
                                                             </div>
                                                         </td>
                                                         <td class="fw-semibold text-dark">
@@ -470,11 +550,11 @@ ob_start();
                                                         ob_start();
                                                     ?>
                                                     <div class="modal fade" id="completeModal<?= $row['id'] ?>" tabindex="-1" aria-hidden="true">
-                                                        <div class="modal-dialog modal-dialog-centered">
+                                                        <div class="modal-dialog modal-dialog-centered modal-lg">
                                                             <div class="modal-content border-0 shadow rounded-4">
                                                                 <form method="POST">
                                                                     <div class="modal-header border-0 pb-0">
-                                                                        <h5 class="fw-bold text-dark">Log Repair Resolution</h5>
+                                                                        <h5 class="fw-bold text-dark">Log Repair Resolution &amp; Component Scrap</h5>
                                                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                                     </div>
                                                                     <div class="modal-body text-start">
@@ -502,6 +582,42 @@ ob_start();
                                                                             <textarea name="resolution_notes" class="form-control" rows="3" placeholder="e.g., Replaced hard drive and reloaded OS. Tested OK." required></textarea>
                                                                         </div>
 
+                                                                        <!-- Toggle Button for E-Waste Component Scrapping -->
+                                                                        <div class="mb-3" id="ewasteTriggerWrapper<?= $row['id'] ?>">
+                                                                            <button type="button" class="btn btn-outline-secondary btn-sm border-dashed d-flex align-items-center gap-2" onclick="toggleModalEwasteSection(<?= $row['id'] ?>)">
+                                                                                <i class="bi bi-recycle text-danger"></i> + Scrap Component(s) / Log to E-Waste
+                                                                            </button>
+                                                                        </div>
+
+                                                                        <!-- Hidden E-Waste Container -->
+                                                                        <div class="mb-3" id="componentScrapWrapper<?= $row['id'] ?>" style="display: none;">
+                                                                            <div class="p-3 bg-light rounded-1 border position-relative">
+                                                                                <button type="button" class="btn-close position-absolute top-0 end-0 m-2" aria-label="Close" onclick="toggleModalEwasteSection(<?= $row['id'] ?>)"></button>
+                                                                                <label class="form-label text-dark fw-bold mb-2">
+                                                                                    <i class="bi bi-recycle text-danger me-1"></i> Component Replacement &amp; E-Waste Routing
+                                                                                </label>
+                                                                                
+                                                                                <!-- Dynamic Rows Container -->
+                                                                                <div id="scrapRowsContainer<?= $row['id'] ?>" class="d-flex flex-column gap-2 mb-2">
+                                                                                    <div class="row g-2 align-items-center scrap-row">
+                                                                                        <div class="col-md-9">
+                                                                                            <input type="text" name="scrapped_component[]" class="form-control form-control-sm" list="commonComponentsModal" placeholder="Type or select component (e.g. RAM, SSD)..." autocomplete="off">
+                                                                                        </div>
+                                                                                        <div class="col-md-3">
+                                                                                            <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeModalScrapRow(this)" disabled style="font-size: .75rem;">
+                                                                                                <i class="bi bi-trash"></i> Remove
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <!-- Add Another Component Button -->
+                                                                                <button type="button" class="btn btn-outline-primary btn-sm mt-1" onclick="addModalScrapRow(<?= $row['id'] ?>)" style="font-size: .75rem;">
+                                                                                    <i class="bi bi-plus-circle me-1"></i> Add Another Component
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+
                                                                         <div class="mb-3">
                                                                             <label class="form-label fw-bold small">Final Cost (₹)</label>
                                                                             <input type="number" step="0.01" name="final_cost" class="form-control" value="<?= htmlspecialchars($row['repair_cost']) ?>">
@@ -522,36 +638,86 @@ ob_start();
                                                         ob_start();
                                                     ?>
                                                     <div class="modal fade" id="ewasteModal<?= $row['id'] ?>" tabindex="-1" aria-hidden="true">
-                                                        <div class="modal-dialog modal-dialog-centered">
-                                                            <div class="modal-content border-0 shadow rounded-4">
-                                                                <form method="POST">
-                                                                    <div class="modal-header border-0 pb-0">
-                                                                        <h5 class="fw-bold text-danger"><i class="bi bi-trash3-fill me-2"></i>Declare Unrepairable / E-Waste</h5>
-                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                                    </div>
-                                                                    <div class="modal-body text-start">
-                                                                        <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
-                                                                        <input type="hidden" name="action" value="e_waste">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow rounded-4">
+            <form method="POST">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold text-danger"><i class="bi bi-trash3-fill me-2"></i>Declare Unrepairable / E-Waste</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-start">
+                    <input type="hidden" name="repair_id" value="<?= $row['id'] ?>">
+                    <input type="hidden" name="action" value="e_waste">
 
-                                                                        <div class="mb-3 p-3 bg-light rounded-3">
-                                                                            <div class="small text-muted">Asset Tag: <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong></div>
-                                                                            <div class="small text-muted">Item: <strong><?= htmlspecialchars($row['item_name']) ?></strong></div>
-                                                                            <div class="small text-muted">S/N: <strong><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></strong></div>
-                                                                        </div>
+                    <div class="mb-3 p-3 bg-light rounded-3">
+                        <div class="small text-muted">Asset Tag: <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong></div>
+                        <div class="small text-muted">Item: <strong><?= htmlspecialchars($row['item_name']) ?></strong></div>
+                        <div class="small text-muted">S/N: <strong><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></strong></div>
+                    </div>
 
-                                                                        <div class="mb-3">
-                                                                            <label class="form-label fw-bold small">Disposal / Failure Reason <span class="text-danger">*</span></label>
-                                                                            <textarea name="resolution_notes" class="form-control" rows="3" placeholder="e.g., Motherboard short-circuited and completely unrepairable." required></textarea>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="modal-footer border-0 pt-0">
-                                                                        <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
-                                                                        <button type="submit" class="btn btn-danger fw-bold px-4">Confirm &amp; Route to E-Waste</button>
-                                                                    </div>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Disposal Scope <span class="text-danger">*</span></label>
+                        <select name="disposal_scope" class="form-select form-select-sm" id="disposalScopeSelect<?= $row['id'] ?>" onchange="toggleModalScope(<?= $row['id'] ?>)" required>
+                            <option value="whole_asset">Whole Asset (Scrap entire unit)</option>
+                            <option value="component_only">Component Only (e.g., Dead motherboard replaced by vendor)</option>
+                        </select>
+                    </div>
+
+                    <!-- Component Scrapping Wrapper (Hidden by default, shown if component_only) -->
+                    <div class="mb-3" id="modalComponentWrapper<?= $row['id'] ?>" style="display: none;">
+                        <div class="p-3 bg-light rounded-1 border position-relative">
+                            <label class="form-label text-dark fw-bold mb-2">
+                                <i class="bi bi-recycle text-danger me-1"></i> Affected Component(s)
+                            </label>
+                            
+                            <div class="scrap-rows-container d-flex flex-column gap-2 mb-2">
+                                <div class="row g-2 align-items-center scrap-row">
+                                    <div class="col-md-9">
+                                        <input type="text" name="scrapped_component[]" class="form-control form-control-sm" list="commonComponentsModal" placeholder="Type or select component (e.g. Motherboard, RAM)..." autocomplete="off">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button type="button" class="btn btn-outline-danger btn-sm w-100 remove-scrap-btn" onclick="removeModalScrapRow(this)" disabled style="font-size: .75rem;">
+                                            <i class="bi bi-trash"></i> Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn btn-outline-primary btn-sm mt-1" onclick="addModalScrapRow(this)" style="font-size: .75rem;">
+                                <i class="bi bi-plus-circle me-1"></i> Add Another Component
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Disposal / Failure Reason <span class="text-danger">*</span></label>
+                        <textarea name="resolution_notes" class="form-control" rows="3" placeholder="e.g., Motherboard short-circuited and completely unrepairable." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4">Confirm &amp; Route to E-Waste</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Shared Datalist for Modals -->
+<datalist id="commonComponentsModal">
+    <option value="RAM">
+    <option value="SSD / Hard Drive">
+    <option value="Motherboard">
+    <option value="SMPS (Power Supply)">
+    <option value="Processor (CPU)">
+    <option value="Cabinet">
+    <option value="Monitor">
+    <option value="Keyboard">
+    <option value="Mouse">
+    <option value="Printer">
+    <option value="Projector Lamp Bulb">
+    <option value="UPS (Uninterruptible Power Supply)">
+</datalist>
                                                     <?php 
                                                         $modals_html .= ob_get_clean();
                                                     ?>
@@ -655,7 +821,7 @@ ob_start();
                                                                 elseif ($row['repair_type'] === 'external_paid') $badge_bg = 'bg-danger-subtle text-danger';
                                                             ?>
                                                             <span class="badge <?= $badge_bg ?> mb-1"><?= $type_label ?></span>
-                                                            <div class="small fw-medium text-secondary"><?= htmlspecialchars($row['vendor_name'] ?: 'Internal Tech') ?></div>
+                                                            <div class="small fw-medium text-secondary"><?= htmlspecialchars($row['vendor_name'] ?: 'Internal maintenance') ?></div>
                                                         </td>
                                                         <td class="small text-muted" style="max-width: 180px;">
                                                             <div class="text-success"><?= htmlspecialchars($row['resolution_notes']) ?></div>
@@ -823,6 +989,79 @@ ob_start();
 
     </div>
 </div>
+
+<script>
+function toggleModalScope(rowId) {
+    const scopeSelect = document.getElementById('disposalScopeSelect' + rowId);
+    const componentWrapper = document.getElementById('modalComponentWrapper' + rowId);
+    
+    if (scopeSelect.value === 'component_only') {
+        componentWrapper.style.display = 'block';
+    } else {
+        componentWrapper.style.display = 'none';
+    }
+}
+
+function toggleModalEwasteSection(rowId) {
+    const scrapWrapper = document.getElementById('componentScrapWrapper' + rowId);
+    const triggerWrapper = document.getElementById('ewasteTriggerWrapper' + rowId);
+
+    if (scrapWrapper.style.display === 'none') {
+        scrapWrapper.style.display = 'block';
+        triggerWrapper.style.display = 'none';
+    } else {
+        scrapWrapper.style.display = 'none';
+        triggerWrapper.style.display = 'block';
+        document.getElementById('scrapRowsContainer' + rowId).innerHTML = `
+            <div class="row g-2 align-items-center scrap-row">
+                <div class="col-md-9">
+                    <input type="text" name="scrapped_component[]" class="form-control form-control-sm" list="commonComponentsModal" placeholder="Type or select component (e.g. RAM, SSD)..." autocomplete="off">
+                </div>
+                <div class="col-md-3">
+                    <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeModalScrapRow(this)" disabled style="font-size: .75rem;">
+                        <i class="bi bi-trash"></i> Remove
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function addModalScrapRow(rowId) {
+    const container = document.getElementById('scrapRowsContainer' + rowId);
+    const newRow = document.createElement('div');
+    newRow.className = 'row g-2 align-items-center scrap-row';
+    newRow.innerHTML = `
+        <div class="col-md-9">
+            <input type="text" name="scrapped_component[]" class="form-control form-control-sm" list="commonComponentsModal" placeholder="Type or select component..." autocomplete="off">
+        </div>
+        <div class="col-md-3">
+            <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeModalScrapRow(this)" style="font-size: .75rem;">
+                <i class="bi bi-trash"></i> Remove
+            </button>
+        </div>
+    `;
+    container.appendChild(newRow);
+    updateModalRemoveButtons(container);
+}
+
+function removeModalScrapRow(button) {
+    const row = button.closest('.scrap-row');
+    const container = row.parentElement;
+    row.remove();
+    updateModalRemoveButtons(container);
+}
+
+function updateModalRemoveButtons(container) {
+    const rows = container.querySelectorAll('.scrap-row');
+    rows.forEach((row) => {
+        const removeBtn = row.querySelector('button.btn-outline-danger');
+        if (removeBtn) {
+            removeBtn.disabled = (rows.length === 1);
+        }
+    });
+}
+</script>
 
 <?php
 $content = ob_get_clean();

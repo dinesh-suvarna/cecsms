@@ -74,7 +74,6 @@ $pending_query = "SELECT
 if ($role !== 'SuperAdmin') {
     $pending_query .= " AND dm.division_id = " . intval($division_id);
 }
-// Sort by the audit log request timestamp instead of assigned_at
 $pending_query .= " ORDER BY al.created_at DESC";
 $pending_res = $conn->query($pending_query);
 
@@ -90,7 +89,6 @@ ob_start();
     }
     .card-custom { border: none; border-radius: 1.25rem; background: #ffffff; overflow: hidden; }
     
-    /* Service Table Styling */
     .lifecycle-table thead th {
         background-color: var(--emerald-50);
         color: var(--emerald-600);
@@ -102,7 +100,6 @@ ob_start();
         border: none;
     }
     
-    /* Audit Table Styling */
     .audit-table { font-size: 0.85rem; table-layout: fixed; width: 100%; }
     .audit-table th {
         font-size: 0.725rem;
@@ -187,172 +184,130 @@ ob_start();
     </div>
 
     <!-- PENDING REQUESTS QUEUE -->
-            <div class="card card-custom shadow-sm">
-                <div class="table-responsive">
-                    <table class="table align-middle mb-0 lifecycle-table">
-                        <thead>
-                            <tr>
-                                <th>Date & Time</th>
-                                <th class="ps-4">Asset ID</th>
-                                <th>Item Details</th>
-                                <th>Department</th>
-                                <th>Lab / Facility</th>
-                                <?php if ($role === 'SuperAdmin'): ?>
-                                    <th class="text-end pe-4">Action</th>
-                                <?php endif; ?>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if($pending_res->num_rows > 0): ?>
-                                <?php while($row = $pending_res->fetch_assoc()): 
-                                    $unit_display = "Unassigned";
-                                    if (!empty($row['unit_name'])) {
-                                        $code_prefix = !empty($row['unit_code']) ? strtoupper($row['unit_code']) . " - " : "";
-                                        $unit_display = '<span class="fw-semibold text-dark">' . $code_prefix . htmlspecialchars($row['unit_name']) . '</span>';
-                                    }
-                                    $unitFullName = (!empty($row['unit_code']) ? $row['unit_code'] . " - " : "") . $row['unit_name'];
-                                ?>
-                                <tr>
-                                    <td>
-                                    <div class="small text-dark fw-semibold"><?= date('d M, Y', strtotime($row['created_at'])) ?></div>
-                                    <div class="extra-small text-muted"><?= date('h:i A', strtotime($row['created_at'])) ?></div>
-                                    </td>
-                                    <td class="ps-4 fw-bold text-dark"><?= $row['division_asset_id'] ?></td>
-                                    <td>
-                                        <div class="fw-semibold small mb-1"><?= htmlspecialchars($row['item_name']) ?></div>
-                                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                                            <div class="text-muted extra-small">SN: <?= $row['serial_number'] ?: '---' ?></div>
-                                            <!-- Warranty Badge Added Here -->
-                                            <?php if (!empty($row['is_under_warranty']) && $row['is_under_warranty'] == 1): ?>
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0.5 fw-semibold" style="font-size: 10px;" title="Submitted under warranty">
-                                                    <i class="bi bi-shield-check me-1"></i>Warranty
-                                                </span>
-                                            <?php endif; ?>
-                                        </div>
-                                    </td>
-                                    <td><div class="small text-secondary"><?= htmlspecialchars($row['department']) ?></div></td>
-                                    <td><div class="small"><?= $unit_display ?></div></td>
-                                    
-                                    <?php if ($role === 'SuperAdmin'): ?>
-                                    <td class="text-end pe-4">
-                                        <button type="button" class="btn btn-approve shadow-sm" 
-                                                onclick="processItem(
-                                                    '<?= $row['id'] ?>', 
-                                                    '<?= $row['division_asset_id'] ?>', 
-                                                    '<?= addslashes($row['item_name']) ?>', 
-                                                    '<?= $row['serial_number'] ?>', 
-                                                    '<?= addslashes($row['notes'] ?? "") ?>',
-                                                    '<?= getAssetIcon($row['item_name']) ?>',
-                                                    '<?= addslashes($unitFullName) ?>',
-                                                    '<?= addslashes($row['department']) ?>'
-                                                )">
-                                            <i class="bi bi-gear-fill me-1"></i> Process Request
-                                        </button>
-                                    </td>
+    <div class="card card-custom shadow-sm">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 lifecycle-table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th class="ps-4">Asset ID</th>
+                        <th>Item Details</th>
+                        <th>Department</th>
+                        <th>Lab / Facility</th>
+                        <?php if ($role === 'SuperAdmin'): ?>
+                            <th class="text-end pe-4">Action</th>
+                        <?php endif; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if($pending_res->num_rows > 0): ?>
+                        <?php while($row = $pending_res->fetch_assoc()): 
+                            $unit_display = "Unassigned";
+                            if (!empty($row['unit_name'])) {
+                                $code_prefix = !empty($row['unit_code']) ? strtoupper($row['unit_code']) . " - " : "";
+                                $unit_display = '<span class="fw-semibold text-dark">' . $code_prefix . htmlspecialchars($row['unit_name']) . '</span>';
+                            }
+                            $unitFullName = (!empty($row['unit_code']) ? $row['unit_code'] . " - " : "") . $row['unit_name'];
+                        ?>
+                        <tr>
+                            <td>
+                                <div class="small text-dark fw-semibold"><?= date('d M, Y', strtotime($row['created_at'])) ?></div>
+                                <div class="extra-small text-muted"><?= date('h:i A', strtotime($row['created_at'])) ?></div>
+                            </td>
+                            <td class="ps-4 fw-bold text-dark"><?= $row['division_asset_id'] ?></td>
+                            <td>
+                                <div class="fw-semibold small mb-1"><?= htmlspecialchars($row['item_name']) ?></div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <div class="text-muted extra-small">SN: <?= $row['serial_number'] ?: '---' ?></div>
+                                    <?php if (!empty($row['is_under_warranty']) && $row['is_under_warranty'] == 1): ?>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0.5 fw-semibold" style="font-size: 10px;" title="Submitted under warranty">
+                                            <i class="bi bi-shield-check me-1"></i>Warranty
+                                        </span>
                                     <?php endif; ?>
-                                </tr>
-                    
-                                <?php 
-                                    // 1. Return to Stock Modal
-                                    $modal_id_1 = "confirmReturnStockModal" . $row['id'];
-                                    $modals_html =$modals_html ?? '';
-                                    ob_start();
-                                ?>
-                                <div class="modal fade" id="<?= $modal_id_1 ?>" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
-                                    <div class="modal-dialog modal-dialog-centered">
-                                        <div class="modal-content border-0 shadow rounded-4">
-                                            <div class="modal-header border-0 pb-0">
-                                                <h5 class="fw-bold text-dark"><i class="bi bi-box-arrow-in-left me-2"></i>Confirm Return to Stock</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body text-start">
-                                                <p class="text-muted mb-0">Are you sure you want to approve this return for asset <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong> and restore it to active unassigned stock?</p>
-                                            </div>
-                                            <div class="modal-footer border-0 pt-0">
-                                                <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
-                                                <a href="process_request.php?id=<?= $row['id'] ?>&action=return_requested" class="btn text-white fw-bold px-4" style="background-color: #173f63;">Yes, Proceed</a>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
-                                <?php 
-                                    $modals_html .= ob_get_clean();
-
-                                    // 2. Send for Repair Modal
-                                    $modal_id_2 = "confirmRepairModal" . $row['id'];
-                                    ob_start();
-                                ?>
-                                <div class="modal fade" id="<?= $modal_id_2 ?>" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
-                                    <div class="modal-dialog modal-dialog-centered">
-                                        <div class="modal-content border-0 shadow rounded-4">
-                                            <div class="modal-header border-0 pb-0">
-                                                <h5 class="fw-bold text-dark"><i class="bi bi-tools me-2"></i>Confirm Send for Repair</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body text-start">
-                                                <p class="text-muted mb-0">Are you sure you want to send asset <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong> for repair?</p>
-                                            </div>
-                                            <div class="modal-footer border-0 pt-0">
-                                                <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
-                                                <a href="process_request.php?id=<?= $row['id'] ?>&action=repair_requested" class="btn text-white fw-bold px-4" style="background-color: #173f63;">Yes, Proceed</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <?php
-    // 3. Scrap / Dispose Modal with Remarks Input
-    $modal_id_3 = "confirmDisposeModal" . $row['id'];
-    ob_start();
-?>
-<div class="modal fade" id="<?= $modal_id_3 ?>" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
-            <form method="POST" action="process_request.php">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="fw-bold text-dark"><i class="bi bi-trash3 text-danger me-2"></i>Confirm Scrap / Dispose</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body text-start">
-                    <!-- Pass the request ID and action type -->
-                    <input type="hidden" name="id" value="<?= $row['id'] ?>">
-                    <input type="hidden" name="action" value="dispose_requested">
-
-                    <p class="text-muted small mb-3">
-                        You are about to decommission asset <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong> and route it to the E-Waste registry.
-                    </p>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small">Disposal / Scrap Reason <span class="text-danger">*</span></label>
-                        <textarea name="disposal_reason" class="form-control" rows="3" placeholder="Provide a reason for decommissioning (e.g., unrepairable motherboard failure, physical damage)..." required></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger fw-bold px-4">Yes, Decommission</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-<?php 
-    $modals_html .= ob_get_clean();
-?>
-
-                                    
-                                <?php 
-                                    $modals_html .= ob_get_clean();
-                                ?>
-                                <?php endwhile; ?>
-                               
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="<?= ($role === 'SuperAdmin') ? '6' : '5' ?>" class="text-center py-5 text-muted">No pending service requests.</td>
-                                </tr>
+                            </td>
+                            <td><div class="small text-secondary"><?= htmlspecialchars($row['department']) ?></div></td>
+                            <td><div class="small"><?= $unit_display ?></div></td>
+                            
+                            <?php if ($role === 'SuperAdmin'): ?>
+                            <td class="text-end pe-4">
+                                <button type="button" class="btn btn-approve shadow-sm" 
+                                        onclick="processItem(
+                                            '<?= $row['id'] ?>', 
+                                            '<?= $row['division_asset_id'] ?>', 
+                                            '<?= addslashes($row['item_name']) ?>', 
+                                            '<?= $row['serial_number'] ?>', 
+                                            '<?= addslashes($row['notes'] ?? "") ?>',
+                                            '<?= getAssetIcon($row['item_name']) ?>',
+                                            '<?= addslashes($unitFullName) ?>',
+                                            '<?= addslashes($row['department']) ?>'
+                                        )">
+                                    <i class="bi bi-gear-fill me-1"></i> Process Request
+                                </button>
+                            </td>
                             <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                        </tr>
+            
+                        <?php 
+                            // 1. Return to Stock Modal
+                            $modal_id_1 = "confirmReturnStockModal" . $row['id'];
+                            $modals_html = $modals_html ?? '';
+                            ob_start();
+                        ?>
+                        <div class="modal fade" id="<?= $modal_id_1 ?>" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content border-0 shadow rounded-4">
+                                    <div class="modal-header border-0 pb-0">
+                                        <h5 class="fw-bold text-dark"><i class="bi bi-box-arrow-in-left me-2"></i>Confirm Return to Stock</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body text-start">
+                                        <p class="text-muted mb-0">Are you sure you want to approve this return for asset <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong> and restore it to active unassigned stock?</p>
+                                    </div>
+                                    <div class="modal-footer border-0 pt-0">
+                                        <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
+                                        <a href="process_request.php?id=<?= $row['id'] ?>&action=return_requested" class="btn text-white fw-bold px-4" style="background-color: #173f63;">Yes, Proceed</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php 
+                            $modals_html .= ob_get_clean();
+
+                            // 2. Send for Repair Modal
+                            $modal_id_2 = "confirmRepairModal" . $row['id'];
+                            ob_start();
+                        ?>
+                        <div class="modal fade" id="<?= $modal_id_2 ?>" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content border-0 shadow rounded-4">
+                                    <div class="modal-header border-0 pb-0">
+                                        <h5 class="fw-bold text-dark"><i class="bi bi-tools me-2"></i>Proceed to Repair Configuration</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body text-start">
+                                        <p class="text-muted mb-0">Are you sure you want to configure repair routing for asset <strong><?= htmlspecialchars($row['division_asset_id']) ?></strong>?</p>
+                                    </div>
+                                    <div class="modal-footer border-0 pt-0">
+                                        <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
+                                        <!-- link to repair_handler.php with the encrypted token -->
+                                        <a href="../services/repair_handler.php?token=<?= urlencode(encrypt_id($row['id'])) ?>" class="btn text-white fw-bold px-4" style="background-color: #173f63;">Yes, Configure Repair</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php
+                            $modals_html .= ob_get_clean();
+                        ?>
+                        <?php endwhile; ?>
+                       
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="<?= ($role === 'SuperAdmin') ? '6' : '5' ?>" class="text-center py-5 text-muted">No pending service requests.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -398,7 +353,7 @@ function processItem(id, assetTag, itemName, serial, notes, iconClass, unitName,
                     </div>
                 </div>
 
-                <label class="extra-small text-uppercase fw-bold text-dark mb-2">Select 1 of 3 Actions to Execute:</label>
+                <label class="extra-small text-uppercase fw-bold text-dark mb-2">Select 1 of 2 Actions to Execute:</label>
                 
                 <button type="button" class="swal-action-btn" onclick="triggerBootstrapModal('confirmReturnStockModal${id}')">
                     <div class="fw-bold text-success"><i class="bi bi-box-arrow-in-left me-1"></i> 1. Return to Stock</div>
@@ -408,11 +363,6 @@ function processItem(id, assetTag, itemName, serial, notes, iconClass, unitName,
                 <button type="button" class="swal-action-btn" onclick="triggerBootstrapModal('confirmRepairModal${id}')">
                     <div class="fw-bold text-primary"><i class="bi bi-tools me-1"></i> 2. Send for Repair</div>
                     <div class="text-muted extra-small">Assign to Maintenance / Repair.</div>
-                </button>
-
-                <button type="button" class="swal-action-btn" onclick="triggerBootstrapModal('confirmDisposeModal${id}')">
-                    <div class="fw-bold text-danger"><i class="bi bi-trash3 me-1"></i> 3. Scrap / Dispose</div>
-                    <div class="text-muted extra-small">Decommission item and log to E-Waste registry.</div>
                 </button>
 
                 <div id="denySection" class="mt-3" style="display:none;">
@@ -436,12 +386,10 @@ function processItem(id, assetTag, itemName, serial, notes, iconClass, unitName,
             }
         },
         didClose: () => {
-            // 1. Force-wipe SweetAlert containers or classes
             document.querySelectorAll('.swal2-container').forEach(el => el.remove());
             document.body.classList.remove('swal2-shown', 'swal2-height-auto', 'swal2-backdrop-show');
             document.body.style.overflow = '';
 
-            // 2. Launch the Bootstrap modal safely
             if (targetModalToOpen) {
                 const modalId = targetModalToOpen;
                 targetModalToOpen = null;

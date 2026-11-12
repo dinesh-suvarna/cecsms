@@ -105,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         
                         $resolution_summary = $resolution_notes . " | Scrapped Parts: " . implode(', ', $scrapped_components) . " | Reason: " . $reason_to_use;
 
+                        // 1. Mark repair status as completed
                         $up_rep = $conn->prepare("UPDATE repairs SET status = 'completed', repair_cost = ?, resolution_notes = ?, completed_at = NOW() WHERE id = ?");
                         $up_rep->bind_param("dsi", $final_cost, $resolution_summary, $repair_id);
                         $up_rep->execute();
@@ -120,6 +121,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             $ewaste_stmt->execute();
                         }
                         $ewaste_stmt->close();
+
+                        // 3. LOG TO SERVICES TABLE IF EXTERNAL / PAID (Matches standard repair behavior)
+                        if ($repair_info && in_array($repair_info['repair_type'], ['external_paid', 'external_warranty'])) {
+                            $item_name    = $repair_info['item_name']; 
+                            $stock_id     = $repair_info['stock_detail_id'];
+                            $vendor_name  = $repair_info['vendor_name'];
+                            $service_type = ($repair_info['repair_type'] === 'external_paid') ? 'EXTERNAL PAID' : 'EXTERNAL WARRANTY';
+                            $bill_status  = ($repair_info['repair_type'] === 'external_paid') ? 'Unpaid' : 'Warranty';
+
+                            $vendor_id = null;
+                            if (!empty($vendor_name)) {
+                                $v_stmt = $conn->prepare("SELECT id FROM vendors WHERE vendor_name = ?");
+                                $v_stmt->bind_param("s", $vendor_name);
+                                $v_stmt->execute();
+                                $v_res = $v_stmt->get_result()->fetch_assoc();
+                                if ($v_res) {
+                                    $vendor_id = (int)$v_res['id'];
+                                }
+                                $v_stmt->close();
+                            }
+
+                            $ins_service = $conn->prepare("
+                                INSERT INTO services (vendor_id, stock_detail_id, service_date, item_name, service_type, amount, bill_status, bill_number, resolution_notes, created_at) 
+                                VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, NOW())
+                            ");
+                            $ins_service->bind_param("iissdsss", 
+                                $vendor_id, 
+                                $stock_id,
+                                $item_name, 
+                                $service_type, 
+                                $final_cost, 
+                                $bill_status,
+                                $bill_number,
+                                $resolution_notes
+                            );
+                            $ins_service->execute();
+                            $ins_service->close();
+                        }
 
                         $_SESSION['success_msg'] = "Component(s) logged to E-Waste and repair completed! Asset is now pending return.";
 

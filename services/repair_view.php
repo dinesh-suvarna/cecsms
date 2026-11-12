@@ -103,10 +103,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                         $reason_to_use = !empty($disposal_reason) ? $disposal_reason : 'Component failure during repair';
                         
-                        // Construct a clean, structured summary for resolution notes
                         $resolution_summary = $resolution_notes . " | Scrapped Parts: " . implode(', ', $scrapped_components) . " | Reason: " . $reason_to_use;
 
-                        // 1. Mark repair status as 'completed' so it populates Tab 2 (Completed / Pending Return)
                         $up_rep = $conn->prepare("UPDATE repairs SET status = 'completed', repair_cost = ?, resolution_notes = ?, completed_at = NOW() WHERE id = ?");
                         $up_rep->bind_param("dsi", $final_cost, $resolution_summary, $repair_id);
                         $up_rep->execute();
@@ -181,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $up_rep = $conn->prepare("UPDATE repairs SET status = 'returned' WHERE id = ?");
                     $up_rep->bind_param("i", $repair_id);
                     $up_rep->execute();
-            
+
                     // 2. Restore asset status back to assigned/active pool
                     $up_da = $conn->prepare("UPDATE division_assets SET status = 'assigned' WHERE division_asset_id = ? AND stock_detail_id = ?");
                     $up_da->bind_param("si", $asset_tag, $stock_detail_id);
@@ -235,7 +233,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $log_stmt->execute();
 
                     $_SESSION['success_msg'] = "Asset successfully returned to its originating department and labs/facilities.";
-                }
 
                 } elseif ($action === 'return_main_stock') {
                     // 1. Update repair status to returned
@@ -308,7 +305,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                     $_SESSION['success_msg'] = "Asset successfully moved to the E-Waste management registry!";  
                 }
-            
+            }
             $conn->commit();
         } catch (Exception $e) {
             $conn->rollback();
